@@ -914,3 +914,14 @@ footer {
 .following-page .following-empty[hidden] {
   display: none !important;
 }
+
+@media (max-width: 1100px) and (min-width: 701px) {
+  .discover-toolbar {
+    padding-top: 40px;
+  }
+}
+@media (max-width: 700px) {
+  .discover-toolbar {
+    padding-top: 32px;
+  }
+}
