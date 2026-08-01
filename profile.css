@@ -1,0 +1,278 @@
+/* =========================================================
+   ARTIST PROFILE
+   ========================================================= */
+
+.artist-profile {
+  --sidebar-width: clamp(220px, 21vw, 310px);
+--profile-gap: clamp(12px, 2vw, 36px);
+
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  gap: var(--profile-gap);
+
+  padding:
+    calc(var(--header-height) + 54px)
+    var(--page-gutter)
+    140px;
+}
+
+
+/* SIDEBAR */
+
+.artist-sidebar {
+  position: relative;
+  z-index: 2;
+
+  min-width: 0;
+}
+
+.artist-sidebar-inner {
+  position: fixed;
+  top: calc(var(--header-height) + 52px);
+  left: var(--page-gutter);
+
+  width: var(--sidebar-width);
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.artist-intro h1 {
+  margin: 0 0 28px;
+
+  font-size: clamp(26px, 2.8vw, 48px);
+  line-height: 0.95;
+  font-weight: 400;
+  letter-spacing: -0.055em;
+}
+
+.artist-intro p {
+  margin: 0 0 24px;
+
+  font-size: var(--font-meta);
+}
+
+.profile-follow {
+  margin-bottom: 58px;
+}
+
+.artist-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  font-size: var(--font-meta);
+}
+
+.artist-navigation .is-active {
+  color: var(--accent);
+}
+
+.artist-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  margin-top: 58px;
+
+  font-size: var(--font-meta);
+}
+
+.artist-links a {
+  color: var(--accent);
+}
+
+
+/* WORK STREAM */
+
+.artist-works {
+  position: relative;
+  z-index: 1;
+
+  min-width: 0;
+}
+
+.profile-work {
+  --work-meta-width: clamp(190px, 16vw, 270px);
+--work-gap: clamp(10px, 1.25vw, 22px);
+
+  display: grid;
+  grid-template-columns:
+    var(--work-meta-width)
+    minmax(0, 1fr);
+
+  align-items: center;
+  column-gap: var(--work-gap);
+
+  min-height: 100svh;
+  margin-bottom: 160px;
+}
+
+.profile-work:last-child {
+  margin-bottom: 0;
+}
+
+
+/* WORK IMAGE */
+
+.profile-image-link {
+  grid-column: 2;
+  grid-row: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+
+  width: 100%;
+  height: calc(
+    100svh
+    - var(--header-height)
+    - 105px
+  );
+
+  transform: none;
+}
+
+.profile-image-link img {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+  object-position: center center;
+}
+
+
+/* MAXIMUM IMAGE WIDTH BY ORIENTATION */
+
+.profile-work-portrait .profile-image-link {
+  max-width: 760px;
+}
+
+.profile-work-landscape .profile-image-link {
+  max-width: 1180px;
+}
+
+
+/* WORK METADATA */
+
+.profile-work-meta {
+  grid-column: 1;
+  grid-row: 1;
+
+  position: static;
+  align-self: center;
+
+  width: 100%;
+  max-width: none;
+
+  padding: 0;
+  transform: none;
+
+  font-size: var(--font-meta);
+}
+
+.profile-work-meta h2 {
+  margin: 0 0 8px;
+
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 400;
+}
+
+.profile-work-meta > a {
+  color: var(--accent);
+}
+
+.profile-work-meta p {
+  margin: 14px 0;
+}
+
+.profile-work-meta .save-work {
+  margin-top: 10px;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 900px) {
+  .artist-profile {
+    --sidebar-width: 200px;
+--profile-gap: 20px;
+  }
+
+ .profile-work {
+  --work-meta-width: 170px;
+--work-gap: 12px;
+}
+}
+
+@media (max-width: 700px) {
+  .artist-profile {
+    display: block;
+
+    padding-top: calc(var(--header-height) + 42px);
+  }
+
+  .artist-sidebar-inner {
+    position: static;
+  }
+
+  .artist-intro h1 {
+    font-size: 34px;
+  }
+
+  .profile-follow {
+    margin-bottom: 32px;
+  }
+
+  .artist-navigation {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+  }
+
+  .artist-links {
+    margin: 32px 0 70px;
+  }
+
+.profile-work {
+  display: flex;
+  flex-direction: column;
+
+  min-height: 0;
+  margin-bottom: 100px;
+}
+
+.profile-image-link {
+  order: 1;
+
+  width: 100%;
+  max-width: none !important;
+  height: auto;
+
+  transform: none;
+}
+
+.profile-image-link img {
+  width: 100%;
+  height: auto;
+
+  object-position: center center;
+}
+
+.profile-work-meta {
+  order: 2;
+
+  width: 100%;
+  max-width: 620px;
+
+  padding-top: 22px;
+}
+}
+.profile-year {
+  display: block;
+}

@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+
+  <title>Agenda — CHAINED</title>
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="agenda.css">
+</head>
+
+<body class="agenda-page">
+
+  <header class="site-header">
+    <a class="wordmark" href="discover.html">
+      &lt;CHAINED&gt;
+    </a>
+
+    <nav class="main-nav" aria-label="Primary navigation">
+      <a href="discover.html">DISCOVER</a>
+      <a href="following.html">FOLLOWING</a>
+      <a href="archive.html">ARCHIVE</a>
+      <a class="is-active" href="agenda.html">AGENDA</a>
+      <a href="profile-peer-vink.html">PROFILE</a>
+    </nav>
+  </header>
+
+
+  <main class="agenda-layout">
+
+    <aside class="agenda-sidebar">
+      <div class="agenda-sidebar-inner">
+
+        <section class="agenda-sidebar-section">
+          <h1>AGENDA</h1>
+
+<p class="agenda-status">
+  PROTOTYPE / DEMO DATA
+</p>
+
+<p class="agenda-note">
+  ALL EVENTS ON THIS PAGE ARE FICTIONAL AND ONLY USED TO TEST THE INTERFACE.
+</p>
+
+
+        <section class="agenda-sidebar-section">
+          <h2>VIEW</h2>
+
+          <button
+            class="agenda-scope is-active"
+            type="button"
+            data-agenda-scope="all">
+            ALL EVENTS
+          </button>
+
+          <button
+            class="agenda-scope"
+            type="button"
+            data-agenda-scope="following">
+            FOLLOWED ARTISTS
+          </button>
+        </section>
+
+
+        <section class="agenda-sidebar-section">
+          <h2>FILTER BY CITY</h2>
+
+          <button
+            class="agenda-filter"
+            type="button"
+            data-filter-type="city"
+            data-filter-value="amsterdam">
+            AMSTERDAM
+          </button>
+
+          <button
+            class="agenda-filter"
+            type="button"
+            data-filter-type="city"
+            data-filter-value="nijmegen">
+            NIJMEGEN
+          </button>
+
+          <button
+            class="agenda-filter"
+            type="button"
+            data-filter-type="city"
+            data-filter-value="utrecht">
+            UTRECHT
+          </button>
+        </section>
+
+
+        <section class="agenda-sidebar-section">
+          <h2>FILTER BY TYPE</h2>
+
+          <button
+            class="agenda-filter"
+            type="button"
+            data-filter-type="type"
+            data-filter-value="opening">
+            OPENING
+          </button>
+
+          <button
+            class="agenda-filter"
+            type="button"
+            data-filter-type="type"
+            data-filter-value="exhibition">
+            EXHIBITION
+          </button>
+
+          <button
+            class="agenda-filter"
+            type="button"
+            data-filter-type="type"
+            data-filter-value="talk">
+            ARTIST TALK
+          </button>
+
+          <button
+            class="agenda-filter"
+            type="button"
+            data-filter-type="type"
+            data-filter-value="performance">
+            PERFORMANCE
+          </button>
+        </section>
+
+
+        <button
+          class="text-action agenda-clear"
+          type="button">
+          [ CLEAR FILTERS ]
+        </button>
+
+      </div>
+    </aside>
+
+
+    <section class="agenda-content">
+
+      <header class="agenda-content-header">
+
+        <div>
+          <p class="agenda-current-view">
+            ALL EVENTS
+          </p>
+
+          <p class="agenda-result-count">
+            6 EVENTS
+          </p>
+        </div>
+
+        <label class="agenda-search">
+          <span class="sr-only">
+            Search agenda
+          </span>
+
+          <input
+            type="search"
+            placeholder="SEARCH AGENDA"
+            autocomplete="off">
+        </label>
+
+      </header>
+
+
+      <section class="agenda-month">
+        <h2>AUGUST 2026</h2>
+
+        <div class="agenda-events">
+
+          <article
+            class="agenda-event"
+            data-artist-id="koos-de-vries"
+            data-city="nijmegen"
+            data-event-type="opening">
+
+            <div class="agenda-date">
+              <span>07 AUG</span>
+              <span>FRI</span>
+            </div>
+
+            <div class="agenda-event-main">
+              <p class="agenda-event-type">
+                OPENING
+              </p>
+
+              <h3>
+                BIRDS DON’T SING, THEY SCREECH IN PAIN
+              </h3>
+
+              <a href="profile-koos-de-vries.html">
+                KOOS DE VRIES
+              </a>
+            </div>
+
+            <div class="agenda-event-details">
+              <p>18:00–21:00</p>
+
+              <p>
+                PROJECT SPACE 14<br>
+                NIJMEGEN
+              </p>
+            </div>
+
+          </article>
+
+
+          <article
+            class="agenda-event"
+            data-artist-id="peer-vink"
+            data-city="amsterdam"
+            data-event-type="opening">
+
+            <div class="agenda-date">
+              <span>14 AUG</span>
+              <span>FRI</span>
+            </div>
+
+            <div class="agenda-event-main">
+              <p class="agenda-event-type">
+                OPENING
+              </p>
+
+              <h3>THE NEW ORDER</h3>
+
+              <a href="profile-peer-vink.html">
+                PEER VINK
+              </a>
+            </div>
+
+            <div class="agenda-event-details">
+              <p>17:00–20:00</p>
+
+              <p>
+                STUDIO 07<br>
+                AMSTERDAM
+              </p>
+            </div>
+
+          </article>
+
+
+          <article
+            class="agenda-event"
+            data-artist-id="peer-vink"
+            data-city="amsterdam"
+            data-event-type="talk">
+
+            <div class="agenda-date">
+              <span>22 AUG</span>
+              <span>SAT</span>
+            </div>
+
+            <div class="agenda-event-main">
+              <p class="agenda-event-type">
+                ARTIST TALK
+              </p>
+
+              <h3>
+                IMAGE, DESIRE AND THE CONTEMPORARY RELIC
+              </h3>
+
+              <a href="profile-peer-vink.html">
+                PEER VINK
+              </a>
+            </div>
+
+            <div class="agenda-event-details">
+              <p>15:00–16:30</p>
+
+              <p>
+                STUDIO 07<br>
+                AMSTERDAM
+              </p>
+            </div>
+
+          </article>
+
+
+          <article
+            class="agenda-event"
+            data-artist-id=""
+            data-city="utrecht"
+            data-event-type="performance">
+
+            <div class="agenda-date">
+              <span>29 AUG</span>
+              <span>SAT</span>
+            </div>
+
+            <div class="agenda-event-main">
+              <p class="agenda-event-type">
+                PERFORMANCE
+              </p>
+
+              <h3>
+                AN EVENING OF UNSTABLE OBJECTS
+              </h3>
+
+              <p>GROUP PROGRAM</p>
+            </div>
+
+            <div class="agenda-event-details">
+              <p>20:00–23:00</p>
+
+              <p>
+                PROJECT ROOM WEST<br>
+                UTRECHT
+              </p>
+            </div>
+
+          </article>
+
+        </div>
+      </section>
+
+
+      <section class="agenda-month">
+        <h2>SEPTEMBER 2026</h2>
+
+        <div class="agenda-events">
+
+          <article
+            class="agenda-event"
+            data-artist-id="koos-de-vries"
+            data-city="utrecht"
+            data-event-type="exhibition">
+
+            <div class="agenda-date">
+              <span>03 SEP</span>
+              <span>THU</span>
+            </div>
+
+            <div class="agenda-event-main">
+              <p class="agenda-event-type">
+                EXHIBITION
+              </p>
+
+              <h3>MEDUSA / MES</h3>
+
+              <a href="profile-koos-de-vries.html">
+                KOOS DE VRIES
+              </a>
+            </div>
+
+            <div class="agenda-event-details">
+              <p>03–27 SEP</p>
+
+              <p>
+                PRINTROOM<br>
+                UTRECHT
+              </p>
+            </div>
+
+          </article>
+
+
+          <article
+            class="agenda-event"
+            data-artist-id=""
+            data-city="amsterdam"
+            data-event-type="talk">
+
+            <div class="agenda-date">
+              <span>12 SEP</span>
+              <span>SAT</span>
+            </div>
+
+            <div class="agenda-event-main">
+              <p class="agenda-event-type">
+                PUBLIC TALK
+              </p>
+
+              <h3>
+                ARCHIVES AS A CURATORIAL TOOL
+              </h3>
+
+              <p>CHAINED PUBLIC PROGRAM</p>
+            </div>
+
+            <div class="agenda-event-details">
+              <p>16:00–17:30</p>
+
+              <p>
+                PROJECT SPACE NORTH<br>
+                AMSTERDAM
+              </p>
+            </div>
+
+          </article>
+
+        </div>
+      </section>
+
+
+      <p class="agenda-empty" hidden>
+        NO EVENTS MATCH THE ACTIVE FILTERS
+      </p>
+
+    </section>
+
+  </main>
+
+
+  <script src="followed-artists.js"></script>
+  <script src="agenda.js"></script>
+
+</body>
+</html>
