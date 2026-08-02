@@ -127,6 +127,227 @@ Object.values(materialOptions).forEach((options) => {
   const materialPreview =
     document.querySelector(".work-material-preview");
 
+  const imageInput =
+    document.querySelector("#work-images-input");
+
+  const imageValidation =
+    document.querySelector("#work-image-validation");
+
+  const imagePreviews =
+    document.querySelector(".work-image-previews");
+
+  const supportedImageTypes = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+  ]);
+
+  const maximumImageSize = 25 * 1024 * 1024;
+  const selectedImages = [];
+  let nextImageId = 0;
+
+
+  function isSupportedImage(file) {
+    if (file.type) {
+      return supportedImageTypes.has(
+        file.type.toLowerCase()
+      );
+    }
+
+    return /\.(jpe?g|png|webp)$/i.test(file.name);
+  }
+
+
+  function formatFileSize(size) {
+    if (size >= 1024 * 1024) {
+      return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+    }
+
+    return `${Math.max(1, Math.ceil(size / 1024))} KB`;
+  }
+
+
+  function showImageValidation(messages) {
+    if (!imageValidation) {
+      return;
+    }
+
+    imageValidation.textContent = messages.join(" ");
+    imageValidation.hidden = messages.length === 0;
+  }
+
+
+  function createImageAction(label, ariaLabel, onClick) {
+    const button = document.createElement("button");
+
+    button.type = "button";
+    button.className = "work-image-preview-action";
+    button.textContent = `[ ${label} ]`;
+    button.setAttribute("aria-label", ariaLabel);
+    button.addEventListener("click", onClick);
+
+    return button;
+  }
+
+
+  function makeCoverImage(imageId) {
+    const imageIndex = selectedImages.findIndex(
+      (selectedImage) => selectedImage.id === imageId
+    );
+
+    if (imageIndex <= 0) {
+      return;
+    }
+
+    const [coverImage] = selectedImages.splice(imageIndex, 1);
+
+    selectedImages.unshift(coverImage);
+    renderImagePreviews();
+  }
+
+
+  function removeImage(imageId) {
+    const imageIndex = selectedImages.findIndex(
+      (selectedImage) => selectedImage.id === imageId
+    );
+
+    if (imageIndex === -1) {
+      return;
+    }
+
+    URL.revokeObjectURL(selectedImages[imageIndex].url);
+    selectedImages.splice(imageIndex, 1);
+
+    if (imageInput) {
+      imageInput.value = "";
+    }
+
+    if (selectedImages.length === 0) {
+      showImageValidation([]);
+    }
+
+    renderImagePreviews();
+  }
+
+
+  function createImagePreview(selectedImage, index) {
+    const preview = document.createElement("article");
+    const image = document.createElement("img");
+    const metadata = document.createElement("div");
+    const details = document.createElement("div");
+    const filename = document.createElement("p");
+    const filesize = document.createElement("p");
+    const actions = document.createElement("div");
+
+    preview.className = "work-image-preview";
+
+    image.src = selectedImage.url;
+    image.alt = `Preview of ${selectedImage.file.name}`;
+
+    metadata.className = "work-image-preview-meta";
+    details.className = "work-image-preview-details";
+    actions.className = "work-image-preview-actions";
+
+    if (index === 0) {
+      const coverLabel = document.createElement("p");
+
+      coverLabel.className = "work-image-cover";
+      coverLabel.textContent = "COVER IMAGE";
+      details.append(coverLabel);
+    }
+
+    filename.className = "work-image-filename";
+    filename.textContent = selectedImage.file.name;
+
+    filesize.className = "work-image-filesize";
+    filesize.textContent = formatFileSize(selectedImage.file.size);
+
+    details.append(filename, filesize);
+
+    if (index > 0) {
+      actions.append(
+        createImageAction(
+          "MAKE COVER",
+          `Make ${selectedImage.file.name} the cover image`,
+          () => makeCoverImage(selectedImage.id)
+        )
+      );
+    }
+
+    actions.append(
+      createImageAction(
+        "REMOVE",
+        `Remove ${selectedImage.file.name}`,
+        () => removeImage(selectedImage.id)
+      )
+    );
+
+    metadata.append(details, actions);
+    preview.append(image, metadata);
+
+    return preview;
+  }
+
+
+  function renderImagePreviews() {
+    if (!imagePreviews) {
+      return;
+    }
+
+    imagePreviews.replaceChildren(
+      ...selectedImages.map(createImagePreview)
+    );
+  }
+
+
+  function addSelectedImages(files) {
+    const validationMessages = [];
+
+    files.forEach((file) => {
+      if (!isSupportedImage(file)) {
+        validationMessages.push(
+          `${file.name} was not added: choose a JPG, PNG or WEBP image.`
+        );
+        return;
+      }
+
+      if (file.size > maximumImageSize) {
+        validationMessages.push(
+          `${file.name} was not added: the maximum file size is 25 MB.`
+        );
+        return;
+      }
+
+      selectedImages.push({
+        id: nextImageId,
+        file,
+        url: URL.createObjectURL(file)
+      });
+
+      nextImageId += 1;
+    });
+
+    showImageValidation(validationMessages);
+    renderImagePreviews();
+
+    if (imageInput) {
+      imageInput.value = "";
+    }
+  }
+
+
+  if (imageInput && imagePreviews && imageValidation) {
+    imageInput.addEventListener("change", () => {
+      addSelectedImages([...imageInput.files]);
+    });
+
+    window.addEventListener("beforeunload", () => {
+      selectedImages.forEach((selectedImage) => {
+        URL.revokeObjectURL(selectedImage.url);
+      });
+    });
+  }
+
 
   function createOption(value) {
     const button = document.createElement("button");
@@ -286,10 +507,16 @@ Object.values(materialOptions).forEach((options) => {
     ].filter(Boolean);
 
 
-    materialPreview.innerHTML = `
-      <span>PUBLIC DISPLAY:</span>
-      ${formatMaterialList(materials)}
-    `;
+    const previewLabel = document.createElement("span");
+
+    previewLabel.textContent = "PUBLIC DISPLAY:";
+
+    materialPreview.replaceChildren(
+      previewLabel,
+      document.createTextNode(
+        ` ${formatMaterialList(materials)}`
+      )
+    );
   }
 
 

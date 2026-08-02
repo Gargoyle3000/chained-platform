@@ -135,6 +135,10 @@
 
 /* IMAGE UPLOAD */
 
+.work-upload-field {
+  min-width: 0;
+}
+
 .work-upload-area {
   display: flex;
   flex-direction: column;
@@ -169,6 +173,109 @@
 .work-upload-area:hover,
 .work-upload-area:focus-within {
   border-color: var(--accent);
+}
+
+.work-upload-validation {
+  margin: 14px 0 0;
+  padding-left: 12px;
+
+  border-left: 1px solid var(--black);
+
+  color: var(--black);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.work-upload-validation[hidden] {
+  display: none;
+}
+
+.work-image-previews {
+  display: grid;
+  gap: 38px;
+
+  margin-top: 38px;
+}
+
+.work-image-previews:empty {
+  display: none;
+}
+
+.work-image-preview {
+  min-width: 0;
+  padding-top: 18px;
+}
+
+.work-image-preview img {
+  display: block;
+
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 70vh;
+
+  background: var(--white);
+}
+
+.work-image-preview-meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+
+  margin-top: 14px;
+}
+
+.work-image-preview-details {
+  display: grid;
+  gap: 6px;
+
+  min-width: 0;
+}
+
+.work-image-cover,
+.work-image-filename,
+.work-image-filesize {
+  margin: 0;
+
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.work-image-cover {
+  color: var(--accent);
+}
+
+.work-image-filename {
+  overflow-wrap: anywhere;
+}
+
+.work-image-preview-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px 20px;
+}
+
+.work-image-preview-action {
+  padding: 0;
+
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+
+  font: inherit;
+  font-size: var(--font-meta);
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.work-image-preview-action:hover,
+.work-image-preview-action:focus-visible {
+  color: var(--black);
+  outline: none;
 }
 
 
@@ -310,6 +417,19 @@
   .work-form-actions {
     align-items: flex-start;
     flex-direction: column-reverse;
+  }
+
+  .work-upload-area {
+    min-height: 190px;
+    padding: 26px;
+  }
+
+  .work-image-preview-meta {
+    flex-direction: column;
+  }
+
+  .work-image-preview-actions {
+    justify-content: flex-start;
   }
 }
 

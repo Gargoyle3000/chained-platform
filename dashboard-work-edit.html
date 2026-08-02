@@ -196,19 +196,35 @@
           </header>
 
 
-          <label class="work-upload-area">
-            <input
-              type="file"
-              name="images"
-              accept="image/jpeg,image/png,image/webp"
-              multiple>
+          <div class="work-upload-field">
+            <label class="work-upload-area">
+              <input
+                id="work-images-input"
+                type="file"
+                name="images"
+                accept="image/jpeg,image/png,image/webp"
+                aria-describedby="work-image-requirements work-image-validation"
+                multiple>
 
-            <span>[ + CHOOSE IMAGES ]</span>
+              <span>[ + CHOOSE IMAGES ]</span>
 
-            <small>
-              JPG, PNG OR WEBP · MAX 25 MB PER IMAGE
-            </small>
-          </label>
+              <small id="work-image-requirements">
+                JPG, PNG OR WEBP · MAX 25 MB PER IMAGE
+              </small>
+            </label>
+
+            <p
+              class="work-upload-validation"
+              id="work-image-validation"
+              role="alert"
+              aria-live="polite"
+              hidden></p>
+
+            <div
+              class="work-image-previews"
+              aria-label="Selected images"
+              aria-live="polite"></div>
+          </div>
 
         </section>
 
