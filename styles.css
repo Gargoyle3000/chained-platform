@@ -581,6 +581,8 @@ footer {
   .site-header {
     position: static;
     flex-direction: column;
+    height: auto;
+    min-height: var(--header-height);
   }
 
   .main-nav {

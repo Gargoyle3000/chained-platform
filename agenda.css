@@ -32,6 +32,10 @@
   left: var(--page-gutter);
 
   width: var(--agenda-sidebar-width);
+  max-height: calc(100svh - var(--header-height) - 70px);
+
+  overflow-y: auto;
+  padding-bottom: 30px;
 }
 
 .agenda-sidebar-section {
@@ -270,6 +274,10 @@
   .agenda-sidebar-inner {
     position: static;
     width: 100%;
+    max-height: none;
+
+    overflow: visible;
+    padding-bottom: 0;
   }
 
   .agenda-sidebar-section {
