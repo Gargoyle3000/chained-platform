@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+
+  <title>Add Work — CHAINED Dashboard</title>
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="dashboard-form.css">
+</head>
+
+<body class="dashboard-page dashboard-form-page">
+
+  <header class="site-header">
+    <a class="wordmark" href="discover.html">
+      &lt;CHAINED&gt;
+    </a>
+
+    <nav class="main-nav" aria-label="Primary navigation">
+      <a href="discover.html">DISCOVER</a>
+      <a href="following.html">FOLLOWING</a>
+      <a href="archive.html">ARCHIVE</a>
+      <a href="agenda.html">AGENDA</a>
+
+      <span class="profile-nav-group">
+        <a href="profile-peer-vink.html">
+          PROFILE
+        </a>
+
+        <a
+          class="dashboard-link is-active"
+          href="dashboard.html"
+          aria-label="Open dashboard">
+          +
+        </a>
+      </span>
+    </nav>
+  </header>
+
+
+  <main class="dashboard-layout">
+
+    <aside class="dashboard-sidebar">
+      <div class="dashboard-sidebar-inner">
+
+        <header class="dashboard-intro">
+          <h1>DASHBOARD</h1>
+
+          <p>
+            PEER VINK<br>
+            ARTIST ACCOUNT
+          </p>
+        </header>
+
+
+        <nav
+          class="dashboard-navigation"
+          aria-label="Dashboard navigation">
+
+          <a href="dashboard.html">
+            OVERVIEW
+          </a>
+
+          <a
+            class="is-active"
+            href="dashboard-works.html">
+            WORKS
+          </a>
+
+          <span>PRESENTATIONS</span>
+          <span>AGENDA</span>
+          <span>PROFILE</span>
+          <span>CV</span>
+          <span>PRESS</span>
+          <span>SETTINGS</span>
+        </nav>
+
+
+        <a
+          class="dashboard-public-link"
+          href="profile-peer-vink.html">
+          VIEW PUBLIC PROFILE ↗
+        </a>
+
+      </div>
+    </aside>
+
+
+    <section class="dashboard-content">
+
+      <header class="dashboard-content-header">
+        <div>
+          <p>WORKS / ADD WORK</p>
+
+          <h2>NEW WORK</h2>
+        </div>
+
+        <a
+          class="text-action dashboard-cancel"
+          href="dashboard-works.html">
+          [ CANCEL ]
+        </a>
+      </header>
+
+
+      <form class="work-form">
+
+        <!-- BASIC INFORMATION -->
+
+        <section class="work-form-section">
+
+          <header class="work-form-section-header">
+            <p>01</p>
+
+            <div>
+              <h3>BASIC INFORMATION</h3>
+              <p>THE MINIMUM REQUIRED TO CREATE A WORK</p>
+            </div>
+          </header>
+
+
+          <div class="work-form-fields">
+
+            <label class="work-form-field">
+              <span>WORK TYPE *</span>
+
+              <select name="work-type" required>
+                <option value="">SELECT TYPE</option>
+                <option value="single-work">SINGLE WORK</option>
+                <option value="series">SERIES</option>
+              </select>
+            </label>
+
+
+            <label class="work-form-field">
+              <span>TITLE *</span>
+
+              <input
+                type="text"
+                name="title"
+                placeholder="UNTITLED"
+                required>
+            </label>
+
+
+            <label class="work-form-field work-form-field-small">
+              <span>YEAR *</span>
+
+              <input
+                type="number"
+                name="year"
+                min="1900"
+                max="2100"
+                placeholder="2026"
+                required>
+            </label>
+
+
+            <label class="work-form-field">
+              <span>FORMAT / DISCIPLINE</span>
+
+              <select name="format">
+                <option value="">SELECT FORMAT</option>
+                <option value="painting">PAINTING</option>
+                <option value="sculpture">SCULPTURE</option>
+                <option value="installation">INSTALLATION</option>
+                <option value="photography">PHOTOGRAPHY</option>
+                <option value="video">VIDEO</option>
+                <option value="performance">PERFORMANCE</option>
+                <option value="sound">SOUND</option>
+                <option value="publication">PUBLICATION</option>
+                <option value="digital">DIGITAL WORK</option>
+                <option value="other">OTHER</option>
+              </select>
+            </label>
+
+          </div>
+
+        </section>
+
+
+        <!-- IMAGES -->
+
+        <section class="work-form-section">
+
+          <header class="work-form-section-header">
+            <p>02</p>
+
+            <div>
+              <h3>IMAGES</h3>
+              <p>ADD IMAGES AND CHOOSE THE DISPLAY ORDER</p>
+            </div>
+          </header>
+
+
+          <label class="work-upload-area">
+            <input
+              type="file"
+              name="images"
+              accept="image/jpeg,image/png,image/webp"
+              multiple>
+
+            <span>[ + CHOOSE IMAGES ]</span>
+
+            <small>
+              JPG, PNG OR WEBP · MAX 25 MB PER IMAGE
+            </small>
+          </label>
+
+        </section>
+
+
+        <!-- SPECIFICATIONS -->
+
+        <section class="work-form-section">
+
+          <header class="work-form-section-header">
+            <p>03</p>
+
+            <div>
+              <h3>SPECIFICATIONS</h3>
+              <p>STANDARDISED TECHNICAL INFORMATION</p>
+            </div>
+          </header>
+
+
+          <div class="work-form-fields">
+
+            <!-- MATERIALS / TECHNIQUE -->
+
+            <div
+              class="work-form-field
+                     work-form-field-wide
+                     work-material-builder">
+
+              <span>MATERIALS / TECHNIQUE</span>
+
+
+              <div class="work-material-fields">
+
+                <!-- PRIMARY MEDIUM / TECHNIQUE -->
+
+                <label
+                  class="material-combobox"
+                  data-material-combobox
+                  data-material-category="primary">
+
+                  <span>PRIMARY MEDIUM / TECHNIQUE</span>
+
+                  <div class="material-combobox-control">
+
+                    <input
+                      type="text"
+                      name="primary-medium"
+                      placeholder="SELECT OR TYPE"
+                      autocomplete="off"
+                      aria-expanded="false"
+                      aria-controls="primary-material-menu">
+
+                    <button
+                      class="material-combobox-toggle"
+                      type="button"
+                      aria-label="Open primary medium menu">
+                      [ ↓ ]
+                    </button>
+
+                    <div
+                      class="material-combobox-menu"
+                      id="primary-material-menu"
+                      role="listbox"
+                      hidden>
+                    </div>
+
+                  </div>
+                </label>
+
+
+                <!-- SUPPORT / BASE -->
+
+                <label
+                  class="material-combobox"
+                  data-material-combobox
+                  data-material-category="support">
+
+                  <span>SUPPORT / BASE</span>
+
+                  <div class="material-combobox-control">
+
+                    <input
+                      type="text"
+                      name="support-base"
+                      placeholder="SELECT OR TYPE"
+                      autocomplete="off"
+                      aria-expanded="false"
+                      aria-controls="support-material-menu">
+
+                    <button
+                      class="material-combobox-toggle"
+                      type="button"
+                      aria-label="Open support or base menu">
+                      [ ↓ ]
+                    </button>
+
+                    <div
+                      class="material-combobox-menu"
+                      id="support-material-menu"
+                      role="listbox"
+                      hidden>
+                    </div>
+
+                  </div>
+                </label>
+
+
+                <!-- ADDITIONAL MATERIALS -->
+
+                <label
+                  class="material-combobox"
+                  data-material-combobox
+                  data-material-category="additional">
+
+                  <span>ADDITIONAL MATERIALS</span>
+
+                  <div class="material-combobox-control">
+
+                    <input
+                      type="text"
+                      name="additional-materials"
+                      placeholder="SELECT OR TYPE"
+                      autocomplete="off"
+                      aria-expanded="false"
+                      aria-controls="additional-material-menu">
+
+                    <button
+                      class="material-combobox-toggle"
+                      type="button"
+                      aria-label="Open additional materials menu">
+                      [ ↓ ]
+                    </button>
+
+                    <div
+                      class="material-combobox-menu"
+                      id="additional-material-menu"
+                      role="listbox"
+                      hidden>
+                    </div>
+
+                  </div>
+                </label>
+
+              </div>
+
+
+              <p class="work-material-preview">
+                <span>PUBLIC DISPLAY:</span>
+                MATERIALS WILL APPEAR HERE
+              </p>
+
+              <small>
+                CHAINED DISPLAYS PRIMARY MEDIUM, SUPPORT AND
+                ADDITIONAL MATERIALS IN A FIXED ORDER
+              </small>
+
+            </div>
+
+
+            <!-- DIMENSIONS -->
+
+            <fieldset class="work-dimensions">
+
+              <legend>DIMENSIONS</legend>
+
+              <label>
+                <span>HEIGHT</span>
+
+                <input
+                  type="number"
+                  name="height"
+                  min="0"
+                  step="0.1"
+                  inputmode="decimal">
+              </label>
+
+              <label>
+                <span>WIDTH</span>
+
+                <input
+                  type="number"
+                  name="width"
+                  min="0"
+                  step="0.1"
+                  inputmode="decimal">
+              </label>
+
+              <label>
+                <span>DEPTH</span>
+
+                <input
+                  type="number"
+                  name="depth"
+                  min="0"
+                  step="0.1"
+                  inputmode="decimal">
+              </label>
+
+              <label>
+                <span>UNIT</span>
+
+                <select name="dimension-unit">
+                  <option value="cm">CM</option>
+                  <option value="mm">MM</option>
+                  <option value="m">M</option>
+                  <option value="in">IN</option>
+                </select>
+              </label>
+
+            </fieldset>
+
+
+            <!-- TIME-BASED / EDITION DETAILS -->
+
+            <label class="work-form-field">
+              <span>DURATION</span>
+
+              <input
+                type="text"
+                name="duration"
+                placeholder="12 MIN 34 SEC">
+            </label>
+
+
+            <label class="work-form-field">
+              <span>EDITION</span>
+
+              <input
+                type="text"
+                name="edition"
+                placeholder="EDITION OF 5 + 2 AP">
+            </label>
+
+          </div>
+
+        </section>
+
+
+        <!-- CONTEXT -->
+
+        <section class="work-form-section">
+
+          <header class="work-form-section-header">
+            <p>04</p>
+
+            <div>
+              <h3>CONTEXT</h3>
+              <p>OPTIONAL INFORMATION ABOUT THE WORK</p>
+            </div>
+          </header>
+
+
+          <div class="work-form-fields">
+
+            <label class="work-form-field work-form-field-wide">
+              <span>DESCRIPTION</span>
+
+              <textarea
+                name="description"
+                rows="7"
+                placeholder="ADD A SHORT DESCRIPTION OF THE WORK"></textarea>
+            </label>
+
+
+<div class="work-linked-group">
+
+  <label class="work-form-field">
+    <span>COLLABORATOR / ORGANISATION</span>
+
+    <input
+      type="text"
+      name="collaborator-name"
+      placeholder="NAME OR ORGANISATION">
+  </label>
+
+  <label class="work-form-field">
+    <span>LINK — OPTIONAL</span>
+
+    <input
+      type="url"
+      name="collaborator-url"
+      placeholder="HTTPS://">
+  </label>
+
+</div>
+
+
+<div class="work-linked-group">
+
+  <label class="work-form-field">
+    <span>PHOTO CREDIT</span>
+
+    <input
+      type="text"
+      name="photo-credit"
+      placeholder="PHOTOGRAPHER NAME">
+  </label>
+
+  <label class="work-form-field">
+    <span>LINK — OPTIONAL</span>
+
+    <input
+      type="url"
+      name="photo-credit-url"
+      placeholder="HTTPS://">
+  </label>
+
+</div>
+
+          </div>
+
+        </section>
+
+
+        <!-- VISIBILITY -->
+
+        <section class="work-form-section">
+
+          <header class="work-form-section-header">
+            <p>05</p>
+
+            <div>
+              <h3>VISIBILITY</h3>
+              <p>CHOOSE WHETHER THE WORK IS PUBLIC</p>
+            </div>
+          </header>
+
+
+          <fieldset class="work-visibility-options">
+
+            <label>
+              <input
+                type="radio"
+                name="visibility"
+                value="draft"
+                checked>
+
+              <span>
+                DRAFT
+                <small>ONLY VISIBLE IN YOUR DASHBOARD</small>
+              </span>
+            </label>
+
+
+            <label>
+              <input
+                type="radio"
+                name="visibility"
+                value="published">
+
+              <span>
+                PUBLISHED
+                <small>VISIBLE ON YOUR PUBLIC PROFILE</small>
+              </span>
+            </label>
+
+          </fieldset>
+
+        </section>
+
+
+        <!-- ACTIONS -->
+
+        <footer class="work-form-actions">
+
+          <button
+            class="text-action"
+            type="button">
+            [ SAVE DRAFT ]
+          </button>
+
+          <button
+            class="text-action work-form-publish"
+            type="submit">
+            [ PUBLISH WORK ]
+          </button>
+
+        </footer>
+
+      </form>
+
+    </section>
+
+  </main>
+
+
+  <script src="dashboard-form.js"></script>
+
+</body>
+</html>

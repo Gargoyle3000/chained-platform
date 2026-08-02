@@ -925,3 +925,26 @@ footer {
     padding-top: 32px;
   }
 }
+
+/* PROFILE + DASHBOARD LINK */
+
+.profile-nav-group {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.dashboard-link {
+  color: var(--black);
+  text-decoration: none;
+}
+
+.dashboard-link.is-active {
+  color: var(--accent);
+}
+
+.dashboard-link:hover,
+.dashboard-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
