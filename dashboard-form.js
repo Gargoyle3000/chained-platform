@@ -127,31 +127,42 @@ Object.values(materialOptions).forEach((options) => {
   const materialPreview =
     document.querySelector(".work-material-preview");
 
-  const imageInput =
-    document.querySelector("#work-images-input");
-
-  const imageValidation =
-    document.querySelector("#work-image-validation");
-
-  const imagePreviews =
-    document.querySelector(".work-image-previews");
-
+  const workStore = window.ChainedWorkStore;
+  const form = document.querySelector(".work-form");
+  const editorHeading = document.querySelector("#work-editor-heading");
+  const editorContext = document.querySelector("#work-editor-context");
+  const formStatus = document.querySelector("#work-form-status");
+  const basicValidation = document.querySelector("#work-basic-validation");
+  const contextValidation = document.querySelector(
+    "#work-context-validation"
+  );
+  const saveDraftButton = document.querySelector(".work-form-save");
+  const publishButton = document.querySelector(".work-form-publish");
+  const imageInput = document.querySelector("#work-images-input");
+  const imageValidation = document.querySelector("#work-image-validation");
+  const imagePreviews = document.querySelector(".work-image-previews");
   const supportedImageTypes = new Set([
     "image/jpeg",
     "image/png",
     "image/webp"
   ]);
-
   const maximumImageSize = 25 * 1024 * 1024;
   const selectedImages = [];
-  let nextImageId = 0;
+  let currentWorkId = new URLSearchParams(window.location.search).get("id");
+
+
+  function createImageId() {
+    const uniquePart =
+      window.crypto?.randomUUID?.() ||
+      `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    return `image-${uniquePart}`;
+  }
 
 
   function isSupportedImage(file) {
     if (file.type) {
-      return supportedImageTypes.has(
-        file.type.toLowerCase()
-      );
+      return supportedImageTypes.has(file.type.toLowerCase());
     }
 
     return /\.(jpe?g|png|webp)$/i.test(file.name);
@@ -163,17 +174,77 @@ Object.values(materialOptions).forEach((options) => {
       return `${(size / (1024 * 1024)).toFixed(2)} MB`;
     }
 
-    return `${Math.max(1, Math.ceil(size / 1024))} KB`;
+    if (size >= 1024) {
+      return `${Math.ceil(size / 1024)} KB`;
+    }
+
+    return `${size} B`;
+  }
+
+
+  function setValidation(element, message = "") {
+    if (!element) {
+      return;
+    }
+
+    element.textContent = message;
+    element.hidden = !message;
   }
 
 
   function showImageValidation(messages) {
-    if (!imageValidation) {
+    setValidation(imageValidation, messages.join(" "));
+  }
+
+
+  function showFormStatus(message, isError = false) {
+    if (!formStatus) {
       return;
     }
 
-    imageValidation.textContent = messages.join(" ");
-    imageValidation.hidden = messages.length === 0;
+    formStatus.textContent = message;
+    formStatus.hidden = !message;
+    formStatus.classList.toggle("is-error", isError);
+  }
+
+
+  function setEditorBusy(isBusy) {
+    if (saveDraftButton) {
+      saveDraftButton.disabled = isBusy;
+    }
+
+    if (publishButton) {
+      publishButton.disabled = isBusy;
+    }
+  }
+
+
+  function releasePreviewUrl(selectedImage) {
+    if (!selectedImage?.objectUrl) {
+      return;
+    }
+
+    URL.revokeObjectURL(selectedImage.objectUrl);
+    selectedImage.objectUrl = "";
+    selectedImage.previewUrl = "";
+  }
+
+
+  function releaseAllPreviewUrls() {
+    selectedImages.forEach(releasePreviewUrl);
+  }
+
+
+  function preparePreviewUrl(selectedImage) {
+    releasePreviewUrl(selectedImage);
+
+    if (selectedImage.blob) {
+      selectedImage.objectUrl = URL.createObjectURL(selectedImage.blob);
+      selectedImage.previewUrl = selectedImage.objectUrl;
+      return;
+    }
+
+    selectedImage.previewUrl = selectedImage.src;
   }
 
 
@@ -215,7 +286,7 @@ Object.values(materialOptions).forEach((options) => {
       return;
     }
 
-    URL.revokeObjectURL(selectedImages[imageIndex].url);
+    releasePreviewUrl(selectedImages[imageIndex]);
     selectedImages.splice(imageIndex, 1);
 
     if (imageInput) {
@@ -241,8 +312,8 @@ Object.values(materialOptions).forEach((options) => {
 
     preview.className = "work-image-preview";
 
-    image.src = selectedImage.url;
-    image.alt = `Preview of ${selectedImage.file.name}`;
+    image.src = selectedImage.previewUrl;
+    image.alt = `Preview of ${selectedImage.filename}`;
 
     metadata.className = "work-image-preview-meta";
     details.className = "work-image-preview-details";
@@ -257,10 +328,10 @@ Object.values(materialOptions).forEach((options) => {
     }
 
     filename.className = "work-image-filename";
-    filename.textContent = selectedImage.file.name;
+    filename.textContent = selectedImage.filename;
 
     filesize.className = "work-image-filesize";
-    filesize.textContent = formatFileSize(selectedImage.file.size);
+    filesize.textContent = formatFileSize(selectedImage.size);
 
     details.append(filename, filesize);
 
@@ -268,7 +339,7 @@ Object.values(materialOptions).forEach((options) => {
       actions.append(
         createImageAction(
           "MAKE COVER",
-          `Make ${selectedImage.file.name} the cover image`,
+          `Make ${selectedImage.filename} the cover image`,
           () => makeCoverImage(selectedImage.id)
         )
       );
@@ -277,7 +348,7 @@ Object.values(materialOptions).forEach((options) => {
     actions.append(
       createImageAction(
         "REMOVE",
-        `Remove ${selectedImage.file.name}`,
+        `Remove ${selectedImage.filename}`,
         () => removeImage(selectedImage.id)
       )
     );
@@ -294,6 +365,7 @@ Object.values(materialOptions).forEach((options) => {
       return;
     }
 
+    selectedImages.forEach(preparePreviewUrl);
     imagePreviews.replaceChildren(
       ...selectedImages.map(createImagePreview)
     );
@@ -319,12 +391,15 @@ Object.values(materialOptions).forEach((options) => {
       }
 
       selectedImages.push({
-        id: nextImageId,
-        file,
-        url: URL.createObjectURL(file)
+        id: createImageId(),
+        filename: file.name,
+        mimeType: file.type,
+        size: file.size,
+        blob: file,
+        src: "",
+        objectUrl: "",
+        previewUrl: ""
       });
-
-      nextImageId += 1;
     });
 
     showImageValidation(validationMessages);
@@ -336,17 +411,344 @@ Object.values(materialOptions).forEach((options) => {
   }
 
 
+  function formValue(name) {
+    const control = form?.elements.namedItem(name);
+
+    return typeof control?.value === "string" ? control.value.trim() : "";
+  }
+
+
+  function setFormValue(name, value) {
+    const control = form?.elements.namedItem(name);
+
+    if (control && "value" in control) {
+      control.value = value || "";
+    }
+  }
+
+
+  function serialiseImages() {
+    return selectedImages.map((selectedImage, index) => ({
+      id: selectedImage.id,
+      filename: selectedImage.filename,
+      mimeType: selectedImage.mimeType,
+      size: selectedImage.size,
+      blob: selectedImage.blob || null,
+      src: selectedImage.src || "",
+      order: index,
+      isCover: index === 0
+    }));
+  }
+
+
+  function buildWorkRecord(visibility) {
+    return {
+      id: currentWorkId || undefined,
+      title: formValue("title"),
+      year: formValue("year"),
+      workType: formValue("work-type"),
+      format: formValue("format"),
+      primaryMedium: formValue("primary-medium"),
+      supportBase: formValue("support-base"),
+      additionalMaterials: formValue("additional-materials"),
+      height: formValue("height"),
+      width: formValue("width"),
+      depth: formValue("depth"),
+      dimensionUnit: formValue("dimension-unit") || "cm",
+      duration: formValue("duration"),
+      edition: formValue("edition"),
+      description: formValue("description"),
+      collaboratorName: formValue("collaborator-name"),
+      collaboratorUrl: formValue("collaborator-url"),
+      photoCreditName: formValue("photo-credit"),
+      photoCreditUrl: formValue("photo-credit-url"),
+      visibility,
+      images: serialiseImages()
+    };
+  }
+
+
+  function isValidOptionalUrl(value) {
+    if (!value) {
+      return true;
+    }
+
+    try {
+      const url = new URL(value);
+
+      return (
+        (url.protocol === "http:" || url.protocol === "https:") &&
+        Boolean(url.hostname)
+      );
+    } catch (error) {
+      return false;
+    }
+  }
+
+
+  function clearValidationState() {
+    setValidation(basicValidation);
+    setValidation(contextValidation);
+    showImageValidation([]);
+
+    form?.querySelectorAll('[aria-invalid="true"]').forEach((control) => {
+      control.removeAttribute("aria-invalid");
+    });
+  }
+
+
+  function validateLinkedUrls(record) {
+    const invalidControls = [];
+
+    if (!isValidOptionalUrl(record.collaboratorUrl)) {
+      invalidControls.push(form.elements.namedItem("collaborator-url"));
+    }
+
+    if (!isValidOptionalUrl(record.photoCreditUrl)) {
+      invalidControls.push(form.elements.namedItem("photo-credit-url"));
+    }
+
+    invalidControls.forEach((control) => {
+      control?.setAttribute("aria-invalid", "true");
+    });
+
+    if (invalidControls.length > 0) {
+      setValidation(
+        contextValidation,
+        "OPTIONAL LINKS MUST USE A COMPLETE HTTP:// OR HTTPS:// URL."
+      );
+      invalidControls[0]?.focus();
+      return false;
+    }
+
+    return true;
+  }
+
+
+  function validateForPublishing(record) {
+    const missingControls = [];
+    const workType = form.elements.namedItem("work-type");
+    const title = form.elements.namedItem("title");
+    const year = form.elements.namedItem("year");
+    const numericYear = Number(record.year);
+
+    if (!record.workType) {
+      missingControls.push(workType);
+    }
+
+    if (!record.title) {
+      missingControls.push(title);
+    }
+
+    if (
+      !record.year ||
+      !Number.isInteger(numericYear) ||
+      numericYear < 1900 ||
+      numericYear > 2100
+    ) {
+      missingControls.push(year);
+    }
+
+    missingControls.forEach((control) => {
+      control?.setAttribute("aria-invalid", "true");
+    });
+
+    if (missingControls.length > 0) {
+      setValidation(
+        basicValidation,
+        "WORK TYPE, TITLE, AND A YEAR FROM 1900 TO 2100 ARE REQUIRED TO PUBLISH."
+      );
+    }
+
+    if (record.images.length === 0) {
+      showImageValidation([
+        "Add at least one image before publishing this work."
+      ]);
+      imageInput?.setAttribute("aria-invalid", "true");
+    }
+
+    if (missingControls.length > 0) {
+      missingControls[0]?.focus();
+    } else if (record.images.length === 0) {
+      imageInput?.focus();
+    }
+
+    return missingControls.length === 0 && record.images.length > 0;
+  }
+
+
+  function setVisibility(visibility) {
+    const radio = form?.querySelector(
+      `input[name="visibility"][value="${visibility}"]`
+    );
+
+    if (radio) {
+      radio.checked = true;
+    }
+  }
+
+
+  function setEditMode(workId) {
+    currentWorkId = workId;
+    editorHeading.textContent = "EDIT WORK";
+    editorContext.textContent = "WORKS / EDIT WORK";
+    document.title = "Edit Work — CHAINED Dashboard";
+
+    const url = new URL(window.location.href);
+
+    url.searchParams.set("id", workId);
+    window.history.replaceState({}, "", url);
+  }
+
+
+  function loadSelectedImages(images = []) {
+    releaseAllPreviewUrls();
+    selectedImages.splice(
+      0,
+      selectedImages.length,
+      ...images
+        .sort((first, second) => first.order - second.order)
+        .map((image) => ({
+          id: image.id,
+          filename: image.filename,
+          mimeType: image.mimeType,
+          size: image.size,
+          blob: image.blob || null,
+          src: image.src || "",
+          objectUrl: "",
+          previewUrl: ""
+        }))
+    );
+    renderImagePreviews();
+  }
+
+
+  function populateForm(work) {
+    const values = {
+      "work-type": work.workType,
+      title: work.title,
+      year: work.year,
+      format: work.format,
+      "primary-medium": work.primaryMedium,
+      "support-base": work.supportBase,
+      "additional-materials": work.additionalMaterials,
+      height: work.height,
+      width: work.width,
+      depth: work.depth,
+      "dimension-unit": work.dimensionUnit,
+      duration: work.duration,
+      edition: work.edition,
+      description: work.description,
+      "collaborator-name": work.collaboratorName,
+      "collaborator-url": work.collaboratorUrl,
+      "photo-credit": work.photoCreditName,
+      "photo-credit-url": work.photoCreditUrl
+    };
+
+    Object.entries(values).forEach(([name, value]) => {
+      setFormValue(name, value);
+    });
+
+    setVisibility(work.visibility);
+    loadSelectedImages(work.images);
+    updateMaterialPreview();
+  }
+
+
+  async function saveWork(visibility) {
+    clearValidationState();
+    showFormStatus("");
+
+    const record = buildWorkRecord(visibility);
+    const urlsAreValid = validateLinkedUrls(record);
+    const publishFieldsAreValid =
+      visibility !== "published" || validateForPublishing(record);
+
+    if (!urlsAreValid || !publishFieldsAreValid) {
+      return;
+    }
+
+    setVisibility(visibility);
+    setEditorBusy(true);
+
+    try {
+      const savedWork = currentWorkId
+        ? await workStore.updateWork(record)
+        : await workStore.createWork(record);
+
+      setEditMode(savedWork.id);
+      loadSelectedImages(savedWork.images);
+      showFormStatus(
+        visibility === "published" ? "WORK PUBLISHED" : "DRAFT SAVED"
+      );
+    } catch (error) {
+      console.error("Could not save the CHAINED work record.", error);
+      showFormStatus("WORK COULD NOT BE SAVED", true);
+    } finally {
+      setEditorBusy(false);
+    }
+  }
+
+
+  async function initialiseEditor() {
+    if (!form || !workStore) {
+      console.error("CHAINED work editor dependencies are unavailable.");
+      showFormStatus("LOCAL WORK STORAGE IS UNAVAILABLE", true);
+      return;
+    }
+
+    try {
+      await workStore.initialiseDatabase();
+
+      if (!currentWorkId) {
+        return;
+      }
+
+      const work = await workStore.getWork(currentWorkId);
+
+      if (!work) {
+        showFormStatus("WORK COULD NOT BE FOUND", true);
+        currentWorkId = null;
+        return;
+      }
+
+      setEditMode(work.id);
+      populateForm(work);
+    } catch (error) {
+      console.error("Could not initialise CHAINED work storage.", error);
+      showFormStatus("LOCAL WORK STORAGE IS UNAVAILABLE", true);
+    }
+  }
+
+
   if (imageInput && imagePreviews && imageValidation) {
     imageInput.addEventListener("change", () => {
       addSelectedImages([...imageInput.files]);
     });
-
-    window.addEventListener("beforeunload", () => {
-      selectedImages.forEach((selectedImage) => {
-        URL.revokeObjectURL(selectedImage.url);
-      });
-    });
   }
+
+  saveDraftButton?.addEventListener("click", () => {
+    saveWork("draft");
+  });
+
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    saveWork("published");
+  });
+
+  form?.addEventListener("input", (event) => {
+    event.target.removeAttribute?.("aria-invalid");
+
+    if (["work-type", "title", "year"].includes(event.target.name)) {
+      setValidation(basicValidation);
+    }
+
+    if (["collaborator-url", "photo-credit-url"].includes(event.target.name)) {
+      setValidation(contextValidation);
+    }
+  });
+
+  window.addEventListener("beforeunload", releaseAllPreviewUrls);
 
 
   function createOption(value) {
@@ -594,4 +996,5 @@ Object.values(materialOptions).forEach((options) => {
 
 
   updateMaterialPreview();
+  initialiseEditor();
 });

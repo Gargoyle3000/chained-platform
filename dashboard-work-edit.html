@@ -93,9 +93,9 @@
 
       <header class="dashboard-content-header">
         <div>
-          <p>WORKS / ADD WORK</p>
+          <p id="work-editor-context">WORKS / ADD WORK</p>
 
-          <h2>NEW WORK</h2>
+          <h2 id="work-editor-heading">NEW WORK</h2>
         </div>
 
         <a
@@ -106,7 +106,7 @@
       </header>
 
 
-      <form class="work-form">
+      <form class="work-form" novalidate>
 
         <!-- BASIC INFORMATION -->
 
@@ -127,10 +127,17 @@
             <label class="work-form-field">
               <span>WORK TYPE *</span>
 
-              <select name="work-type" required>
+              <select
+                name="work-type"
+                aria-describedby="work-basic-validation"
+                required>
                 <option value="">SELECT TYPE</option>
                 <option value="single-work">SINGLE WORK</option>
                 <option value="series">SERIES</option>
+                <option value="installation">INSTALLATION</option>
+                <option value="video">VIDEO</option>
+                <option value="performance">PERFORMANCE</option>
+                <option value="publication">PUBLICATION</option>
               </select>
             </label>
 
@@ -142,6 +149,7 @@
                 type="text"
                 name="title"
                 placeholder="UNTITLED"
+                aria-describedby="work-basic-validation"
                 required>
             </label>
 
@@ -155,6 +163,7 @@
                 min="1900"
                 max="2100"
                 placeholder="2026"
+                aria-describedby="work-basic-validation"
                 required>
             </label>
 
@@ -178,6 +187,13 @@
             </label>
 
           </div>
+
+          <p
+            class="work-form-validation"
+            id="work-basic-validation"
+            role="alert"
+            aria-live="polite"
+            hidden></p>
 
         </section>
 
@@ -505,6 +521,7 @@
     <input
       type="url"
       name="collaborator-url"
+      aria-describedby="work-context-validation"
       placeholder="HTTPS://">
   </label>
 
@@ -528,12 +545,20 @@
     <input
       type="url"
       name="photo-credit-url"
+      aria-describedby="work-context-validation"
       placeholder="HTTPS://">
   </label>
 
 </div>
 
           </div>
+
+          <p
+            class="work-form-validation"
+            id="work-context-validation"
+            role="alert"
+            aria-live="polite"
+            hidden></p>
 
         </section>
 
@@ -587,10 +612,17 @@
 
         <!-- ACTIONS -->
 
+        <p
+          class="work-form-status"
+          id="work-form-status"
+          role="status"
+          aria-live="polite"
+          hidden></p>
+
         <footer class="work-form-actions">
 
           <button
-            class="text-action"
+            class="text-action work-form-save"
             type="button">
             [ SAVE DRAFT ]
           </button>
@@ -610,6 +642,7 @@
   </main>
 
 
+  <script src="work-store.js"></script>
   <script src="dashboard-form.js"></script>
 
 </body>

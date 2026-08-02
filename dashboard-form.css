@@ -75,6 +75,22 @@
   max-width: 220px;
 }
 
+.work-form-validation {
+  grid-column: 2;
+
+  margin: 18px 0 0;
+  padding-left: 12px;
+
+  border-left: 1px solid var(--black);
+
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.work-form-validation[hidden] {
+  display: none;
+}
+
 .work-form-field > span,
 .work-dimensions legend,
 .work-dimensions label > span {
@@ -361,6 +377,27 @@
   margin-top: 20px;
 }
 
+.work-form-status {
+  width: max-content;
+  max-width: 100%;
+  margin: 0 0 24px auto;
+
+  color: var(--accent);
+  font-size: var(--font-meta);
+}
+
+.work-form-status.is-error {
+  padding-left: 12px;
+
+  border-left: 1px solid var(--black);
+
+  color: var(--black);
+}
+
+.work-form-status[hidden] {
+  display: none;
+}
+
 .work-form-publish {
   color: var(--accent);
 }
@@ -406,6 +443,10 @@
     max-width: none;
   }
 
+  .work-form-validation {
+    grid-column: auto;
+  }
+
   .work-dimensions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -417,6 +458,10 @@
   .work-form-actions {
     align-items: flex-start;
     flex-direction: column-reverse;
+  }
+
+  .work-form-status {
+    margin-left: 0;
   }
 
   .work-upload-area {

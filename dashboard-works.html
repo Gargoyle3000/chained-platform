@@ -97,11 +97,11 @@
           <h2>MANAGE YOUR WORKS</h2>
         </div>
 
-<a
-  class="text-action dashboard-add-work"
-  href="dashboard-work-edit.html">
-  [ + ADD WORK ]
-</a>
+        <a
+          class="text-action dashboard-add-work"
+          href="dashboard-work-edit.html">
+          [ + ADD WORK ]
+        </a>
       </header>
 
 
@@ -113,99 +113,33 @@
               ALL WORKS
             </p>
 
-            <h2>3 PUBLISHED / 0 DRAFTS</h2>
+            <h2 id="dashboard-works-breakdown">
+              LOADING WORKS
+            </h2>
           </div>
 
-          <span>3 WORKS</span>
+          <span id="dashboard-works-total">—</span>
         </header>
 
+        <p
+          class="dashboard-inline-error"
+          id="dashboard-works-error"
+          role="alert"
+          hidden></p>
 
-        <div class="dashboard-work-list">
-
-          <!-- THE NEW ORDER I -->
-
-          <article class="dashboard-work-row">
-            <img
-              src="assets/peer-vink/the-new-order-i.jpg"
-              alt="The New Order I by Peer Vink">
-
-            <div>
-              <h3>THE NEW ORDER I</h3>
-              <p>2026 · SINGLE WORK</p>
-            </div>
-
-            <div class="dashboard-work-status">
-              <span class="is-published">
-                PUBLISHED
-              </span>
-
-              <button
-                class="text-action"
-                type="button">
-                [ EDIT ]
-              </button>
-            </div>
-          </article>
-
-
-          <!-- HEY MAN -->
-
-          <article class="dashboard-work-row">
-            <img
-              src="assets/peer-vink/hey-man.jpg"
-              alt="Hey Man by Peer Vink">
-
-            <div>
-              <h3>HEY MAN</h3>
-              <p>2026 · INSTALLATION</p>
-            </div>
-
-            <div class="dashboard-work-status">
-              <span class="is-published">
-                PUBLISHED
-              </span>
-
-              <button
-                class="text-action"
-                type="button">
-                [ EDIT ]
-              </button>
-            </div>
-          </article>
-
-
-          <!-- HEDO MAXXING ALPHA -->
-
-          <article class="dashboard-work-row">
-            <img
-              src="assets/archive-06.svg"
-              alt="Hedo Maxxing Alpha by Peer Vink">
-
-            <div>
-              <h3>HEDO MAXXING ALPHA</h3>
-              <p>2026 · SINGLE WORK</p>
-            </div>
-
-            <div class="dashboard-work-status">
-              <span class="is-published">
-                PUBLISHED
-              </span>
-
-              <button
-                class="text-action"
-                type="button">
-                [ EDIT ]
-              </button>
-            </div>
-          </article>
-
-        </div>
+        <div
+          class="dashboard-work-list"
+          id="dashboard-work-list"
+          aria-live="polite"></div>
 
       </section>
 
     </section>
 
   </main>
+
+  <script src="work-store.js"></script>
+  <script src="dashboard-works.js"></script>
 
 </body>
 </html>

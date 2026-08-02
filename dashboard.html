@@ -103,20 +103,20 @@
       WORKS
     </p>
 
-    <p class="dashboard-number">
+    <p class="dashboard-number" id="dashboard-work-total">
       4
     </p>
 
-    <p>
+    <p id="dashboard-work-breakdown">
       4 PUBLISHED<br>
       0 DRAFTS
     </p>
 
-    <button
+    <a
       class="text-action dashboard-summary-action"
-      type="button">
+      href="dashboard-work-edit.html">
       [ + ADD WORK ]
-    </button>
+    </a>
   </article>
 
 
@@ -224,42 +224,19 @@
             <h2>YOUR LATEST UPDATES</h2>
           </div>
 
-          <span>4 WORKS</span>
+          <span id="dashboard-recent-total">—</span>
         </header>
 
-
-        <div class="dashboard-work-list">
-
-          <article class="dashboard-work-row">
-            <img
-              src="assets/peer-vink/the-new-order-i.jpg"
-              alt="The New Order I by Peer Vink">
-
-            <div>
-              <h3>THE NEW ORDER I</h3>
-              <p>2026</p>
-            </div>
-
-            <span class="is-published">
-              PUBLISHED
-            </span>
-          </article>
+        <p
+          class="dashboard-inline-error"
+          id="dashboard-overview-error"
+          role="alert"
+          hidden></p>
 
 
-          <article class="dashboard-work-row">
-            <img
-              src="assets/peer-vink/hey-man.jpg"
-              alt="Hey Man by Peer Vink">
-
-            <div>
-              <h3>HEY MAN</h3>
-              <p>2026</p>
-            </div>
-
-            <span class="is-published">
-              PUBLISHED
-            </span>
-          </article>
+        <div
+          class="dashboard-work-list"
+          id="dashboard-recent-work-list">
 
         </div>
 
@@ -268,6 +245,9 @@
     </section>
 
   </main>
+
+  <script src="work-store.js"></script>
+  <script src="dashboard-overview.js"></script>
 
 </body>
 </html>
