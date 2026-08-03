@@ -9,9 +9,12 @@
 
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="auth/auth.css">
+
+  <script type="module" src="auth/guard.mjs"></script>
 </head>
 
-<body class="dashboard-page">
+<body class="dashboard-page" data-auth-protected="true">
 
   <header class="site-header">
     <a class="wordmark" href="discover.html">

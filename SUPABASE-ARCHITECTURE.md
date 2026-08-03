@@ -1,6 +1,6 @@
 # CHAINED Supabase Architecture
 
-Status: approved architecture with local database, invitation, and Work-media foundations. This document does not connect the repository to a hosted Supabase project.
+Status: approved architecture with local database, invitation, Work-media, and browser-authentication foundations. This document does not connect the repository to a hosted Supabase project.
 
 ## 1. Executive recommendation
 
@@ -795,7 +795,24 @@ Public self-registration is unavailable. A normalized `account_invitations` reco
 
 An ordinary invitation can assign only its explicitly approved initial `private_member`, artist, curator, or institution roles. It can never assign `admin`; later roles and all profile memberships remain separate trusted decisions. Do not infer roles from Auth metadata, email domains, or self-supplied text. The first hosted administrator is established by a separate, controlled deployment bootstrap procedure—never a permanent public endpoint. Gallery/institution profiles are managed by individual Auth accounts, never shared passwords or synthetic Auth users.
 
-Future frontend passwordless login must call the Supabase magic-link/OTP sign-in API with `shouldCreateUser: false`, so a login attempt cannot become an account-registration path. Frontend Auth integration is outside this phase.
+The first frontend Auth integration has two explicit modes. `prototype` is the fallback when `frontend-config.local.mjs` is absent: it makes no Auth request and preserves the published static prototype. `local-supabase` is enabled only by that generated, untracked file. The browser receives the local API URL, an official browser-safe publishable or legacy anon key, the exact callback URL, and the explicit mode—never a secret/service-role/database credential. Hosted frontend configuration remains intentionally absent.
+
+The local static origin is `http://127.0.0.1:5500` and the only callback is `http://127.0.0.1:5500/auth-callback.html`; no wildcard or hosted redirect is allowed in this phase. The invitation Edge Function obtains that callback from its local trusted environment and never accepts a redirect from a browser request. The passwordless login form calls the official browser client with `signInWithOtp`, `shouldCreateUser: false`, and the same exact `emailRedirectTo`. All admissible requests receive generic user-facing text so the interface does not disclose account existence.
+
+The callback handles both URL-session and authorization-code forms, establishes the persisted/refreshable Supabase session, removes callback parameters/fragments from browser history, and then reads the caller's own `accounts` row through RLS. The shared guard protects Dashboard, Works, Work editor, Following, Archive, and Agenda in `local-supabase` mode. An Auth session alone is insufficient: only `accounts.status = 'active'` admits the page, and missing/suspended/disabled accounts are signed out or denied. Authorization never uses `user_metadata`. Logout calls `supabase.auth.signOut()` and returns to the login page. Optional next-page values are restricted to an exact same-origin dashboard-page allow-list.
+
+The Supabase browser client is imported from one exactly versioned ESM location in `auth/supabase-client.mjs`. It can be bundled or self-hosted before production without changing page modules. Works and images remain on the single existing `window.ChainedWorkStore` IndexedDB adapter in this phase; no data is migrated or deleted and no competing Supabase Work provider exists. A later phase replaces that adapter boundary while preserving its page-facing contract.
+
+Local setup and review:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/write-local-frontend-config.ps1
+powershell -ExecutionPolicy Bypass -File scripts/create-local-auth-demo.ps1
+# Open local Mailpit, accept the invitation, then use the local frontend.
+npx supabase db reset --local
+```
+
+The configuration helper reads machine-readable local CLI status, selects only the local API URL plus browser-safe key, never prints the key, and refuses non-local APIs. The demo helper creates only temporary `example.test` identities through local trusted APIs, sends one artist invitation through `invite-account`, retains credentials only in process variables, and is cleaned by the explicit local reset above. Auth redirect configuration changes require restarting the local Supabase stack.
 
 Artist profile claiming is also distinct from account approval. An already invited/active claimant follows the verified claim workflow for the existing artist profile. Approval updates that profile in place and establishes primary-controller membership without issuing a second account-approval step.
 

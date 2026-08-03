@@ -9,9 +9,15 @@
 
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="archive.css">
+  <link rel="stylesheet" href="auth/auth.css">
+
+  <script type="module" src="auth/guard.mjs"></script>
 </head>
 
-<body class="archive-page" data-view="grid">
+<body
+  class="archive-page"
+  data-view="grid"
+  data-auth-protected="true">
 
   <!-- MAIN CHAINED HEADER -->
 
@@ -20,12 +26,21 @@
       &lt;CHAINED&gt;
     </a>
 
-    <nav class="main-nav" aria-label="Primary navigation">
+    <nav
+      class="main-nav main-nav-with-dashboard"
+      aria-label="Primary navigation">
       <a href="discover.html">DISCOVER</a>
       <a href="following.html">FOLLOWING</a>
       <a class="is-active" href="archive.html">ARCHIVE</a>
       <a href="agenda.html">AGENDA</a>
-      <a href="profile-peer-vink.html">PROFILE</a>
+
+      <span class="profile-nav-group">
+        <a href="profile-peer-vink.html">PROFILE</a>
+        <a
+          class="dashboard-link"
+          href="dashboard.html"
+          aria-label="Open dashboard">+</a>
+      </span>
     </nav>
   </header>
 

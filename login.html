@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+
+  <title>Sign In — CHAINED</title>
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="auth/auth.css">
+</head>
+
+<body class="auth-page">
+  <header class="site-header">
+    <a class="wordmark" href="discover.html">
+      &lt;CHAINED&gt;
+    </a>
+
+    <nav class="main-nav" aria-label="Primary navigation">
+      <a href="discover.html">DISCOVER</a>
+    </nav>
+  </header>
+
+  <main class="auth-main">
+    <section class="auth-intro">
+      <h1>PRIVATE ACCESS</h1>
+      <p>
+        CHAINED ACCOUNTS ARE INVITATION ONLY. ADMITTED MEMBERS CAN REQUEST
+        A PASSWORDLESS SIGN-IN LINK.
+      </p>
+    </section>
+
+    <section class="auth-panel" aria-labelledby="auth-login-heading">
+      <h2 id="auth-login-heading">SIGN IN TO CHAINED</h2>
+
+      <form class="auth-form" data-auth-login-form novalidate>
+        <label class="auth-field" for="auth-email">
+          <span>EMAIL</span>
+          <input
+            id="auth-email"
+            name="email"
+            type="email"
+            inputmode="email"
+            autocomplete="email"
+            required>
+        </label>
+
+        <button class="auth-submit" type="submit" data-auth-submit>
+          [ SEND SIGN-IN LINK ]
+        </button>
+      </form>
+
+      <p
+        class="auth-status"
+        role="status"
+        aria-live="polite"
+        data-auth-status></p>
+    </section>
+  </main>
+
+  <script type="module" src="auth/login.mjs"></script>
+</body>
+</html>
+
