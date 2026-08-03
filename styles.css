@@ -950,3 +950,37 @@ footer {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+@media (max-width: 720px) {
+  .main-nav-with-dashboard {
+    display: grid;
+    grid-template-columns:
+      max-content
+      max-content
+      max-content
+      minmax(max-content, 1fr);
+    justify-content: start;
+
+    width: 100%;
+  }
+
+  .main-nav-with-dashboard .profile-nav-group {
+    display: grid;
+    grid-template-columns: max-content minmax(44px, 1fr);
+    grid-column: 1 / -1;
+    align-items: center;
+    gap: 0;
+
+    width: 100%;
+  }
+
+  .profile-nav-group .dashboard-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: center;
+
+    width: 44px;
+    min-height: 44px;
+  }
+}
