@@ -132,6 +132,70 @@ body.artwork-page {
 }
 
 
+/* DYNAMIC ARTWORK */
+
+body.artwork-dynamic-page {
+  overflow: auto;
+}
+
+.artwork-dynamic-page .artwork-layout {
+  align-items: start;
+
+  height: auto;
+  min-height: 100svh;
+}
+
+.artwork-dynamic-page .artwork-information {
+  position: sticky;
+  top: calc(var(--header-height) + 34px);
+
+  max-height: calc(100svh - var(--header-height) - 58px);
+  overflow-y: auto;
+}
+
+.artwork-dynamic-page .artwork-information-inner {
+
+  padding-bottom: 24px;
+}
+
+.artwork-dynamic-page .artwork-content {
+  display: grid;
+  gap: clamp(70px, 10vw, 150px);
+
+  height: auto;
+  min-height: calc(100svh - var(--header-height) - 58px);
+
+  padding-bottom: 120px;
+}
+
+.artwork-dynamic-page .artwork-main-image {
+  height: auto;
+  min-height: calc(100svh - var(--header-height) - 58px);
+}
+
+.artwork-dynamic-page .artwork-main-image img {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: calc(100svh - var(--header-height) - 58px);
+}
+
+.artwork-description {
+  line-height: 1.45;
+  text-transform: none;
+}
+
+.artwork-credit a {
+  color: var(--accent);
+}
+
+.artwork-state {
+  margin: 0;
+
+  font-size: var(--font-meta);
+}
+
+
 /* RESPONSIVE */
 
 @media (max-width: 900px) {
@@ -201,5 +265,46 @@ body.artwork-page {
 
   .artwork-back {
     margin-top: 38px;
+  }
+
+  .artwork-dynamic-page .artwork-information {
+    order: 1;
+
+    position: relative;
+    top: auto;
+
+    max-height: none;
+    overflow: visible;
+  }
+
+  .artwork-dynamic-page .artwork-content {
+    order: 2;
+
+    gap: 70px;
+
+    min-height: 0;
+
+    padding-bottom: 0;
+  }
+
+  .artwork-dynamic-page .artwork-information-inner {
+    padding-bottom: 0;
+  }
+
+  .artwork-dynamic-page .artwork-main-image {
+    min-height: 0;
+
+    margin: 0;
+  }
+
+  .artwork-dynamic-page .artwork-main-image img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: none;
+  }
+
+  .artwork-dynamic-page .artwork-back {
+    margin-bottom: 60px;
   }
 }

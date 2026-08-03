@@ -93,6 +93,19 @@
   min-width: 0;
 }
 
+.profile-works-state {
+  margin: 0;
+
+  font-size: var(--font-meta);
+  line-height: 1.45;
+}
+
+.profile-works-state.is-error {
+  padding-left: 12px;
+
+  border-left: 1px solid var(--black);
+}
+
 .profile-work {
   --work-meta-width: clamp(190px, 16vw, 270px);
 --work-gap: clamp(10px, 1.25vw, 22px);
@@ -145,6 +158,11 @@
   object-position: center center;
 }
 
+.profile-image-placeholder {
+  font-size: var(--font-meta);
+  text-align: center;
+}
+
 
 /* MAXIMUM IMAGE WIDTH BY ORIENTATION */
 
@@ -181,6 +199,10 @@
   font-size: 16px;
   line-height: 1.2;
   font-weight: 400;
+}
+
+.profile-work-meta h2 a {
+  color: inherit;
 }
 
 .profile-work-meta > a {

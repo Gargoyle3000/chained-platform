@@ -23,20 +23,21 @@
       <a href="following.html">FOLLOWING</a>
       <a href="archive.html">ARCHIVE</a>
       <a href="agenda.html">AGENDA</a>
-<span class="profile-nav-group">
-  <a
-    class="is-active"
-    href="profile-peer-vink.html">
-    PROFILE
-  </a>
 
-  <a
-    class="dashboard-link"
-    href="dashboard.html"
-    aria-label="Open dashboard">
-    +
-  </a>
-</span>
+      <span class="profile-nav-group">
+        <a
+          class="is-active"
+          href="profile-peer-vink.html">
+          PROFILE
+        </a>
+
+        <a
+          class="dashboard-link"
+          href="dashboard.html"
+          aria-label="Open dashboard">
+          +
+        </a>
+      </span>
     </nav>
   </header>
 
@@ -92,148 +93,22 @@
     </aside>
 
 
-    <section class="artist-works" id="works">
+    <section
+      class="artist-works"
+      id="works"
+      aria-live="polite">
 
-      <!-- THE NEW ORDER I -->
-
-      <article class="profile-work profile-work-portrait">
-
-        <a
-          class="profile-image-link"
-          href="artwork-the-new-order-i.html">
-
-          <img
-            src="assets/peer-vink/the-new-order-i.jpg"
-            alt="The New Order I by Peer Vink">
-        </a>
-
-        <div class="profile-work-meta">
-          <h2>THE NEW ORDER I</h2>
-
-          <span class="profile-year">2026</span>
-
-          <p>
-            PAPER, WOOD, EPOXY AND ACRYLIC GEL
-          </p>
-
-          <p>28.4 × 19.8 × 3 CM</p>
-
-          <button
-            class="text-action save-work"
-            type="button"
-            data-save-work
-            data-work-id="the-new-order-i">
-            [ SAVE WORK ]
-          </button>
-        </div>
-
-      </article>
-
-
-      <!-- HEY MAN -->
-
-      <article class="profile-work profile-work-landscape">
-
-        <a
-          class="profile-image-link"
-          href="artwork-hey-man.html">
-
-          <img
-            src="assets/peer-vink/hey-man.jpg"
-            alt="Hey Man by Peer Vink">
-        </a>
-
-        <div class="profile-work-meta">
-          <h2>HEY MAN</h2>
-
-          <span class="profile-year">2026</span>
-
-          <p>
-            STYROFOAM, WOOD, ALUMINIUM, OIL PAINT,
-            PLASTER AND STEEL
-          </p>
-
-          <p>VARIABLE DIMENSIONS, INSTALLATION</p>
-
-          <button
-            class="text-action save-work"
-            type="button"
-            data-save-work
-            data-work-id="hey-man">
-            [ SAVE WORK ]
-          </button>
-        </div>
-
-      </article>
-
-
-      <!-- HEDO MAXXING ALPHA -->
-
-      <article class="profile-work profile-work-portrait">
-
-        <div class="profile-image-link">
-          <img
-            src="assets/archive-06.svg"
-            alt="Hedo Maxxing Alpha by Peer Vink">
-        </div>
-
-        <div class="profile-work-meta">
-          <h2>HEDO MAXXING ALPHA</h2>
-
-          <span class="profile-year">2026</span>
-
-          <p>
-            WOOD, PAPER, EPOXY, ALUMINIUM AND STUDS
-          </p>
-
-          <p>14.8 × 21 × 3 CM</p>
-
-          <button
-            class="text-action save-work"
-            type="button">
-            [ SAVE WORK ]
-          </button>
-        </div>
-
-      </article>
-
-
-      <!-- ADD TO CART -->
-
-      <article class="profile-work profile-work-landscape">
-
-        <div class="profile-image-link">
-          <img
-            src="assets/archive-02.svg"
-            alt="Add To Cart by Peer Vink and Tom Putman">
-        </div>
-
-        <div class="profile-work-meta">
-          <h2>ADD TO CART</h2>
-
-          <span class="profile-year">2025</span>
-
-          <p>
-            DUO EXHIBITION WITH TOM PUTMAN
-          </p>
-
-          <p>HEEJSTECK#, UTRECHT</p>
-
-          <button
-            class="text-action save-work"
-            type="button">
-            [ SAVE WORK ]
-          </button>
-        </div>
-
-      </article>
+      <p class="profile-works-state" id="profile-works-state">
+        LOADING PUBLISHED WORKS
+      </p>
 
     </section>
 
   </main>
 
 
-  <script src="saved-works.js"></script>
+  <script src="work-store.js"></script>
+  <script src="public-profile.js"></script>
   <script src="followed-artists.js"></script>
 
 </body>
