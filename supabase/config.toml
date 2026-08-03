@@ -117,6 +117,16 @@ enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
+[storage.buckets.work-originals]
+public = false
+file_size_limit = "50MiB"
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp", "image/avif"]
+
+[storage.buckets.work-public]
+public = true
+file_size_limit = "50MiB"
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp", "image/avif"]
+
 # Uncomment to configure local storage buckets
 # [storage.buckets.images]
 # public = false
@@ -297,6 +307,26 @@ auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/invite-account/index.ts"
+
+[functions.finalize-work-image-upload]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/finalize-work-image-upload/index.ts"
+
+[functions.publish-work]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/publish-work/index.ts"
+
+[functions.unpublish-work]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/unpublish-work/index.ts"
+
+[functions.delete-work-image]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/delete-work-image/index.ts"
 
 # Multi-factor-authentication is available to Supabase Pro plan.
 [auth.mfa]

@@ -1,6 +1,6 @@
 # CHAINED Supabase Architecture
 
-Status: architecture and security design only. This document is not an executable migration and does not connect the repository to Supabase.
+Status: approved architecture with local database, invitation, and Work-media foundations. This document does not connect the repository to a hosted Supabase project.
 
 ## 1. Executive recommendation
 
@@ -743,23 +743,21 @@ The current local-storage data can be imported after sign-in with explicit conse
 | Separate private originals and public delivery copies **(recommended)** | Authoritative originals remain protected; public `<img>` delivery is simple and cacheable; public files can be immutable and optimized later | Publishing/unpublishing requires copying and cleanup; a public URL already fetched may remain cached temporarily |
 | Private bucket only with signed URLs | One authoritative object; time-bounded access; suitable for drafts and sensitive originals | Anonymous galleries need a trusted signer or server route; URL refresh adds complexity; an issued URL works until expiry and caches can delay revocation |
 
-The approved design uses two buckets:
+The implemented Work-media foundation uses two file buckets:
 
-- `private-originals`: private, authoritative Work, Presentation, and profile uploads/dashboard previews.
-- `public-media`: public, immutable, publication-specific copies only.
+- `work-originals`: private and authoritative, with a 50 MiB bucket limit and JPG, PNG, WEBP, and AVIF MIME allowlist.
+- `work-public`: public and retrieval-only for immutable, publication-specific copies, with the same limit and allowlist.
 
-Recommended paths are generated from trusted IDs, never from filenames:
+Work paths are generated from trusted IDs and a MIME-derived extension, never from a user filename:
 
 ```text
-private-originals/profiles/{profile_id}/works/{work_id}/{image_id}/source.{ext}
-public-media/profiles/{profile_id}/works/{work_id}/{image_id}/{content_hash_or_version}.{ext}
-private-originals/profiles/{profile_id}/presentations/{presentation_id}/{image_id}/source.{ext}
-public-media/profiles/{profile_id}/presentations/{presentation_id}/{image_id}/{content_hash_or_version}.{ext}
-private-originals/profiles/{profile_id}/avatar/{image_id}/source.{ext}
-public-media/profiles/{profile_id}/avatar/{content_hash_or_version}.{ext}
+work-originals/{owner_profile_id}/{work_id}/{work_image_id}/original.{ext}
+work-public/{owner_profile_id}/{work_id}/{publication_revision_id}/{work_image_id}.{ext}
 ```
 
-If Press images are approved later, use the same private-source/public-copy pattern under `profiles/{profile_id}/press/{press_entry_id}/{image_id}/...`; add an explicit image record and rights metadata rather than placing an untracked URL on `press_entries`.
+Every UUID segment uses lowercase canonical text. The original filename remains inert database metadata only. Replacing an image creates a new Work-image UUID and private path. A browser must first reserve the exact path through the authenticated reservation RPC and then upload with `upsert: false`; it cannot choose a path, overwrite an object, write a public copy, or list the private bucket.
+
+Presentation, profile, and any later Press media should receive separate reviewed bucket/path rules when those domains are implemented rather than being inferred from the Work-specific bucket.
 
 Immutable public names permit long-lived cache headers without stale in-place replacement. A publication Edge Function copies a validated private object to a new public version and atomically completes the database publication state only after all required copies exist. Unpublish/delete functions stop database-level public access and new URL generation before removing CHAINED-controlled public objects. Soft deletion retains private originals until the 30-day purge; unpublishing without deletion retains them indefinitely as draft media.
 
@@ -767,18 +765,20 @@ This is best-effort public recall. CHAINED cannot delete files already downloade
 
 ### 13.2 Upload and validation boundary
 
-The browser may upload directly only after an authorized reservation creates the image ID and expected path. Database/Storage authorization re-evaluates either direct target membership or the active delegate-membership-plus-scope chain. Storage RLS verifies the private bucket, reserved object name, target profile, content record, and uploader; a gallery employee cannot invent a represented artist path. Do not allow unrestricted inserts, bucket listing, path changes, or `upsert`.
+The browser may upload directly only after an authorized reservation creates the image ID and expected path. Database/Storage authorization re-evaluates either direct target membership or the active delegate-membership-plus-exact-`works_editor` chain. Storage RLS verifies the private bucket, operation type, exact reserved object name, draft/non-deleted Work, declared MIME, and declared byte count; a gallery employee cannot invent a represented artist path. Broad listing, path changes, update, delete, public-bucket upload, and `upsert` have no browser policy.
 
-Enforce JPG, PNG, and WEBP; maximum 25 MB; no SVG. Configure bucket MIME/size restrictions, then finalize through trusted code that independently verifies object ownership/path, byte count, detected file signature/decodability, declared MIME, dimensions, and quota. Client checks remain usability checks, not security. Consider malware scanning before public copy creation. Original filenames are inert metadata and must never become HTML or a path.
+The bucket enforces JPG, PNG, WEBP, or AVIF and a maximum 50 MiB. `finalize-work-image-upload` independently downloads the exact original through trusted Storage access and verifies non-zero content, byte count, MIME, extension, and a format signature before marking the row ready. Client checks remain usability checks, not security. Original filenames are inert metadata and must never become HTML or a path. A future frontend should use Supabase's resumable upload path for uploads larger than 6 MB.
 
-On failed or abandoned reservations, a scheduled Edge Function removes unreferenced private objects after a grace period. Soft deletion immediately invokes idempotent public cleanup; permanent purge removes private objects and rows after `purge_after`. Missing objects are treated as already cleaned and every attempt is audited. Operational logs record IDs and outcomes, not credentials, signed URLs, claim evidence, filenames, or image content.
+Failed verification records a sanitized closed state. Deletion soft-hides the image row before removing objects through the Storage API; incomplete removal becomes `cleanup_pending` for a trusted retry. Missing objects are treated as already cleaned. Operational logs and audit events record IDs, lifecycle outcomes, and sanitized failure codes, not credentials, signed URLs, request headers, filenames, or image content.
 
 ### 13.3 Media access
 
-- Guests receive only `public-media` paths belonging to published records.
-- Authenticated managers receive short-lived signed URLs for private originals after database authorization.
-- Private paths, bucket inventory, and signed URLs never appear in public table responses.
+- Guests receive only `work-public` paths belonging to published records. Public URLs are delivery locations, not secrets.
+- Authenticated managers retrieve a private original only through exact-object Storage access after current direct/delegated authorization; broad bucket listing is denied by operation-aware RLS.
+- Private paths and bucket inventory never appear in public table responses. The reservation response returns only the one path needed for that upload.
 - Secret/service-role credentials exist only in Supabase Edge Function secrets. They are never embedded in browser JavaScript, committed, logged, included in prompts/screenshots/fixtures, returned in responses, or exposed to coding agents. The Dashboard is emergency/controlled administration only.
+
+`publish-work` claims one deterministic operation, creates a server publication revision, validates each ready original, and copies images sequentially with immutable cache metadata. Copies are initially byte-identical; future processing can replace only the copy step without changing authorization or lifecycle. The Work becomes published and public paths become visible only after every copy is recorded. `unpublish-work` first changes database visibility to draft and clears active public paths atomically, then performs best-effort public-object recall. Postgres and Storage therefore form a recoverable, idempotent saga rather than one cross-service SQL transaction. Partial publish copies are cleaned before retry; incomplete recall remains `cleanup_pending`. No paid image transformation feature is required by this phase.
 
 ## 14. Authentication and onboarding
 
@@ -898,7 +898,7 @@ RLS is the primary data boundary. Input constraints, foreign keys, column grants
 | User changes owner/role in payload | Authority | Column grants plus trusted assignment functions | update attempts fail even when other fields are editable |
 | Attribution used as access | Artist control | Attribution tables/fields excluded from policy logic | collaborator cannot edit linked Work |
 | Join-table IDOR | Archive or participant relationships | Validate both parent owners and RLS on joins | mix IDs from two accounts and expect denial |
-| Malicious/oversized upload | Storage, viewers, cost | Reservation, bucket limits, signature decode, quota, optional scan | MIME spoof, polyglot, >25 MB, SVG, wrong path tests |
+| Malicious/oversized upload | Storage, viewers, cost | Reservation, bucket limits, signature decode, quota, optional scan | MIME spoof, polyglot, >50 MiB, SVG, wrong path tests |
 | Object path enumeration | Private originals | Private bucket and object RLS; opaque UUID paths | list/download as guest and unrelated member denied |
 | Unpublished image stays reachable | Artist control | Stop public DB access/new URLs, delete controlled public copies, retain private original | test unpublish/delete object cleanup plus documented best-effort recall limitation |
 | Purge destroys recoverable data early or corrupts relations | Artist catalog/private originals | Server-set 30-day deadline, trusted idempotent job, ordered cleanup/audit | retry before/after partial object/row deletion; no purge before deadline; restore-before-deadline test |
@@ -948,7 +948,7 @@ Concretely, `work-store.js` becomes the provider façade or is replaced by a com
 | 3. Schema and migrations | Encode accounts/roles, durable claimable profiles, memberships, relationships, scoped grants, claims/audit, Works/images, year/deletion fields, constraints/indexes | Reviewed migration files in a later implementation task; validate artist-only Work ownership, active-only uniqueness, 30-day deadlines, claim concurrency, and rollback in disposable DB | Restore project snapshot or use reviewed remediation; never improvise against production |
 | 4. RLS enablement | Make exposed data deny-by-default and implement direct plus two-edge delegated authorization | Grants/policies/helpers/test harness; positive/negative CRUD for unrelated artist, relationship-only gallery, wrong scope, revoked staff/grant, immutable owner, draft/deleted states | No client connection until all policy tests pass; revert disposable migration/restore snapshot |
 | 5. Edge Function trust boundary | Implement narrow invitation, role, claim, publication/unpublication, cleanup, restore, purge, and scoped-admin functions | Function secrets, authentication/authorization, idempotency and audit; verify secrets never enter browser/logs/responses and Dashboard is not required in normal flow | Disable each endpoint independently, rotate secrets, and preserve retry state/audit IDs |
-| 6. Storage buckets/policies | Prove `private-originals`, immutable `public-media`, reservation/validation, immediate public cleanup, retained private recovery | Storage/policies/media Edge Functions; test spoofed gallery paths, MIME, >25 MB, drafts, unpublish/delete, restore, purge retries, cache disclosure | Keep IndexedDB authoritative; remove isolated objects/functions and recreate test buckets if policy history is uncertain |
+| 6. Storage buckets/policies | Prove private `work-originals`, immutable public `work-public`, reservation/validation, immediate public cleanup, retained private recovery | Storage/policies/media Edge Functions; test spoofed gallery paths, MIME, >50 MiB, drafts, unpublish/delete, restore, purge retries, cache disclosure | Keep IndexedDB authoritative; remove isolated objects/functions and recreate test buckets if policy history is uncertain |
 | 7. Authentication | Enable admin-sent invitation magic links with no public registration or second approval gate | Auth templates/redirects/expiry/rate/MFA; test invitation acceptance activates account, sign-out, suspended/disabled denial with live token | Disable invitations/provider; no production data depends on Auth yet |
 | 8. Account/profile onboarding and claiming | Assign trusted roles/memberships, create stable unclaimed gallery-managed profiles, and claim them in place | Identity/claim/grant tables and Edge Functions; test duplicate prevention, artist primary control, preserved IDs/relations, gallery grant review/revocation, no self-promotion | Revoke erroneous grants/roles through trusted operation; claim corrections remain audited, never create replacement profiles |
 | 9. Work-store adapter | Add provider seam and managed/public/Edge methods without redesigning pages | Later store/auth/Dashboard script changes; test local/Supabase providers, delegated context, `yearLabel`/`yearSort`, retry/idempotency, no secret key | Feature flag returns to IndexedDB; retain local data |
