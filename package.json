@@ -1,4 +1,10 @@
 {
+  "scripts": {
+    "test:frontend": "node --test tests/*.test.mjs",
+    "test:edge": "node --experimental-transform-types --import ./tests/deno-node-shim.mjs --test supabase/functions/invite-account/logic_test.ts supabase/functions/finalize-work-image-upload/logic_test.ts supabase/functions/publish-work/logic_test.ts supabase/functions/unpublish-work/logic_test.ts supabase/functions/delete-work-image/logic_test.ts",
+    "test:work-integration": "node tests/work-integration.mjs",
+    "test:responsive": "node tests/responsive-smoke.mjs"
+  },
   "devDependencies": {
     "supabase": "^2.111.0"
   }

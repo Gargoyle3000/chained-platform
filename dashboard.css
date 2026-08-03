@@ -359,6 +359,29 @@
   display: none;
 }
 
+.dashboard-local-notice {
+  margin: 0 0 28px;
+  padding-left: 12px;
+  border-left: 1px solid var(--black);
+  font-size: var(--font-meta);
+  line-height: 1.45;
+}
+
+.dashboard-local-notice[hidden] {
+  display: none;
+}
+
+.dashboard-work-image-state {
+  margin-top: 8px !important;
+  font-size: 9px !important;
+}
+
+.dashboard-add-work[aria-disabled="true"] {
+  color: var(--black);
+  text-decoration: none;
+  cursor: not-allowed;
+}
+
 .is-draft {
   color: var(--black);
 }

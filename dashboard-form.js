@@ -1,4 +1,14 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  const {
+    getWorkRepository,
+    getPrototypeWorkCount
+  } = await import("./data/work-repository.mjs");
+  const {
+    publicationReadiness,
+    createIdempotencyState,
+    isValidWorkId
+  } = await import("./data/work-mapping.mjs");
+  const { validateImageFile } = await import("./data/work-media-service.mjs");
   const materialOptions = {
     primary: [
       "OIL PAINT",
@@ -127,7 +137,8 @@ Object.values(materialOptions).forEach((options) => {
   const materialPreview =
     document.querySelector(".work-material-preview");
 
-  const workStore = window.ChainedWorkStore;
+  let workStore = null;
+  let localSupabaseMode = false;
   const form = document.querySelector(".work-form");
   const editorHeading = document.querySelector("#work-editor-heading");
   const editorContext = document.querySelector("#work-editor-context");
@@ -141,6 +152,12 @@ Object.values(materialOptions).forEach((options) => {
   const imageInput = document.querySelector("#work-images-input");
   const imageValidation = document.querySelector("#work-image-validation");
   const imagePreviews = document.querySelector(".work-image-previews");
+  const profileField = document.querySelector("#work-owner-field");
+  const profileSelect = document.querySelector("#work-owner-profile");
+  const prototypeNotice = document.querySelector("#work-prototype-notice");
+  const unpublishButton = document.querySelector("#work-unpublish");
+  const deleteWorkButton = document.querySelector("#work-delete");
+  const publicWorkLink = document.querySelector("#work-public-link");
   const supportedImageTypes = new Set([
     "image/jpeg",
     "image/png",
@@ -149,6 +166,13 @@ Object.values(materialOptions).forEach((options) => {
   const maximumImageSize = 25 * 1024 * 1024;
   const selectedImages = [];
   let currentWorkId = new URLSearchParams(window.location.search).get("id");
+  let expectedUpdatedAt = null;
+  let selectedOwnerProfileId = null;
+  let unsavedChanges = false;
+  let imageOperationBusy = false;
+  let currentWorkPublished = false;
+  const publishAttempt = createIdempotencyState();
+  const unpublishAttempt = createIdempotencyState();
 
 
   function createImageId() {
@@ -216,6 +240,9 @@ Object.values(materialOptions).forEach((options) => {
     if (publishButton) {
       publishButton.disabled = isBusy;
     }
+    if (unpublishButton) unpublishButton.disabled = isBusy;
+    if (deleteWorkButton) deleteWorkButton.disabled = isBusy;
+    if (imageInput) imageInput.disabled = isBusy || currentWorkPublished;
   }
 
 
@@ -236,6 +263,9 @@ Object.values(materialOptions).forEach((options) => {
 
 
   function preparePreviewUrl(selectedImage) {
+    if (selectedImage.serverRecord) {
+      return;
+    }
     releasePreviewUrl(selectedImage);
 
     if (selectedImage.blob) {
@@ -261,7 +291,7 @@ Object.values(materialOptions).forEach((options) => {
   }
 
 
-  function makeCoverImage(imageId) {
+  async function makeCoverImage(imageId) {
     const imageIndex = selectedImages.findIndex(
       (selectedImage) => selectedImage.id === imageId
     );
@@ -274,10 +304,18 @@ Object.values(materialOptions).forEach((options) => {
 
     selectedImages.unshift(coverImage);
     renderImagePreviews();
+    if (localSupabaseMode && currentWorkId && coverImage.serverRecord) {
+      try {
+        setEditorBusy(true);
+        const images = await workStore.reorderImages(currentWorkId, selectedImages.map((image) => image.id), imageId);
+        await loadSelectedImages(images);
+      } catch { showFormStatus("IMAGE ORDER COULD NOT BE SAVED", true); }
+      finally { setEditorBusy(false); }
+    }
   }
 
 
-  function removeImage(imageId) {
+  async function removeImage(imageId) {
     const imageIndex = selectedImages.findIndex(
       (selectedImage) => selectedImage.id === imageId
     );
@@ -286,7 +324,19 @@ Object.values(materialOptions).forEach((options) => {
       return;
     }
 
-    releasePreviewUrl(selectedImages[imageIndex]);
+    const target = selectedImages[imageIndex];
+    if (localSupabaseMode && target.serverRecord) {
+      if (!window.confirm("REMOVE THIS IMAGE?")) return;
+      try {
+        setEditorBusy(true);
+        const result = await workStore.media.deleteImage(imageId);
+        showFormStatus(result.cleanup_status === "cleanup_pending" ? "IMAGE HIDDEN · CLEANUP PENDING" : "IMAGE REMOVED");
+        await reloadCurrentWork();
+      } catch { showFormStatus("IMAGE COULD NOT BE REMOVED", true); }
+      finally { setEditorBusy(false); }
+      return;
+    }
+    releasePreviewUrl(target);
     selectedImages.splice(imageIndex, 1);
 
     if (imageInput) {
@@ -312,12 +362,13 @@ Object.values(materialOptions).forEach((options) => {
 
     preview.className = "work-image-preview";
 
-    image.src = selectedImage.previewUrl;
+    if (selectedImage.previewUrl) image.src = selectedImage.previewUrl;
     image.alt = `Preview of ${selectedImage.filename}`;
 
     metadata.className = "work-image-preview-meta";
     details.className = "work-image-preview-details";
     actions.className = "work-image-preview-actions";
+    const mediaLocked = localSupabaseMode && selectedImage.serverRecord && currentWorkPublished;
 
     if (index === 0) {
       const coverLabel = document.createElement("p");
@@ -335,7 +386,14 @@ Object.values(materialOptions).forEach((options) => {
 
     details.append(filename, filesize);
 
-    if (index > 0) {
+    if (selectedImage.uploadStatus && selectedImage.uploadStatus !== "ready") {
+      const state = document.createElement("p");
+      state.className = "work-image-upload-state";
+      state.textContent = selectedImage.uploadStatus.replaceAll("_", " ").toUpperCase();
+      details.append(state);
+    }
+
+    if (index > 0 && !mediaLocked) {
       actions.append(
         createImageAction(
           "MAKE COVER",
@@ -345,18 +403,62 @@ Object.values(materialOptions).forEach((options) => {
       );
     }
 
-    actions.append(
-      createImageAction(
-        "REMOVE",
-        `Remove ${selectedImage.filename}`,
-        () => removeImage(selectedImage.id)
-      )
-    );
+    if (localSupabaseMode && selectedImage.serverRecord && !mediaLocked) {
+      if (["reserved", "failed"].includes(selectedImage.uploadStatus)) {
+        actions.append(createImageAction("RETRY VERIFY", `Retry verification for ${selectedImage.filename}`, () => retryImageVerification(selectedImage.id)));
+      }
+      if (index > 0) actions.append(createImageAction("MOVE UP", `Move ${selectedImage.filename} up`, () => moveImage(selectedImage.id, -1)));
+      if (index < selectedImages.length - 1) actions.append(createImageAction("MOVE DOWN", `Move ${selectedImage.filename} down`, () => moveImage(selectedImage.id, 1)));
+    }
+
+    if (!mediaLocked) {
+      actions.append(
+        createImageAction(
+          "REMOVE",
+          `Remove ${selectedImage.filename}`,
+          () => removeImage(selectedImage.id)
+        )
+      );
+    }
 
     metadata.append(details, actions);
-    preview.append(image, metadata);
+    if (selectedImage.previewUrl) {
+      preview.append(image);
+    } else {
+      const unavailable = document.createElement("p");
+      unavailable.className = "work-image-preview-unavailable";
+      unavailable.textContent = "PREVIEW UNAVAILABLE";
+      preview.append(unavailable);
+    }
+    preview.append(metadata);
 
     return preview;
+  }
+
+  async function retryImageVerification(imageId) {
+    try {
+      setEditorBusy(true);
+      showFormStatus("VERIFYING");
+      await workStore.media.finalize(imageId);
+      await reloadCurrentWork();
+      showFormStatus("READY");
+    } catch { showFormStatus("IMAGE VERIFICATION COULD NOT BE COMPLETED", true); }
+    finally { setEditorBusy(false); }
+  }
+
+  async function moveImage(imageId, offset) {
+    const index = selectedImages.findIndex((image) => image.id === imageId);
+    const next = index + offset;
+    if (index < 0 || next < 0 || next >= selectedImages.length) return;
+    [selectedImages[index], selectedImages[next]] = [selectedImages[next], selectedImages[index]];
+    renderImagePreviews();
+    try {
+      setEditorBusy(true);
+      const cover = selectedImages.find((image) => image.isCover) || selectedImages[0];
+      const images = await workStore.reorderImages(currentWorkId, selectedImages.map((image) => image.id), cover.id);
+      await loadSelectedImages(images);
+    } catch { showFormStatus("IMAGE ORDER COULD NOT BE SAVED", true); }
+    finally { setEditorBusy(false); }
   }
 
 
@@ -376,14 +478,17 @@ Object.values(materialOptions).forEach((options) => {
     const validationMessages = [];
 
     files.forEach((file) => {
-      if (!isSupportedImage(file)) {
+      if (localSupabaseMode) {
+        try { validateImageFile(file); }
+        catch (error) { validationMessages.push(`${file.name} was not added: ${error.message}.`); return; }
+      } else if (!isSupportedImage(file)) {
         validationMessages.push(
           `${file.name} was not added: choose a JPG, PNG or WEBP image.`
         );
         return;
       }
 
-      if (file.size > maximumImageSize) {
+      if (!localSupabaseMode && file.size > maximumImageSize) {
         validationMessages.push(
           `${file.name} was not added: the maximum file size is 25 MB.`
         );
@@ -398,12 +503,16 @@ Object.values(materialOptions).forEach((options) => {
         blob: file,
         src: "",
         objectUrl: "",
-        previewUrl: ""
+        previewUrl: "",
+        uploadStatus: localSupabaseMode ? "selected" : "ready",
+        serverRecord: false,
+        isCover: selectedImages.length === 0
       });
     });
 
     showImageValidation(validationMessages);
     renderImagePreviews();
+    if (files.length > validationMessages.length) unsavedChanges = true;
 
     if (imageInput) {
       imageInput.value = "";
@@ -601,29 +710,48 @@ Object.values(materialOptions).forEach((options) => {
   }
 
 
-  function loadSelectedImages(images = []) {
+  async function loadSelectedImages(images = []) {
     releaseAllPreviewUrls();
+    const mapped = images
+      .sort((first, second) => first.order - second.order)
+      .map((image) => ({
+        id: image.id,
+        filename: image.filename,
+        mimeType: image.mimeType,
+        size: image.size,
+        blob: image.blob || null,
+        src: image.src || "",
+        objectUrl: "",
+        previewUrl: "",
+        uploadStatus: image.uploadStatus || "ready",
+        serverRecord: localSupabaseMode,
+        privatePath: image.privatePath || null,
+        publicPath: image.publicPath || null,
+        isCover: image.isCover === true
+      }));
+    if (localSupabaseMode) {
+      for (const image of mapped) {
+        try {
+          image.previewUrl = image.publicPath && currentVisibility() === "published"
+            ? workStore.media.publicUrl(image.publicPath)
+            : await workStore.media.privatePreview(image);
+        } catch { image.previewUrl = ""; }
+      }
+    }
     selectedImages.splice(
       0,
       selectedImages.length,
-      ...images
-        .sort((first, second) => first.order - second.order)
-        .map((image) => ({
-          id: image.id,
-          filename: image.filename,
-          mimeType: image.mimeType,
-          size: image.size,
-          blob: image.blob || null,
-          src: image.src || "",
-          objectUrl: "",
-          previewUrl: ""
-        }))
+      ...mapped
     );
     renderImagePreviews();
   }
 
+  function currentVisibility() {
+    return form?.querySelector('input[name="visibility"]:checked')?.value || "draft";
+  }
 
-  function populateForm(work) {
+
+  async function populateForm(work) {
     const values = {
       "work-type": work.workType,
       title: work.title,
@@ -650,10 +778,58 @@ Object.values(materialOptions).forEach((options) => {
     });
 
     setVisibility(work.visibility);
-    loadSelectedImages(work.images);
+    expectedUpdatedAt = work.updatedAt;
+    updateLifecycleControls(work);
+    await loadSelectedImages(work.images);
+    unsavedChanges = false;
     updateMaterialPreview();
   }
 
+  function updateLifecycleControls(work) {
+    const published = work?.visibility === "published";
+    currentWorkPublished = published;
+    if (imageInput) imageInput.disabled = published;
+    if (unpublishButton) unpublishButton.hidden = !published;
+    if (deleteWorkButton) deleteWorkButton.hidden = !work || published;
+    if (publicWorkLink) {
+      publicWorkLink.hidden = !published;
+      if (published) publicWorkLink.href = `artwork.html?id=${encodeURIComponent(work.id)}`;
+    }
+    if (publishButton) publishButton.hidden = published;
+  }
+
+
+  async function uploadPendingImages(workId) {
+    const pending = selectedImages.filter((image) => !image.serverRecord && image.blob);
+    let failure = null;
+    for (const image of pending) {
+      if (imageOperationBusy) break;
+      imageOperationBusy = true;
+      try {
+        await workStore.media.upload(workId, image.blob, selectedImages.indexOf(image) === 0, (stage) => {
+          image.uploadStatus = stage.toLowerCase();
+          showFormStatus(stage);
+          renderImagePreviews();
+        });
+      } catch (error) {
+        failure = error;
+        image.uploadStatus = "failed";
+        showImageValidation([`${image.filename} COULD NOT BE ADDED.`]);
+      } finally { imageOperationBusy = false; }
+    }
+    await reloadCurrentWork();
+    if (failure) throw failure;
+  }
+
+  async function persistMetadata(record) {
+    const saved = currentWorkId
+      ? await workStore.updateWork(record, expectedUpdatedAt)
+      : await workStore.createWork(record, selectedOwnerProfileId);
+    setEditMode(saved.id);
+    expectedUpdatedAt = saved.updatedAt;
+    unsavedChanges = false;
+    return saved;
+  }
 
   async function saveWork(visibility) {
     clearValidationState();
@@ -661,46 +837,105 @@ Object.values(materialOptions).forEach((options) => {
 
     const record = buildWorkRecord(visibility);
     const urlsAreValid = validateLinkedUrls(record);
-    const publishFieldsAreValid =
-      visibility !== "published" || validateForPublishing(record);
+    const publishFieldsAreValid = visibility !== "published" || validateForPublishing(record);
 
     if (!urlsAreValid || !publishFieldsAreValid) {
       return;
     }
 
-    setVisibility(visibility);
     setEditorBusy(true);
 
     try {
-      const savedWork = currentWorkId
-        ? await workStore.updateWork(record)
-        : await workStore.createWork(record);
+      if (!localSupabaseMode) {
+        setVisibility(visibility);
+        const savedWork = currentWorkId ? await workStore.updateWork(record) : await workStore.createWork(record);
+        setEditMode(savedWork.id);
+        await loadSelectedImages(savedWork.images);
+        showFormStatus(visibility === "published" ? "WORK PUBLISHED" : "DRAFT SAVED");
+        return;
+      }
 
-      setEditMode(savedWork.id);
-      loadSelectedImages(savedWork.images);
-      showFormStatus(
-        visibility === "published" ? "WORK PUBLISHED" : "DRAFT SAVED"
-      );
+      showFormStatus(visibility === "published" ? "PREPARING" : "SAVING DRAFT");
+      await persistMetadata(record);
+      if (selectedImages.some((image) => !image.serverRecord && image.blob)) await uploadPendingImages(currentWorkId);
+      let authoritative = await workStore.getWork(currentWorkId);
+      await populateForm(authoritative);
+      if (visibility === "published") {
+        const readiness = publicationReadiness(authoritative);
+        if (!readiness.ready) {
+          const message = readiness.reasons.includes("unready_image") ? "ALL IMAGES MUST BE READY BEFORE PUBLISHING" : readiness.reasons.includes("missing_cover") ? "ONE COVER IMAGE IS REQUIRED" : "REQUIRED WORK DETAILS AND ONE IMAGE ARE NEEDED";
+          showFormStatus(message, true);
+          return;
+        }
+        showFormStatus("PUBLISHING");
+        await workStore.media.publish(currentWorkId, publishAttempt.current());
+        publishAttempt.reset();
+        authoritative = await workStore.getWork(currentWorkId);
+        await populateForm(authoritative);
+        showFormStatus("PUBLISHED");
+      } else showFormStatus("DRAFT SAVED");
     } catch (error) {
-      console.error("Could not save the CHAINED work record.", error);
-      showFormStatus("WORK COULD NOT BE SAVED", true);
+      showFormStatus(error?.code === "conflict" ? "THIS WORK CHANGED ELSEWHERE · RELOAD BEFORE SAVING" : error?.message === "YEAR MUST BE BETWEEN 1900 AND 2100" ? error.message : "WORK COULD NOT BE SAVED", true);
     } finally {
       setEditorBusy(false);
     }
   }
 
+  async function reloadCurrentWork() {
+    if (!currentWorkId) return null;
+    const work = await workStore.getWork(currentWorkId);
+    if (!work) throw new Error("Work unavailable.");
+    await populateForm(work);
+    return work;
+  }
+
+  function populateOwnerProfiles(profiles) {
+    profileSelect.replaceChildren(...profiles.map((profile) => {
+      const option = document.createElement("option");
+      option.value = profile.id;
+      option.textContent = profile.name;
+      return option;
+    }));
+    profileField.hidden = profiles.length <= 1;
+    if (profiles.length) {
+      selectedOwnerProfileId = profiles[0].id;
+      profileSelect.value = selectedOwnerProfileId;
+    }
+  }
+
 
   async function initialiseEditor() {
-    if (!form || !workStore) {
-      console.error("CHAINED work editor dependencies are unavailable.");
-      showFormStatus("LOCAL WORK STORAGE IS UNAVAILABLE", true);
-      return;
-    }
-
     try {
-      await workStore.initialiseDatabase();
+      const selected = await getWorkRepository();
+      workStore = selected.repository;
+      localSupabaseMode = workStore.mode === "local-supabase";
+      await workStore.initialise();
+
+      if (localSupabaseMode) {
+        imageInput.accept = "image/jpeg,image/png,image/webp,image/avif";
+        const requirements = document.querySelector("#work-image-requirements");
+        if (requirements) requirements.textContent = "JPEG, PNG, WEBP OR AVIF · MAX 50 MB PER IMAGE";
+        if (currentWorkId && !isValidWorkId(currentWorkId)) {
+          showFormStatus("WORK COULD NOT BE FOUND", true);
+          form.querySelectorAll("input, select, textarea, button").forEach((control) => { control.disabled = true; });
+          return;
+        }
+        const prototypeCount = await getPrototypeWorkCount().catch(() => 0);
+        if (prototypeCount) {
+          prototypeNotice.textContent = `LOCAL PROTOTYPE WORKS HAVE NOT BEEN IMPORTED. (${prototypeCount})`;
+          prototypeNotice.hidden = false;
+        }
+        const profiles = await workStore.listManagedProfiles();
+        populateOwnerProfiles(profiles);
+        if (!profiles.length) {
+          showFormStatus("ARTIST PROFILE SETUP REQUIRED", true);
+          setEditorBusy(true);
+          return;
+        }
+      }
 
       if (!currentWorkId) {
+        updateLifecycleControls(null);
         return;
       }
 
@@ -713,10 +948,12 @@ Object.values(materialOptions).forEach((options) => {
       }
 
       setEditMode(work.id);
-      populateForm(work);
-    } catch (error) {
-      console.error("Could not initialise CHAINED work storage.", error);
-      showFormStatus("LOCAL WORK STORAGE IS UNAVAILABLE", true);
+      selectedOwnerProfileId = work.ownerProfileId || selectedOwnerProfileId;
+      if (profileSelect) profileSelect.value = selectedOwnerProfileId;
+      if (localSupabaseMode) profileSelect.disabled = true;
+      await populateForm(work);
+    } catch {
+      showFormStatus(localSupabaseMode ? "WORK IS CURRENTLY UNAVAILABLE" : "LOCAL WORK STORAGE IS UNAVAILABLE", true);
     }
   }
 
@@ -737,6 +974,7 @@ Object.values(materialOptions).forEach((options) => {
   });
 
   form?.addEventListener("input", (event) => {
+    unsavedChanges = true;
     event.target.removeAttribute?.("aria-invalid");
 
     if (["work-type", "title", "year"].includes(event.target.name)) {
@@ -748,7 +986,38 @@ Object.values(materialOptions).forEach((options) => {
     }
   });
 
-  window.addEventListener("beforeunload", releaseAllPreviewUrls);
+  profileSelect?.addEventListener("change", () => {
+    if (!currentWorkId) selectedOwnerProfileId = profileSelect.value;
+  });
+
+  unpublishButton?.addEventListener("click", async () => {
+    if (!currentWorkId || !window.confirm("UNPUBLISH THIS WORK?")) return;
+    try {
+      setEditorBusy(true);
+      showFormStatus("UNPUBLISHING");
+      const result = await workStore.media.unpublish(currentWorkId, unpublishAttempt.current());
+      unpublishAttempt.reset();
+      await reloadCurrentWork();
+      showFormStatus(result.cleanup_status === "cleanup_pending" ? "WORK HIDDEN · PUBLIC CLEANUP PENDING" : "WORK UNPUBLISHED");
+    } catch { showFormStatus("WORK COULD NOT BE UNPUBLISHED", true); }
+    finally { setEditorBusy(false); }
+  });
+
+  deleteWorkButton?.addEventListener("click", async () => {
+    if (!currentWorkId || !window.confirm("DELETE THIS DRAFT WORK?")) return;
+    try {
+      setEditorBusy(true);
+      await workStore.deleteWork(currentWorkId);
+      unsavedChanges = false;
+      window.location.assign("dashboard-works.html");
+    } catch { showFormStatus("WORK COULD NOT BE DELETED", true); setEditorBusy(false); }
+  });
+
+  window.addEventListener("beforeunload", (event) => {
+    releaseAllPreviewUrls();
+    workStore?.media?.urls.revokeAll();
+    if (unsavedChanges) { event.preventDefault(); event.returnValue = ""; }
+  });
 
 
   function createOption(value) {

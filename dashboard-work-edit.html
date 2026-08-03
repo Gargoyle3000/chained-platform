@@ -111,6 +111,12 @@
       </header>
 
 
+      <p
+        class="dashboard-local-notice"
+        id="work-prototype-notice"
+        role="status"
+        hidden></p>
+
       <form class="work-form" novalidate>
 
         <!-- BASIC INFORMATION -->
@@ -128,6 +134,14 @@
 
 
           <div class="work-form-fields">
+
+            <label
+              class="work-form-field work-form-field-wide"
+              id="work-owner-field"
+              hidden>
+              <span>WORK FOR</span>
+              <select id="work-owner-profile" name="owner-profile"></select>
+            </label>
 
             <label class="work-form-field">
               <span>WORK TYPE *</span>
@@ -626,6 +640,30 @@
 
         <footer class="work-form-actions">
 
+          <a
+            class="text-action"
+            id="work-public-link"
+            href="artwork.html"
+            hidden>
+            [ VIEW PUBLIC WORK ]
+          </a>
+
+          <button
+            class="text-action"
+            id="work-delete"
+            type="button"
+            hidden>
+            [ DELETE WORK ]
+          </button>
+
+          <button
+            class="text-action"
+            id="work-unpublish"
+            type="button"
+            hidden>
+            [ UNPUBLISH WORK ]
+          </button>
+
           <button
             class="text-action work-form-save"
             type="button">
@@ -648,7 +686,7 @@
 
 
   <script src="work-store.js"></script>
-  <script src="dashboard-form.js"></script>
+  <script src="dashboard-form.js?v=2"></script>
 
 </body>
 </html>

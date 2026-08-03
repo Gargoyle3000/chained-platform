@@ -956,6 +956,16 @@ Use one client/session module and one event-listener registration per page. It o
 
 Concretely, `work-store.js` becomes the provider façade or is replaced by a compatible provider module. The Dashboard scripts and `dashboard-work-edit.html` can remain mostly unchanged apart from authentication/loading/error states and the new upload calls. `public-profile.js` and `artwork-dynamic.js` must replace broad local reads with the dedicated published methods. `agenda.js`, `following.js`, and the Archive scripts move to their own Supabase providers in later phases; their HTML and CSS need not be redesigned.
 
+### 17.1 Implemented local Work frontend boundary
+
+The static frontend selects one explicit Work repository from the existing frontend mode. Prototype mode delegates to the unchanged `chained-works` IndexedDB database and `works` object store. Local-Supabase mode uses Postgres, private `work-originals`, and public `work-public` exclusively; it never combines results, writes an import marker, changes existing browser records, or automatically uploads prototype images. A read-only notice may report an already existing prototype database. Controlled IndexedDB import remains a future workflow.
+
+Manageable artist profiles are resolved server-side from an active account plus either active direct artist membership or the complete live institution-membership and `works_editor` grant chain. Work ownership is chosen only during creation and is never sent by metadata updates. Metadata saves use explicit columns and an `updated_at` condition; an empty conditional update is reported as a stale edit instead of overwriting another session.
+
+Image upload follows `reserve_work_image_upload` → exact private Storage upload with `upsert: false` → `finalize-work-image-upload`. Managed previews download only the authorized private object into a temporary Blob URL and revoke it after use. Cover and order changes use one atomic authenticated RPC with the complete active image set. Publication and unpublication use the existing idempotent Edge Functions, reload authoritative state, and keep private originals protected. Standard uploads are used in this phase; uploads above roughly 6 MiB should move to resumable TUS later for stronger connection-recovery behavior.
+
+In local-Supabase mode, `artwork.html` fetches a published Work, published owner profile, and public image projection through anonymous REST/RLS, then uses the shared browser client only to construct public Storage URLs. Draft, deleted, unauthorized, and unknown IDs share the same unavailable state. Discover, full public profiles, Presentations, Events/Agenda, Following, Archive, CV, and Press remain later integration phases.
+
 ## 18. Phased migration plan
 
 | Phase | Objective | Files or systems affected and test conditions | Rollback / failure consideration |

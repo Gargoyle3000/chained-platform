@@ -1,7 +1,8 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   "use strict";
 
-  const workStore = window.ChainedWorkStore;
+  const { getWorkRepository } = await import("./data/work-repository.mjs");
+  let workStore = null;
   const information = document.querySelector("#artwork-information");
   const content = document.querySelector("#artwork-content");
   const activeObjectUrls = new Set();
@@ -138,8 +139,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const dimensions = formatDimensions(work);
 
     artist.className = "artwork-artist";
-    artist.href = "profile-peer-vink.html";
-    artist.textContent = "PEER VINK";
+    artist.href = work.ownerProfileSlug ? "discover.html" : "profile-peer-vink.html";
+    artist.textContent = work.ownerProfileName || "PEER VINK";
     heading.textContent = work.title;
     fragment.append(artist, heading);
 
@@ -222,7 +223,7 @@ document.addEventListener("DOMContentLoaded", () => {
     figure.className = "artwork-main-image artwork-dynamic-image";
     image.src = createImageSource(imageRecord);
     image.alt =
-      `${work.title} by Peer Vink, image ${index + 1} of ${total}`;
+      `${work.title} by ${work.ownerProfileName || "Peer Vink"}, image ${index + 1} of ${total}`;
     figure.append(image);
 
     return figure;
@@ -266,14 +267,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   function renderWork(work) {
-    document.title = `${work.title} — PEER VINK — CHAINED`;
+    document.title = `${work.title} — ${work.ownerProfileName || "PEER VINK"} — CHAINED`;
     information.replaceChildren(createInformation(work));
     renderImages(work);
   }
 
 
   async function initialiseArtwork() {
-    if (!workStore || !information || !content) {
+    if (!information || !content) {
       console.error("CHAINED dynamic artwork dependencies are unavailable.");
       renderUnavailable();
       return;
@@ -287,8 +288,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      await workStore.initialiseDatabase();
-      const work = await workStore.getWork(workId);
+      const selected = await getWorkRepository();
+      workStore = selected.repository;
+      await workStore.initialise();
+      const work = await workStore.getPublishedWork(workId);
 
       if (!work || work.visibility !== "published") {
         renderUnavailable();
@@ -297,7 +300,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       renderWork(work);
     } catch (error) {
-      console.error(`Could not load CHAINED work ${workId}.`, error);
       renderUnavailable();
     }
   }
