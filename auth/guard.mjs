@@ -41,9 +41,13 @@ function showAccessUnavailable(message) {
   paragraph.textContent = message;
 }
 
-function revealProtectedContent() {
+function revealProtectedContent(mode) {
   document.body.removeAttribute("data-auth-protected");
+  document.body.dataset.authMode = mode;
   document.querySelector(".auth-access-state")?.remove();
+  window.dispatchEvent(new CustomEvent("chained:auth-ready", {
+    detail: Object.freeze({ mode })
+  }));
 }
 
 function redirectToLogin() {
@@ -101,7 +105,7 @@ async function authorize(client) {
   }
 
   renderSessionIndicator(client);
-  revealProtectedContent();
+  revealProtectedContent(FRONTEND_MODES.LOCAL_SUPABASE);
   return true;
 }
 
@@ -121,7 +125,7 @@ async function initializeGuard() {
   }
 
   if (runtime.mode === FRONTEND_MODES.PROTOTYPE) {
-    revealProtectedContent();
+    revealProtectedContent(FRONTEND_MODES.PROTOTYPE);
     return;
   }
 
@@ -141,4 +145,3 @@ async function initializeGuard() {
 }
 
 initializeGuard();
-

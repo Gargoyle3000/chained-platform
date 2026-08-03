@@ -62,6 +62,18 @@
   margin-bottom: 58px;
 }
 
+.profile-follow[hidden] {
+  display: none;
+}
+
+.profile-follow-status {
+  min-height: 1.45em;
+  margin: 8px 0 0;
+
+  font-size: var(--font-meta);
+  line-height: 1.45;
+}
+
 .artist-navigation {
   display: flex;
   flex-direction: column;

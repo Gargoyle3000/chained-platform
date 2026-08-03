@@ -18,6 +18,14 @@ function inFilter(ids) {
 
 const PROFILE_WORK_PAGE_SIZE = 100;
 
+function withFollowIdentity(mapped, profile) {
+  if (mapped.kind !== "available") return mapped;
+  return Object.freeze({
+    ...mapped,
+    followIdentity: Object.freeze({ id: profile.id, slug: profile.slug })
+  });
+}
+
 export function createPublicProfileRepository(
   client,
   config,
@@ -61,11 +69,14 @@ export function createPublicProfileRepository(
       } while (workPage.length === PROFILE_WORK_PAGE_SIZE);
 
       if (!works.length) {
-        return mapPublicProfileResult(
-          profiles[0],
-          [],
-          [],
-          (path) => createPublicImageUrl(client, path)
+        return withFollowIdentity(
+          mapPublicProfileResult(
+            profiles[0],
+            [],
+            [],
+            (path) => createPublicImageUrl(client, path)
+          ),
+          profiles[0]
         );
       }
 
@@ -83,12 +94,14 @@ export function createPublicProfileRepository(
         images.push(...await request(config, "work_images", imageQuery));
       }
 
-      return mapPublicProfileResult(
+      const mapped = mapPublicProfileResult(
         profiles[0],
         works,
         images,
         (path) => createPublicImageUrl(client, path)
       );
+
+      return withFollowIdentity(mapped, profiles[0]);
     }
   });
 }

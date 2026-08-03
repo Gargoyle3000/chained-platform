@@ -936,6 +936,23 @@ footer {
   color: var(--accent);
 }
 
+.following-empty .text-action {
+  margin-top: 18px;
+}
+
+.following-state {
+  margin: 0;
+
+  font-size: var(--font-meta);
+  line-height: 1.45;
+}
+
+.following-state.is-error {
+  padding-left: 12px;
+
+  border-left: 1px solid var(--black);
+}
+
 .following-page .discover-work[hidden],
 .following-page .discover-stream[hidden],
 .following-page .following-empty[hidden] {

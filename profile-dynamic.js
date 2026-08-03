@@ -1,5 +1,6 @@
 import { FRONTEND_MODES } from "./auth/config.mjs";
 import { getPublicProfileRepository } from "./data/public-profile-repository.mjs";
+import { createFollowService } from "./data/follow-service.mjs";
 import {
   createPublicProfileLink,
   isValidProfileSlug
@@ -9,6 +10,9 @@ const worksContainer = document.querySelector("#works");
 const profileName = document.querySelector("#profile-name");
 const biography = document.querySelector("#profile-biography");
 const primaryProfileLink = document.querySelector("#profile-primary-link");
+const followControl = document.querySelector("#profile-follow-control");
+const followAction = document.querySelector("#profile-follow-action");
+const followStatus = document.querySelector("#profile-follow-status");
 
 function formatType(value) {
   return String(value || "").replaceAll("-", " ").toUpperCase();
@@ -147,6 +151,70 @@ function renderProfile(result) {
   );
 }
 
+function hideFollowControl() {
+  followControl.hidden = true;
+  followAction.disabled = false;
+  followAction.removeAttribute("aria-busy");
+  followStatus.textContent = "";
+}
+
+function renderFollowState(state) {
+  if (!["following", "not-following"].includes(state.kind)) {
+    hideFollowControl();
+    return;
+  }
+
+  const isFollowing = state.kind === "following";
+  followControl.hidden = false;
+  followAction.dataset.following = String(isFollowing);
+  followAction.textContent = isFollowing ? "[ FOLLOWING ]" : "[ FOLLOW ]";
+  followAction.setAttribute(
+    "aria-label",
+    isFollowing ? "Unfollow this artist profile" : "Follow this artist profile"
+  );
+}
+
+async function initialiseFollowControl(client, identity) {
+  const followService = createFollowService(client);
+  let state;
+  try {
+    state = await followService.getFollowState(identity);
+  } catch {
+    hideFollowControl();
+    return;
+  }
+  renderFollowState(state);
+  if (!["following", "not-following"].includes(state.kind)) return;
+
+  followAction.addEventListener("click", async () => {
+    if (followAction.disabled) return;
+    const removing = state.kind === "following";
+    if (removing && !window.confirm("STOP FOLLOWING THIS PROFILE?")) return;
+
+    followAction.disabled = true;
+    followAction.setAttribute("aria-busy", "true");
+    followStatus.textContent = removing ? "REMOVING FOLLOW" : "ADDING FOLLOW";
+
+    try {
+      await (removing
+        ? followService.unfollowProfile(identity)
+        : followService.followProfile(identity));
+      state = await followService.getFollowState(identity);
+      renderFollowState(state);
+      followStatus.textContent = state.kind === "following"
+        ? "PROFILE FOLLOWED."
+        : "PROFILE UNFOLLOWED.";
+    } catch {
+      followStatus.textContent = removing
+        ? "THE PROFILE COULD NOT BE UNFOLLOWED. TRY AGAIN."
+        : "THE PROFILE COULD NOT BE FOLLOWED. TRY AGAIN.";
+    } finally {
+      followAction.disabled = false;
+      followAction.removeAttribute("aria-busy");
+    }
+  });
+}
+
 async function initialiseProfile() {
   const slug = new URLSearchParams(window.location.search).get("slug");
   if (!isValidProfileSlug(slug)) {
@@ -168,7 +236,9 @@ async function initialiseProfile() {
     }
 
     renderProfile(result);
+    await initialiseFollowControl(runtime.client, result.followIdentity);
   } catch {
+    hideFollowControl();
     renderUnavailable(true);
   }
 }

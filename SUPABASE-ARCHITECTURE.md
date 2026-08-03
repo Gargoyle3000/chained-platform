@@ -42,7 +42,7 @@ MVP account admission is invitation-only email magic link: a trusted administrat
 | Work year | Public display uses bounded `year_label`; deterministic sorting/filtering uses nullable `year_sort`. Unknown years sort last. Existing integer years migrate into both fields. |
 | Deletion | Thirty-day soft deletion. Public visibility and copies end immediately; private originals and rows remain recoverable until an idempotent trusted purge after `purge_after`. |
 | Trusted runtime | Supabase Edge Functions handle all operations needing secret/service-role credentials. Browser code receives only the publishable key. The Dashboard is not the normal application workflow. |
-| Discover order | Following remains chronological. Discover starts from `published_at desc, id`, then deterministically spreads artists with a preferred gap of four intervening Works and the smallest necessary relaxation. Profile Works use `year_sort desc nulls last, updated_at desc, id`. Payment, manual boosting, randomization, and engagement signals never affect order. |
+| Discover order | Following is strictly `published_at desc, id` and permits consecutive Works by one artist. Discover starts from that base chronology, then deterministically spreads artists with a preferred gap of four intervening Works and the smallest necessary relaxation. Profile Works use `year_sort desc nulls last, updated_at desc, id`. Payment, manual boosting, randomization, and engagement signals never affect order. |
 | Agenda | Shared canonical Events, optional coordinates, no required browser geolocation. Public order is `starts_at asc, id`; followed profiles add an authenticated filter, not a ranking signal. |
 | Team management | Individual accounts and revocable `owner`/`manager`/`editor` profile memberships only; no shared credentials. Team membership alone never grants represented-artist access. |
 | Public media recall | CHAINED removes its public rows/copies and stops issuing new URLs, but cannot revoke downloads, caches, CDN copies awaiting expiry, screenshots, mirrors, or third-party archives. |
@@ -56,7 +56,7 @@ MVP account admission is invitation-only email magic link: a trusted administrat
 | `public-profile.js` | Calls `getAllWorks()`, then filters `visibility === "published"` in JavaScript | A public query returning published Works only, ordered by `year_sort`, update time, and stable ID while displaying `year_label` |
 | `artwork-dynamic.js` | Fetches one local record and rejects drafts in JavaScript | A public single-Work query whose RLS makes a draft indistinguishable from a missing record |
 | Agenda | Static duplicate event markup filtered locally by followed artist, city, and type | One canonical Event with participant joins, indexed date/location/type filters, keyset pagination, and deterministic ordering |
-| Following | Profile IDs in `localStorage` | Private `follows` rows owned by the authenticated account; unavailable to guests |
+| Following | Profile IDs in `localStorage` | Private `profile_follows` rows owned by the authenticated account; unavailable to guests |
 | Archive | Saved IDs, project membership, tags, search, and notes implied by local browser state | Private per-account archive rows, projects, project membership, tags, notes, and strict owner-only RLS |
 | Public profile routes | One Works route plus structural Presentations, CV, and Press routes | Published profile-scoped queries; each content type remains separate |
 | Koos de Vries static profile | Static example Works | Seed/reference data to migrate only after an owning account/profile decision |
@@ -418,7 +418,7 @@ The public profile query accepts a profile slug or ID and returns only:
 
 Profile Works order is `year_sort desc nulls last, updated_at desc, id`. Public pages display `year_label` exactly and never parse it for sorting. The complete cursor makes pagination stable. This ordering is transparent and contains no engagement, payment, follower, save, or view signal.
 
-Following remains primarily chronological. Discover uses candidates ordered by `published_at desc, id`, followed by a deterministic artist-spreading pass. It prefers four intervening Works by other artists before repeating an artist, avoids an immediate repeat whenever any other artist is available, and relaxes only as far as the available artist diversity requires. It never discards, duplicates, permanently suppresses, or randomizes Works. A later editorial selection must be visibly labelled, independently auditable, and separate from ordinary Discover. Neither path may use payment, manual boosting, likes, followers, views, saves, engagement scores, or opaque recommendations.
+Following is strictly chronological by `published_at desc, id`; consecutive Works by one artist remain consecutive. Discover uses candidates ordered by the same base chronology, followed by a deterministic artist-spreading pass. It prefers four intervening Works by other artists before repeating an artist, avoids an immediate repeat whenever any other artist is available, and relaxes only as far as the available artist diversity requires. It never discards, duplicates, permanently suppresses, or randomizes Works. A later editorial selection must be visibly labelled, independently auditable, and separate from ordinary Discover. Neither path may use payment, manual boosting, likes, followers, views, saves, engagement scores, or opaque recommendations.
 
 ### 8.3 Public artwork query
 
@@ -596,7 +596,7 @@ Require `ends_at is null or ends_at >= starts_at`, a valid two-letter country co
 
 The public query filters in Postgres/RLS, not in the browser. Supported filters are upcoming/date window, event type, discipline, country/region/city, profile, followed profile IDs for an authenticated account, and normalized text search. Default order is exactly `starts_at asc, id`; use keyset pagination with that complete cursor. Cap date windows/result counts and select only needed columns. The same indexed query shape scales from roughly 100 to 10,000+ accounts without fetching all Events client-side. Coordinates remain nullable; PostGIS/GiST is added only if later radius discovery warrants it. Exact browser geolocation is not required.
 
-The signed-in Following view joins `follows.followed_profile_id` to `event_profiles.profile_id` and/or `events.owner_profile_id`. Guest location preference may stay in local storage as a city/region choice. Do not collect precise location merely to reproduce current Agenda filters.
+A later signed-in followed-profile Agenda filter would join `profile_follows.profile_id` to `event_profiles.profile_id` and/or `events.owner_profile_id`; the current Following integration is Works-only. Guest location preference may stay in local storage as a city/region choice. Do not collect precise location merely to reproduce current Agenda filters.
 
 ## 11. CV and Press
 
@@ -648,19 +648,21 @@ Do not model uploaded third-party articles as a default feature. Store citations
 
 ## 12. Private Following and Archive
 
-#### `follows`
+#### `profile_follows`
 
 | Item | Definition |
 |---|---|
 | Purpose | Private account-to-profile follow state |
-| Primary key | `(follower_account_id, followed_profile_id)` |
+| Primary key | `(account_id, profile_id)` |
 | Foreign keys | Account and profile cascade on hard deletion |
 | Important fields | `created_at` |
 | Ownership/management | Follower account only |
-| Publication | Never public; counts should not be exposed in the MVP |
+| Publication | Never public; no follower/following counts or public social graph |
 | Deletion | Unfollow hard-deletes the join |
-| Indexes | reverse `(followed_profile_id, follower_account_id)` only if trusted aggregate jobs need it |
+| Indexes | primary account lookup `(account_id, profile_id)` and reverse policy/feed lookup `(profile_id, account_id)` |
 | Anonymous access | None |
+
+Only an active application account may select, insert, or delete its own rows. New relationships require a currently published, non-deleted profile; existing rows survive soft unpublication so republishing can restore future feed eligibility, while hard profile/account deletion cascades explicitly. A follow is a private reading preference, not a recommendation, endorsement, authority grant, or ranking signal.
 
 #### `archive_projects`
 
@@ -974,7 +976,15 @@ The generic public artist route is `profile.html?slug={normalized-slug}`. Malfor
 
 Discover initially requests at most 120 recent published candidates in `published_at desc, id` order. The client then deterministically selects the newest remaining Work whose artist is outside the last-four-artist window; if none qualifies it selects the newest Work that avoids an immediate artist repeat, and if even that is impossible it selects the newest remaining Work. The ordered bounded set is displayed in batches of 12. Appending never reorders visible items, and SINGLE/GRID use the same in-memory order without another data query. This bounded client interleaving suits the current prototype scale; a future server-side feed cursor may replace it at larger scale without changing the product principle.
 
-Prototype mode keeps the static Discover and Peer/Koos profile routes plus the existing IndexedDB Work behavior and makes no Supabase public-data request. Local-Supabase mode does not mix those records into public results. Presentations, Events/Agenda, Following, Archive, CV, and Press remain later Supabase integration phases.
+Prototype mode keeps the static Discover, Following, and Peer/Koos profile routes plus the existing IndexedDB Work behavior and makes no Supabase public-data request. Local-Supabase mode does not mix those records into public results. Presentations, Events/Agenda, Archive, CV, and Press remain later Supabase integration phases.
+
+### 17.3 Implemented private Following boundary
+
+`profile_follows` is an immutable private account-to-profile relationship: the browser may insert and hard-delete only the active caller's own row, and cannot update ownership or `created_at`. Anonymous users have no table or feed privileges, one account cannot inspect another account's graph, and the product exposes neither follower/following lists nor counts. Profile hard deletion and account deletion cascade; soft-unpublishing preserves the private relationship but removes the profile from feed results until it is republished. Unfollow removes that profile from subsequent feed queries immediately. Archive remains separate and unimplemented.
+
+The active-account-only `list_following_feed` SECURITY INVOKER RPC runs under the caller's existing RLS. It returns an explicit public projection for published, non-deleted Works owned by published, non-deleted followed profiles, with an active cover and non-null public-copy path. Ordering is strictly `published_at desc, work_id asc`; same-artist Works remain consecutive, with no Discover spreading, engagement input, randomization, or recommendation signal. The browser requests 13 rows, renders 12, and advances by the last `(published_at, work_id)` cursor, so appended pages do not reorder visible items.
+
+The dynamic public profile remains anonymous-readable. In local-Supabase mode an active application session adds one real `FOLLOW`/`FOLLOWING` button after the profile's public identity has resolved; signed-out or invalid application sessions leave the public content intact without a control. `following.html` waits for the existing Auth guard, then uses only the Supabase feed repository and separates no-follows, no-published-Works, and temporary-failure states. Prototype mode retains the static localStorage Following behavior and makes no Supabase follow request.
 
 ## 18. Phased migration plan
 
@@ -993,7 +1003,7 @@ Prototype mode keeps the static Discover and Peer/Koos profile routes plus the e
 | 11. Multi-account security test | Validate direct, delegated, revoked, claim, deletion and malicious API workflows | Guest/member/two artists/gallery staff/revoked staff/wrong grants/suspended/disabled/admin; REST/Storage/Edge tests plus 10,000-account/event query plans | Block promotion; reset isolated fixtures only from manifest |
 | 12. Public route connection | Replace client-side draft filtering and enforce approved deterministic orders | Later `public-profile.js`, `artwork-dynamic.js`, Discover/provider config; verify missing/draft parity, exact global/profile order, year labels, desktop/390/320 | Provider flag restores static/local rendering while DB remains |
 | 13. Dashboard pilot and MVP launch gate | Pilot direct artist and delegated gallery create/edit/delete/draft/publish/claim/revoke/recovery workflows | Dashboard/provider/Edge integration and monitoring; test Storage/DB partial failures, backup restore, key rotation, immediate cleanup, 30-day purge simulation | Restrict pilot profiles; disable provider/publication functions; preserve recovery state |
-| 14. Later domain rollout | Connect Presentations, shared Events/Agenda, Following, Archive, CV, Press, geography and labelled editorial selections | Domain policies/providers/scripts; test canonical-event dedupe, `starts_at,id` pagination, scopes, public/private split, desktop/390/320 | Release route/domain at a time and retain fallback until verified |
+| 14. Later domain rollout | Connect Presentations, shared Events/Agenda, Archive, CV, Press, geography and labelled editorial selections | Domain policies/providers/scripts; test canonical-event dedupe, `starts_at,id` pagination, scopes, public/private split, desktop/390/320 | Release route/domain at a time and retain fallback until verified |
 
 Each data phase runs in a non-production environment first. Reconcile row counts, foreign keys, image hashes/sizes, cover/order invariants, publication state, and rendered routes before advancing. Keep a source-to-target manifest and never delete browser-local data as part of an automatic import.
 
@@ -1007,7 +1017,7 @@ Each data phase runs in a non-production environment first. Reconcile row counts
 | Works and independent ordered Work images | Presentation management and images; Work relationships |
 | Draft/published lifecycle and trusted private-original/public-copy flow | Advanced derivatives, embargoes, video transcoding, richer media-rights workflows |
 | Public profile Works rendering and public artwork route | Events, shared Agenda publication, following-based Agenda filters, geographic refinement |
-| Guest published reads and direct/delegated dashboard reads/writes with immutable artist ownership | Following, private Archive/projects/tags/notes, curator projects and visibly labelled public curated selections |
+| Guest published reads, direct/delegated dashboard reads/writes with immutable artist ownership, and private active-account Following | Private Archive/projects/tags/notes, curator projects and visibly labelled public curated selections |
 | Complete RLS/Storage policy suite, audit trail for privileged MVP operations, backup/restore | CV and Press management/imports; expanded moderation/audit product UI |
 
 Identity, membership, relationship, grant, claim, and audit schema must exist in the MVP because artist ownership and safe gallery delegation depend on their separation. Rich team-management, paid workflow, Presentation, Agenda, and research interfaces may ship later. Avoid speculative generic content tables, permission JSON, PostGIS, or shared-project ACLs in the first release.
