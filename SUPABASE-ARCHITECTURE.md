@@ -292,11 +292,11 @@ Membership in a gallery/institution profile governs that profile only. Delegated
 | Purpose | One explicit delegated permission scope from a target artist profile to a delegate gallery/institution profile |
 | Primary key | `id uuid` |
 | Foreign keys | `target_profile_id`, `delegate_profile_id -> public_profiles.id`; granting/revoking accounts `on delete set null` |
-| Important fields | constrained `scope_code` (`works_editor`, `presentations_editor`, `events_editor`, `profile_content_editor`), `status` (`active`, `revoked`), optional `expires_at`, `granted_at`, `granted_by_account_id`, `revoked_at`, `revoked_by_account_id`, `updated_at` |
+| Important fields | constrained `scope_code` (`works_editor`, `presentations_editor`, `events_editor`, `profile_content_editor`), dedicated `status` (`active`, `expired`, `revoked`), optional `expires_at`, explicit `expired_at`, `granted_at`, `granted_by_account_id`, `revoked_at`, `revoked_by_account_id`, `updated_at` |
 | Ownership/management | Claimed artist primary controller may grant/revoke; verified admin may establish initial gallery authority for an unclaimed profile; delegate cannot self-grant |
 | Publication | Private authorization data; never a public representation claim |
-| Deletion | Preserve revoked rows for audit; active query requires status, time validity, active profiles, active caller account, and active delegate membership |
-| Indexes | partial unique active `(target_profile_id, delegate_profile_id, scope_code)`; `(delegate_profile_id, status, scope_code)`; target/status/expiry |
+| Deletion | Preserve expired and revoked rows for audit; lifecycle transitions are trusted operations; active query requires status, time validity, active profiles, active caller account, and active delegate membership |
+| Indexes | deterministic partial unique declared-active `(target_profile_id, delegate_profile_id, scope_code)` without a wall-clock predicate; trusted replacement creation first marks an equivalent time-expired row `expired`; delegate/scope/target/expiry lookups |
 | Anonymous access | Never |
 
 Grant scopes do not chain. A delegate cannot grant its authority onward, change target ownership, primary controller, owner memberships, claim state, privileged roles, or purge content.
@@ -825,7 +825,7 @@ The Supabase Dashboard is reserved for emergency operations, debugging, controll
 
 Enable RLS on every table exposed by the Data API, including all join tables. Revoke broad grants before adding the minimum grants and policies. Views must obey caller RLS (`security_invoker` where supported); security-definer functions must use an empty/fixed `search_path`, schema-qualified objects, least privileges, and explicit execute grants.
 
-Centralize authorization in reviewed helpers that first require the caller's application account to be `active`. Direct management checks an active `profile_members` row on the target. Delegated management checks, at request time, both an active caller membership in the delegate gallery/institution profile and an active, non-expired `profile_access_grants` row from the target artist profile for the exact operation scope. Keep helpers small; index every join/status/scope column and verify plans with `EXPLAIN` at 10,000+ account/event-scale fixtures.
+Centralize authorization in reviewed helpers that first require the caller's application account to be `active`. Direct management checks an active `profile_members` row on the target. Delegated management checks, at request time, both an active caller membership in the delegate gallery/institution profile and an explicitly `active`, non-revoked, non-expired `profile_access_grants` row from the target artist profile for the exact operation scope. Expiry remains a real-time authorization condition even when a trusted lifecycle sweep has not yet persisted `expired` status. Keep helpers small; index every join/status/scope column and verify plans with `EXPLAIN` at 10,000+ account/event-scale fixtures.
 
 No authorization helper may consult `profile_relationships`, collaborator credits, Presentation/Event participation, payment/plan data, or audit creator/updater IDs. Revoked membership or grant must fail on the very next database request; do not encode delegated access into long-lived JWT claims.
 
