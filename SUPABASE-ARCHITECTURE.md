@@ -28,13 +28,13 @@ Public profile and artwork queries must never download all of an artist's Works 
 
 Works are always owned by artist profiles. A verified gallery can manage an artist profile only through an active, scoped, revocable profile access grant. The requesting staff member must simultaneously have an active personal membership in that gallery profile. A public representation relationship is descriptive and never grants authority.
 
-MVP account admission is invitation-only email magic link: a trusted administrator approves the person and sends the invitation; accepting it activates the application account. There is no public self-registration and no redundant approval step after invitation acceptance. Privileged invitations, profile claims, role assignments, public-copy operations, and permanent purges run through Supabase Edge Functions. The Supabase Dashboard is reserved for emergency, debugging, and controlled administration.
+MVP account admission is invitation-only email magic link: a trusted administrator records approval before Supabase Auth issues the invitation; confirming the invited email activates the application account. There is no public self-registration and no redundant approval step after invitation acceptance. The trusted invitation records the allowed initial non-admin roles, always including `private_member`; Auth user metadata is never an authorization source. Privileged invitations, profile claims, later role assignments, public-copy operations, and permanent purges run through Supabase Edge Functions. The Supabase Dashboard is reserved for emergency, debugging, and controlled administration.
 
 ## APPROVED ARCHITECTURAL DECISIONS
 
 | Area | Approved decision |
 |---|---|
-| Account admission | Invitation-only email magic links. Sending the invitation is the approval; acceptance activates the application account. No public self-registration or second approval gate. Application status is `active`, `suspended`, or `disabled` and is separate from Auth session state. |
+| Account admission | Invitation-only email magic links. Approval is persisted before Auth sends an invitation; acceptance activates the application account. No public self-registration or second approval gate. Every accepted account receives `private_member`; explicitly approved initial artist, curator, or institution roles may also be granted, but never `admin`. Application status is `active`, `suspended`, or `disabled` and is separate from Auth session state. |
 | Media delivery | Private authoritative originals plus immutable, versioned public publication copies. Edge Functions create and remove public copies. Private signed delivery is reserved for possible embargoed/restricted media. |
 | Work ownership | Every Work is owned by an artist profile. Accounts, galleries, institutions, curators, credits, and references never own artist Works. |
 | Delegated gallery management | An artist profile may grant a gallery profile explicit scopes such as Works, Presentations, Events, or profile-content editing. Staff authority requires both active gallery membership and an active grant. Representation alone grants nothing. |
@@ -99,17 +99,17 @@ Guest is not an application role. A guest is simply a request executing as the P
 
 ### 4.1 Accounts and multiple roles
 
-`accounts.id` should equal `auth.users.id`. A trusted administrator sends an invitation only after approving the person. Accepting its email magic link creates/activates the application account as `active`; there is no second approval state. Public self-registration is disabled. Every activated person receives a private-member capability. Additional capability rows may be added independently:
+`accounts.id` should equal `auth.users.id`. A trusted administrator persists a normalized, expiring approval before the trusted runtime asks Supabase Auth to send an invitation. Confirming its email magic link creates/activates the application account as `active`; there is no second approval state. Public email, SMS, anonymous, and general sign-up are disabled. Every activated person receives a private-member capability. Initial non-admin roles may only come from the approved invitation; `raw_user_meta_data`, other caller-controlled metadata, email domains, and self-supplied text are never authorization sources. Additional capability rows may be added independently through trusted workflows:
 
 - `private_member`
 - `artist`
 - `curator`
-- `organisation_manager`
+- `institution`
 - `admin`
 
 An artist who also curates has three rows: private member, artist, and curator. There is no exclusive `accounts.role` column.
 
-A gallery or institution is not a login identity. It is a `public_profiles` row managed by individual human accounts through `profile_members`. The `organisation_manager` role makes an account eligible to receive such membership; it does not grant access to every gallery or institution and does not grant represented-artist access.
+A gallery or institution is not a login identity. It is a `public_profiles` row managed by individual human accounts through `profile_members`. The `institution` application role makes an account eligible to receive such membership; it does not grant access to every gallery or institution and does not grant represented-artist access.
 
 ### 4.2 Profile membership
 
@@ -791,9 +791,11 @@ TRUSTED ADMIN APPROVES PERSON
 → ACCOUNT ACTIVATED
 ```
 
-Public self-registration is unavailable. The invitation itself represents approval, so accepting the magic link creates/activates the `accounts` row as `active` and assigns `private_member`; there is no redundant approval step. `active`/`suspended`/`disabled` is application state separate from whether an Auth token exists. Policies deny suspended/disabled accounts even if a previously issued session has not expired.
+Public self-registration is unavailable. A normalized `account_invitations` record with deterministic `approved`, `sending`, `sent`, `accepted`, `expired`, `revoked`, or `failed` lifecycle state exists before Auth sends mail. The short `sending` claim makes concurrent Edge Function retries single-dispatch; it remains actionable only until the invitation expires. Confirming a still-valid sent invitation creates/activates the `accounts` row as `active` and assigns `private_member`; there is no redundant approval step. Explicitly approved initial artist, curator, or institution roles may be added in the same transaction. Accepted and other terminal invitation rows remain audit history and do not permanently block a later legitimate approval. `active`/`suspended`/`disabled` is application state separate from whether an Auth token exists. Policies deny suspended/disabled accounts even if a previously issued session has not expired.
 
-Elevated application roles and profile memberships remain separate trusted decisions; an invitation does not automatically make someone an artist, curator, gallery manager, or admin. Do not infer roles from email domains or self-supplied text. Gallery/institution profiles are managed by individual Auth accounts, never shared passwords or synthetic Auth users.
+An ordinary invitation can assign only its explicitly approved initial `private_member`, artist, curator, or institution roles. It can never assign `admin`; later roles and all profile memberships remain separate trusted decisions. Do not infer roles from Auth metadata, email domains, or self-supplied text. The first hosted administrator is established by a separate, controlled deployment bootstrap procedure—never a permanent public endpoint. Gallery/institution profiles are managed by individual Auth accounts, never shared passwords or synthetic Auth users.
+
+Future frontend passwordless login must call the Supabase magic-link/OTP sign-in API with `shouldCreateUser: false`, so a login attempt cannot become an account-registration path. Frontend Auth integration is outside this phase.
 
 Artist profile claiming is also distinct from account approval. An already invited/active claimant follows the verified claim workflow for the existing artist profile. Approval updates that profile in place and establishes primary-controller membership without issuing a second account-approval step.
 
@@ -812,7 +814,7 @@ The anon/publishable key may be present in the client. RLS must make it safe. Br
 
 The following use audited Supabase Edge Functions with narrowly scoped secrets:
 
-- send/revoke invitations and suspend/disable/delete Auth users;
+- approve/send/revoke invitations and suspend/disable/delete Auth users; the invitation Edge Function authenticates the caller, requires an active account plus active `admin` role, then uses its server credential only after authorization;
 - grant/revoke global roles and profile-owner memberships;
 - verify/complete profile claims and establish initial unclaimed-profile gallery grants;
 - perform protected grant/controller/ownership operations and moderation overrides;
