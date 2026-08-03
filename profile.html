@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+
+  <title>Artist profile — CHAINED</title>
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="profile.css">
+</head>
+
+<body class="profile-page profile-dynamic-page">
+
+  <header class="site-header">
+    <a class="wordmark" href="discover.html">&lt;CHAINED&gt;</a>
+
+    <nav class="main-nav" aria-label="Primary navigation">
+      <a href="discover.html">DISCOVER</a>
+      <a href="following.html">FOLLOWING</a>
+      <a href="archive.html">ARCHIVE</a>
+      <a href="agenda.html">AGENDA</a>
+      <a class="is-active" id="profile-primary-link" href="profile.html">PROFILE</a>
+    </nav>
+  </header>
+
+
+  <main class="artist-profile">
+
+    <aside class="artist-sidebar">
+      <div class="artist-sidebar-inner">
+
+        <header class="artist-intro">
+          <h1 id="profile-name">ARTIST PROFILE</h1>
+          <p class="artist-biography" id="profile-biography" hidden></p>
+        </header>
+
+        <nav class="artist-navigation" aria-label="Artist profile">
+          <a class="is-active" id="profile-works-link" href="#works">WORKS</a>
+        </nav>
+
+      </div>
+    </aside>
+
+
+    <section
+      class="artist-works"
+      id="works"
+      aria-live="polite"
+      aria-busy="true">
+      <p class="profile-works-state" role="status">LOADING ARTIST PROFILE</p>
+    </section>
+
+  </main>
+
+
+  <script type="module" src="profile-dynamic.js"></script>
+
+</body>
+</html>

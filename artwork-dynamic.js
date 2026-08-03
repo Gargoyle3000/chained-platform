@@ -2,9 +2,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   "use strict";
 
   const { getWorkRepository } = await import("./data/work-repository.mjs");
+  const { createPublicProfileLink } = await import("./data/public-work-mapping.mjs");
   let workStore = null;
   const information = document.querySelector("#artwork-information");
   const content = document.querySelector("#artwork-content");
+  const primaryProfileLink = document.querySelector(".main-nav a:last-child");
   const activeObjectUrls = new Set();
 
 
@@ -83,11 +85,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
-  function createBackLink() {
+  function profileDestination(work) {
+    return createPublicProfileLink(work?.ownerProfileSlug) || "profile-peer-vink.html";
+  }
+
+
+  function createBackLink(work = null) {
     const backLink = document.createElement("a");
 
     backLink.className = "artwork-back";
-    backLink.href = "profile-peer-vink.html";
+    backLink.href = profileDestination(work);
     backLink.textContent = "← SHOW ARTIST PROFILE";
 
     return backLink;
@@ -139,7 +146,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const dimensions = formatDimensions(work);
 
     artist.className = "artwork-artist";
-    artist.href = work.ownerProfileSlug ? "discover.html" : "profile-peer-vink.html";
+    artist.href = profileDestination(work);
     artist.textContent = work.ownerProfileName || "PEER VINK";
     heading.textContent = work.title;
     fragment.append(artist, heading);
@@ -198,7 +205,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
     }
 
-    fragment.append(createBackLink());
+    fragment.append(createBackLink(work));
 
     return fragment;
   }
@@ -267,6 +274,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
   function renderWork(work) {
+    if (primaryProfileLink) primaryProfileLink.href = profileDestination(work);
     document.title = `${work.title} — ${work.ownerProfileName || "PEER VINK"} — CHAINED`;
     information.replaceChildren(createInformation(work));
     renderImages(work);

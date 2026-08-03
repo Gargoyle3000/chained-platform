@@ -1,0 +1,176 @@
+import { FRONTEND_MODES } from "./auth/config.mjs";
+import { getPublicProfileRepository } from "./data/public-profile-repository.mjs";
+import {
+  createPublicProfileLink,
+  isValidProfileSlug
+} from "./data/public-work-mapping.mjs";
+
+const worksContainer = document.querySelector("#works");
+const profileName = document.querySelector("#profile-name");
+const biography = document.querySelector("#profile-biography");
+const primaryProfileLink = document.querySelector("#profile-primary-link");
+
+function formatType(value) {
+  return String(value || "").replaceAll("-", " ").toUpperCase();
+}
+
+function formatDimensions(work) {
+  if (!Number.isFinite(work.height) || !Number.isFinite(work.width)) return "";
+  const dimensions = [work.height, work.width];
+  if (Number.isFinite(work.depth)) dimensions.push(work.depth);
+  return `${dimensions.join(" × ")}${work.dimensionUnit ? ` ${work.dimensionUnit.toUpperCase()}` : ""}`;
+}
+
+function createState(message, isError = false) {
+  const state = document.createElement("p");
+  state.className = "profile-works-state";
+  state.classList.toggle("is-error", isError);
+  state.setAttribute("role", "status");
+  state.textContent = message;
+  return state;
+}
+
+function replaceBrokenImage(imageLink) {
+  const state = document.createElement("span");
+  state.className = "profile-image-placeholder";
+  state.textContent = "IMAGE NOT AVAILABLE";
+  imageLink.replaceChildren(state);
+}
+
+function applyOrientation(article, image, dimensions) {
+  const setOrientation = (width, height) => {
+    article.classList.toggle("profile-work-landscape", width >= height);
+    article.classList.toggle("profile-work-portrait", width < height);
+  };
+
+  if (dimensions.width && dimensions.height) {
+    setOrientation(dimensions.width, dimensions.height);
+    return;
+  }
+
+  image.addEventListener("load", () => {
+    setOrientation(image.naturalWidth, image.naturalHeight);
+  }, { once: true });
+}
+
+function createWorkArticle(work) {
+  const article = document.createElement("article");
+  const imageLink = document.createElement("a");
+  const image = document.createElement("img");
+  const metadata = document.createElement("div");
+  const heading = document.createElement("h2");
+  const titleLink = document.createElement("a");
+
+  article.className = "profile-work";
+  article.dataset.workId = work.id;
+  imageLink.className = "profile-image-link";
+  imageLink.href = work.artworkHref;
+  imageLink.setAttribute("aria-label", `View ${work.title} by ${work.artistName}`);
+  image.src = work.image.src;
+  image.alt = `${work.title} by ${work.artistName}`;
+  image.addEventListener("error", () => replaceBrokenImage(imageLink), { once: true });
+  applyOrientation(article, image, work.image);
+  imageLink.append(image);
+
+  metadata.className = "profile-work-meta";
+  titleLink.href = work.artworkHref;
+  titleLink.textContent = work.title;
+  heading.append(titleLink);
+  metadata.append(heading);
+
+  if (work.yearLabel) {
+    const year = document.createElement("span");
+    year.className = "profile-year";
+    year.textContent = work.yearLabel;
+    metadata.append(year);
+  }
+
+  const classification = formatType(work.format || work.workType);
+  if (classification) {
+    const type = document.createElement("p");
+    type.textContent = classification;
+    metadata.append(type);
+  }
+
+  const materials = [
+    work.primaryMedium,
+    work.supportBase,
+    ...work.additionalMaterials
+  ].filter(Boolean).join(", ");
+  if (materials) {
+    const line = document.createElement("p");
+    line.textContent = materials;
+    metadata.append(line);
+  }
+
+  const dimensions = formatDimensions(work);
+  if (dimensions) {
+    const line = document.createElement("p");
+    line.textContent = dimensions;
+    metadata.append(line);
+  }
+
+  article.append(imageLink, metadata);
+  return article;
+}
+
+function renderUnavailable(connectionError = false) {
+  document.title = "ARTIST PROFILE NOT AVAILABLE — CHAINED";
+  profileName.textContent = "ARTIST PROFILE";
+  biography.hidden = true;
+  worksContainer.setAttribute("aria-busy", "false");
+  worksContainer.replaceChildren(createState(
+    connectionError ? "ARTIST PROFILE CURRENTLY UNAVAILABLE" : "ARTIST PROFILE NOT AVAILABLE",
+    connectionError
+  ));
+}
+
+function renderProfile(result) {
+  const { profile, works } = result;
+  const profileHref = createPublicProfileLink(profile.slug);
+  document.title = `${profile.displayName} — CHAINED`;
+  profileName.textContent = profile.displayName;
+  primaryProfileLink.href = profileHref;
+
+  if (profile.biography) {
+    biography.textContent = profile.biography;
+    biography.hidden = false;
+  } else {
+    biography.hidden = true;
+  }
+
+  worksContainer.setAttribute("aria-busy", "false");
+  worksContainer.replaceChildren(
+    ...(works.length
+      ? works.map(createWorkArticle)
+      : [createState("NO PUBLISHED WORKS")])
+  );
+}
+
+async function initialiseProfile() {
+  const slug = new URLSearchParams(window.location.search).get("slug");
+  if (!isValidProfileSlug(slug)) {
+    renderUnavailable();
+    return;
+  }
+
+  try {
+    const { runtime, repository } = await getPublicProfileRepository();
+    if (runtime.mode !== FRONTEND_MODES.LOCAL_SUPABASE || !repository) {
+      renderUnavailable();
+      return;
+    }
+
+    const result = await repository.getProfile(slug);
+    if (result.kind !== "available") {
+      renderUnavailable();
+      return;
+    }
+
+    renderProfile(result);
+  } catch {
+    renderUnavailable(true);
+  }
+}
+
+initialiseProfile();

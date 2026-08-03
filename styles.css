@@ -679,6 +679,29 @@ footer {
   padding-top: calc(var(--header-height) + 24px);
 }
 
+.discover-state {
+  margin: 0;
+  padding-top: 48px;
+
+  font-size: var(--font-meta);
+}
+
+.discover-state.is-error {
+  padding-left: 12px;
+  border-left: 1px solid var(--black);
+}
+
+.discover-image-state {
+  font-size: var(--font-meta);
+  text-align: center;
+}
+
+.discover-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 60px 0 0;
+}
+
 
 /* SINGLE VIEW */
 
@@ -810,7 +833,9 @@ footer {
 }
 
 .discover-page[data-view="grid"] .discover-image-link img {
+  display: block;
   width: 100%;
+  height: auto;
   max-width: none;
   max-height: none;
 }

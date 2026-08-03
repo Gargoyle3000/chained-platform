@@ -53,6 +53,11 @@
   font-size: var(--font-meta);
 }
 
+.artist-biography {
+  max-width: 42ch;
+  white-space: pre-line;
+}
+
 .profile-follow {
   margin-bottom: 58px;
 }

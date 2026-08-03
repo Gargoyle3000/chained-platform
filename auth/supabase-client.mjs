@@ -7,12 +7,18 @@ const SUPABASE_BROWSER_MODULE =
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
 
 let runtimePromise;
+let frontendConfigPromise;
+
+export function getFrontendConfig() {
+  if (!frontendConfigPromise) frontendConfigPromise = loadFrontendConfig();
+  return frontendConfigPromise;
+}
 
 export function getFrontendRuntime() {
   if (runtimePromise) return runtimePromise;
 
   runtimePromise = (async () => {
-    const config = await loadFrontendConfig();
+    const config = await getFrontendConfig();
     if (config.mode === FRONTEND_MODES.PROTOTYPE) {
       return Object.freeze({ mode: FRONTEND_MODES.PROTOTYPE, config });
     }
@@ -35,4 +41,3 @@ export function getFrontendRuntime() {
 
   return runtimePromise;
 }
-

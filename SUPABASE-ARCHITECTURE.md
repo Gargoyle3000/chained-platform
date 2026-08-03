@@ -42,7 +42,7 @@ MVP account admission is invitation-only email magic link: a trusted administrat
 | Work year | Public display uses bounded `year_label`; deterministic sorting/filtering uses nullable `year_sort`. Unknown years sort last. Existing integer years migrate into both fields. |
 | Deletion | Thirty-day soft deletion. Public visibility and copies end immediately; private originals and rows remain recoverable until an idempotent trusted purge after `purge_after`. |
 | Trusted runtime | Supabase Edge Functions handle all operations needing secret/service-role credentials. Browser code receives only the publishable key. The Dashboard is not the normal application workflow. |
-| Discover order | Global: `published_at desc, id` as stable tie-breaker. Profile Works: `year_sort desc nulls last, updated_at desc, id`. Payment and engagement signals never affect order. |
+| Discover order | Following remains chronological. Discover starts from `published_at desc, id`, then deterministically spreads artists with a preferred gap of four intervening Works and the smallest necessary relaxation. Profile Works use `year_sort desc nulls last, updated_at desc, id`. Payment, manual boosting, randomization, and engagement signals never affect order. |
 | Agenda | Shared canonical Events, optional coordinates, no required browser geolocation. Public order is `starts_at asc, id`; followed profiles add an authenticated filter, not a ranking signal. |
 | Team management | Individual accounts and revocable `owner`/`manager`/`editor` profile memberships only; no shared credentials. Team membership alone never grants represented-artist access. |
 | Public media recall | CHAINED removes its public rows/copies and stops issuing new URLs, but cannot revoke downloads, caches, CDN copies awaiting expiry, screenshots, mirrors, or third-party archives. |
@@ -418,7 +418,7 @@ The public profile query accepts a profile slug or ID and returns only:
 
 Profile Works order is `year_sort desc nulls last, updated_at desc, id`. Public pages display `year_label` exactly and never parse it for sorting. The complete cursor makes pagination stable. This ordering is transparent and contains no engagement, payment, follower, save, or view signal.
 
-Global Discover order is `published_at desc, id`. A later editorial selection must be visibly labelled, independently auditable, and separate from ordinary chronological Discover. Neither ordering may use payment, likes, followers, views, saves, engagement scores, or opaque recommendations.
+Following remains primarily chronological. Discover uses candidates ordered by `published_at desc, id`, followed by a deterministic artist-spreading pass. It prefers four intervening Works by other artists before repeating an artist, avoids an immediate repeat whenever any other artist is available, and relaxes only as far as the available artist diversity requires. It never discards, duplicates, permanently suppresses, or randomizes Works. A later editorial selection must be visibly labelled, independently auditable, and separate from ordinary Discover. Neither path may use payment, manual boosting, likes, followers, views, saves, engagement scores, or opaque recommendations.
 
 ### 8.3 Public artwork query
 
@@ -964,7 +964,17 @@ Manageable artist profiles are resolved server-side from an active account plus 
 
 Image upload follows `reserve_work_image_upload` → exact private Storage upload with `upsert: false` → `finalize-work-image-upload`. Managed previews download only the authorized private object into a temporary Blob URL and revoke it after use. Cover and order changes use one atomic authenticated RPC with the complete active image set. Publication and unpublication use the existing idempotent Edge Functions, reload authoritative state, and keep private originals protected. Standard uploads are used in this phase; uploads above roughly 6 MiB should move to resumable TUS later for stronger connection-recovery behavior.
 
-In local-Supabase mode, `artwork.html` fetches a published Work, published owner profile, and public image projection through anonymous REST/RLS, then uses the shared browser client only to construct public Storage URLs. Draft, deleted, unauthorized, and unknown IDs share the same unavailable state. Discover, full public profiles, Presentations, Events/Agenda, Following, Archive, CV, and Press remain later integration phases.
+In local-Supabase mode, `artwork.html` fetches a published Work, published owner profile, and public image projection through anonymous REST/RLS, then uses the shared browser client only to construct public Storage URLs. Draft, deleted, unauthorized, and unknown IDs share the same unavailable state. The owning artist link uses the already projected public slug and does not add another query.
+
+### 17.2 Implemented public profile and Discover boundary
+
+Public DOM modules consume dedicated adapters rather than constructing Supabase queries themselves. `public-profile-repository.mjs` owns the published artist/profile-Works query, `discover-repository.mjs` owns the bounded Discover candidate query, `public-work-mapping.mjs` maps explicit public projections and removes Storage paths from UI records, and `discover-ordering.mjs` contains the pure artist-spreading and append-only batch logic. These adapters reuse the configured browser runtime and use anonymous REST requests so an existing authenticated session cannot broaden a public page response. The shared Supabase client is used only to construct `work-public` delivery URLs; no second client is created.
+
+The generic public artist route is `profile.html?slug={normalized-slug}`. Malformed, missing, hidden, deleted, unknown, and unauthorized profiles share one unavailable state. The implemented dynamic profile section is WORKS only. Its order is `year_sort desc nulls last, updated_at desc, id`; stable 100-row profile and cover batches continue until the profile result is complete, and a Work renders only when it has an active cover with a public object path. Presentations, CV, and Press remain later integrations; their static Peer Vink prototype routes are not presented as dynamic Supabase content.
+
+Discover initially requests at most 120 recent published candidates in `published_at desc, id` order. The client then deterministically selects the newest remaining Work whose artist is outside the last-four-artist window; if none qualifies it selects the newest Work that avoids an immediate artist repeat, and if even that is impossible it selects the newest remaining Work. The ordered bounded set is displayed in batches of 12. Appending never reorders visible items, and SINGLE/GRID use the same in-memory order without another data query. This bounded client interleaving suits the current prototype scale; a future server-side feed cursor may replace it at larger scale without changing the product principle.
+
+Prototype mode keeps the static Discover and Peer/Koos profile routes plus the existing IndexedDB Work behavior and makes no Supabase public-data request. Local-Supabase mode does not mix those records into public results. Presentations, Events/Agenda, Following, Archive, CV, and Press remain later Supabase integration phases.
 
 ## 18. Phased migration plan
 
