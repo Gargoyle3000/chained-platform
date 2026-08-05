@@ -1,0 +1,407 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+
+  <title>Edit Presentation — CHAINED Dashboard</title>
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="auth/auth.css">
+
+  <script type="module" src="auth/guard.mjs"></script>
+</head>
+
+<body class="dashboard-page" data-auth-protected="true">
+
+  <header class="site-header">
+    <a class="wordmark" href="discover.html">
+      &lt;CHAINED&gt;
+    </a>
+
+    <nav
+      class="main-nav main-nav-with-dashboard"
+      aria-label="Primary navigation">
+      <a href="discover.html">DISCOVER</a>
+      <a href="following.html">FOLLOWING</a>
+      <a href="archive.html">ARCHIVE</a>
+      <a href="agenda.html">AGENDA</a>
+
+      <span class="profile-nav-group">
+        <a data-own-profile-link href="profile-peer-vink.html">
+          PROFILE
+        </a>
+
+        <a
+          class="dashboard-link is-active"
+          href="dashboard.html"
+          aria-label="Open dashboard">
+          +
+        </a>
+      </span>
+    </nav>
+  </header>
+
+
+  <main class="dashboard-layout">
+
+    <aside class="dashboard-sidebar">
+      <div class="dashboard-sidebar-inner">
+
+        <header class="dashboard-intro">
+          <h1>DASHBOARD</h1>
+
+          <p
+            class="dashboard-account-identity"
+            data-dashboard-account-identity>
+            <span data-dashboard-profile-name>PROFILE LOADING</span><br>
+            <span data-dashboard-account-type>ARTIST ACCOUNT</span>
+          </p>
+        </header>
+
+
+        <nav
+          class="dashboard-navigation"
+          aria-label="Dashboard navigation">
+
+          <a href="dashboard.html">
+            OVERVIEW
+          </a>
+
+          <a href="dashboard-works.html">
+            WORKS
+          </a>
+
+          <a
+            class="is-active"
+            href="dashboard-presentations.html">
+            PRESENTATIONS
+          </a>
+
+          <span>AGENDA</span>
+          <span>CV</span>
+          <span>PRESS</span>
+          <span>SETTINGS</span>
+        </nav>
+
+
+        <a
+          class="dashboard-public-link"
+          data-own-profile-link
+          href="profile-peer-vink.html">
+          VIEW PUBLIC PROFILE &nearr;
+        </a>
+
+      </div>
+    </aside>
+
+
+    <section class="dashboard-content">
+
+      <header class="dashboard-content-header">
+        <div>
+          <p id="presentation-editor-context">
+            PRESENTATIONS / ADD PRESENTATION
+          </p>
+
+          <h2 id="presentation-editor-heading">
+            NEW PRESENTATION
+          </h2>
+        </div>
+
+        <a
+          class="text-action dashboard-cancel"
+          href="dashboard-presentations.html">
+          [ CANCEL ]
+        </a>
+      </header>
+
+
+      <p
+        class="dashboard-inline-error"
+        id="presentation-form-error"
+        role="alert"
+        aria-live="polite"
+        hidden></p>
+
+
+      <form
+        class="work-form presentation-form"
+        id="presentation-form"
+        novalidate>
+
+        <section class="work-form-section">
+
+          <header class="work-form-section-header">
+            <p>01</p>
+
+            <div>
+              <h3>BASIC INFORMATION</h3>
+              <p>THE CORE DETAILS OF THE PRESENTATION</p>
+            </div>
+          </header>
+
+
+          <div class="work-form-fields">
+
+            <label
+              class="work-form-field work-form-field-wide"
+              id="presentation-owner-field"
+              hidden>
+              <span>PRESENTATION FOR</span>
+
+              <select
+                id="presentation-owner-profile"
+                name="owner-profile"></select>
+            </label>
+
+
+            <label class="work-form-field">
+              <span>TYPE</span>
+
+              <select name="activity-type">
+                <option value="">SELECT TYPE</option>
+                <option value="solo-exhibition">
+                  SOLO EXHIBITION
+                </option>
+                <option value="group-exhibition">
+                  GROUP EXHIBITION
+                </option>
+                <option value="art-fair">
+                  ART FAIR
+                </option>
+                <option value="residency">
+                  RESIDENCY
+                </option>
+                <option value="project">
+                  PROJECT
+                </option>
+                <option value="performance">
+                  PERFORMANCE
+                </option>
+                <option value="talk-lecture">
+                  TALK / LECTURE
+                </option>
+                <option value="screening">
+                  SCREENING
+                </option>
+                <option value="publication">
+                  PUBLICATION
+                </option>
+                <option value="other">
+                  OTHER
+                </option>
+              </select>
+            </label>
+
+
+            <label class="work-form-field">
+              <span>TITLE</span>
+
+              <input
+                type="text"
+                name="title"
+                maxlength="300"
+                placeholder="PRESENTATION TITLE">
+            </label>
+
+          </div>
+
+        </section>
+
+
+        <section class="work-form-section">
+
+          <header class="work-form-section-header">
+            <p>02</p>
+
+            <div>
+              <h3>PLACE AND DATE</h3>
+              <p>WHERE AND WHEN THE PRESENTATION TAKES PLACE</p>
+            </div>
+          </header>
+
+
+          <div class="work-form-fields">
+
+            <label class="work-form-field">
+              <span>VENUE / ORGANISATION</span>
+
+              <input
+                type="text"
+                name="venue-name"
+                maxlength="300"
+                placeholder="VENUE OR ORGANISATION">
+            </label>
+
+
+            <label class="work-form-field">
+              <span>CITY</span>
+
+              <input
+                type="text"
+                name="city"
+                maxlength="160"
+                placeholder="CITY">
+            </label>
+
+
+            <label class="work-form-field">
+              <span>COUNTRY</span>
+
+              <input
+                type="text"
+                name="country"
+                maxlength="160"
+                placeholder="COUNTRY">
+            </label>
+
+
+            <label class="work-form-field">
+              <span>START DATE</span>
+
+              <input
+                type="date"
+                name="start-date">
+            </label>
+
+
+            <label class="work-form-field">
+              <span>END DATE</span>
+
+              <input
+                type="date"
+                name="end-date">
+            </label>
+
+          </div>
+
+        </section>
+
+
+        <section class="work-form-section">
+
+          <header class="work-form-section-header">
+            <p>03</p>
+
+            <div>
+              <h3>CONTEXT</h3>
+              <p>OPTIONAL INFORMATION ABOUT THE PRESENTATION</p>
+            </div>
+          </header>
+
+
+          <div class="work-form-fields">
+
+            <label class="work-form-field work-form-field-wide">
+              <span>DESCRIPTION</span>
+
+              <textarea
+                name="description"
+                rows="7"
+                maxlength="50000"
+                placeholder="ADD A SHORT DESCRIPTION"></textarea>
+            </label>
+
+
+            <label class="work-form-field work-form-field-wide">
+              <span>EXTERNAL URL</span>
+
+              <input
+                type="url"
+                name="external-url"
+                maxlength="2048"
+                placeholder="HTTPS://">
+            </label>
+
+          </div>
+
+        </section>
+
+
+        <section class="work-form-section">
+
+          <header class="work-form-section-header">
+            <p>04</p>
+
+            <div>
+              <h3>PLACEMENT</h3>
+              <p>CHOOSE WHERE THIS RECORD WILL EVENTUALLY APPEAR</p>
+            </div>
+          </header>
+
+
+          <fieldset class="work-visibility-options">
+
+            <label>
+              <input
+                type="checkbox"
+                name="show-in-presentations"
+                checked>
+
+              <span>
+                SHOW IN PRESENTATIONS
+                <small>
+                  USE THIS RECORD ON THE PUBLIC PRESENTATIONS PAGE
+                </small>
+              </span>
+            </label>
+
+
+            <label>
+              <input
+                type="checkbox"
+                name="include-in-cv">
+
+              <span>
+                INCLUDE IN CV
+                <small>
+                  USE THIS RECORD AS AN AUTOMATIC CV ENTRY
+                </small>
+              </span>
+            </label>
+
+          </fieldset>
+
+        </section>
+
+
+        <p
+          class="work-form-status"
+          id="presentation-form-status"
+          role="status"
+          aria-live="polite"
+          hidden></p>
+
+
+        <footer class="work-form-actions">
+
+          <button
+            class="text-action"
+            id="presentation-delete"
+            type="button"
+            hidden>
+            [ DELETE PRESENTATION ]
+          </button>
+
+          <button
+            class="text-action presentation-form-save"
+            type="submit">
+            [ SAVE DRAFT ]
+          </button>
+
+        </footer>
+
+      </form>
+
+    </section>
+
+  </main>
+
+
+  <script src="dashboard-presentation-form.js?v=1"></script>
+
+</body>
+</html>

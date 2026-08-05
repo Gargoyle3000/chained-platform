@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
 
-  <title>Works — CHAINED Dashboard</title>
+  <title>Presentations — CHAINED Dashboard</title>
 
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="dashboard.css">
@@ -68,13 +68,13 @@
             OVERVIEW
           </a>
 
-          <a
-            class="is-active"
-            href="dashboard-works.html">
+          <a href="dashboard-works.html">
             WORKS
           </a>
 
-          <a href="dashboard-presentations.html">
+          <a
+            class="is-active"
+            href="dashboard-presentations.html">
             PRESENTATIONS
           </a>
           <span>AGENDA</span>
@@ -99,15 +99,15 @@
 
       <header class="dashboard-content-header">
         <div>
-          <p>WORKS</p>
+          <p>PRESENTATIONS</p>
 
-          <h2>MANAGE YOUR WORKS</h2>
+          <h2>MANAGE YOUR PRESENTATIONS</h2>
         </div>
 
         <a
-          class="text-action dashboard-add-work"
-          href="dashboard-work-edit.html">
-          [ + ADD WORK ]
+          class="text-action dashboard-add-presentation"
+          href="dashboard-presentation-edit.html">
+          [ + ADD PRESENTATION ]
         </a>
       </header>
 
@@ -117,32 +117,32 @@
         <header class="dashboard-section-header">
           <div>
             <p class="dashboard-label">
-              ALL WORKS
+              ALL PRESENTATIONS
             </p>
 
-            <h2 id="dashboard-works-breakdown">
-              LOADING WORKS
+            <h2 id="dashboard-presentations-breakdown">
+              LOADING PRESENTATIONS
             </h2>
           </div>
 
-          <span id="dashboard-works-total">—</span>
+          <span id="dashboard-presentations-total">—</span>
         </header>
 
         <p
           class="dashboard-inline-error"
-          id="dashboard-works-error"
+          id="dashboard-presentations-error"
           role="alert"
           hidden></p>
 
         <p
           class="dashboard-local-notice"
-          id="dashboard-prototype-notice"
+          id="dashboard-presentations-notice"
           role="status"
           hidden></p>
 
         <div
-          class="dashboard-work-list"
-          id="dashboard-work-list"
+          class="dashboard-presentation-list"
+          id="dashboard-presentation-list"
           aria-live="polite"></div>
 
       </section>
@@ -151,8 +151,7 @@
 
   </main>
 
-  <script src="work-store.js"></script>
-  <script src="dashboard-works.js?v=2"></script>
+  <script src="dashboard-presentations.js?v=1"></script>
 
 </body>
 </html>

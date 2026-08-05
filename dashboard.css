@@ -145,7 +145,7 @@
   min-height: 220px;
   padding: 22px 28px 26px 0;
 
-  border-bottom: 1px solid var(--black);
+
 }
 
 .dashboard-summary-item + .dashboard-summary-item {
@@ -222,7 +222,7 @@
 
   padding: 18px 0;
 
-  border-bottom: 1px solid var(--black);
+
 
   font-size: var(--font-meta);
 }
@@ -256,7 +256,7 @@
 
   padding: 18px 0;
 
-  border-bottom: 1px solid var(--black);
+
 }
 
 .dashboard-work-row img {
@@ -384,6 +384,70 @@
 
 .is-draft {
   color: var(--black);
+}
+/* =========================================================
+   PRESENTATIONS
+   ========================================================= */
+
+
+.dashboard-presentation-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 28px;
+
+  padding: 18px 0;
+
+
+}
+
+.dashboard-presentation-row h3 {
+  margin: 0 0 8px;
+
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 400;
+}
+
+.dashboard-presentation-row p,
+.dashboard-presentation-row span {
+  margin: 0;
+
+  font-size: var(--font-meta);
+}
+
+.dashboard-presentation-information {
+  min-width: 0;
+}
+
+.dashboard-presentation-placement {
+  margin-top: 8px !important;
+  font-size: 9px !important;
+}
+
+.dashboard-presentation-status {
+  display: grid;
+  justify-items: end;
+  gap: 12px;
+}
+
+.dashboard-presentation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 18px;
+}
+
+.dashboard-add-presentation {
+  flex-shrink: 0;
+
+  color: var(--accent);
+}
+
+.dashboard-add-presentation[aria-disabled="true"] {
+  color: var(--black);
+  text-decoration: none;
+  cursor: not-allowed;
 }
 
 
@@ -580,4 +644,28 @@
   padding-top: 30px;
 
   color: var(--accent);
+}
+
+/* PRESENTATIONS LAYOUT */
+
+.dashboard-presentation-list {
+  display: grid;
+  gap: 28px;
+}
+
+@media (max-width: 700px) {
+  .dashboard-presentation-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 14px;
+    padding: 0;
+  }
+
+  .dashboard-presentation-status {
+    justify-items: start;
+  }
+
+  .dashboard-presentation-actions {
+    justify-content: flex-start;
+  }
 }
