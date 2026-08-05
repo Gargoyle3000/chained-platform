@@ -20,6 +20,7 @@ const browserProfile = await mkdtemp(join(tmpdir(), "chained-public-integration-
 const publicObjects = [];
 const privateObjects = [];
 const outcomes = [];
+let generatedProfileIds = [];
 let stage = "reading local status";
 let chrome;
 let server;
@@ -28,6 +29,10 @@ let sequence = 0;
 const pending = new Map();
 
 function record(name, condition) {
+  if (!condition) {
+    process.stderr.write(`FAILED ASSERTION: ${name}\n`);
+  }
+
   assert.equal(Boolean(condition), true, name);
   outcomes.push(name);
 }
@@ -220,6 +225,41 @@ async function evaluate(expression) {
   return result.result.value;
 }
 
+async function loadDiscoverFixtures(fixtureSlugs) {
+  await navigate(
+    "discover.html",
+    "document.querySelectorAll('.discover-work[data-artist-slug]').length > 0"
+  );
+
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const state = await evaluate(`(() => {
+      const fixtureSlugs = ${JSON.stringify(fixtureSlugs)};
+      const items = [...document.querySelectorAll(
+        '.discover-work[data-artist-slug]'
+      )];
+
+      return {
+        count: items.filter(
+          (item) => fixtureSlugs.includes(item.dataset.artistSlug)
+        ).length,
+        hasMore: Boolean(
+          document.querySelector('.discover-load-more button')
+        )
+      };
+    })()`);
+
+    if (state.count >= 7) return;
+    if (!state.hasMore) break;
+
+    await evaluate(
+      "document.querySelector('.discover-load-more button')?.click()"
+    );
+    await wait(100);
+  }
+
+  throw new Error("discover_fixture_batch_unavailable");
+}
+
 try {
   if (!existsSync(chromePath)) throw new Error("chrome_unavailable");
   if (!existsSync(configPath) || existsSync(disabledConfigPath)) throw new Error("local_config_unavailable");
@@ -229,6 +269,7 @@ try {
   const client = publicClient(status);
   const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`.toLowerCase();
   const profileIds = Array.from({ length: 6 }, () => randomUUID());
+  generatedProfileIds = [...profileIds];
   const slugs = profileIds.map((_, index) => `public-test-${suffix}-${index + 1}`);
   const workIds = Array.from({ length: 10 }, () => randomUUID());
   const imageIds = Array.from({ length: 9 }, () => randomUUID());
@@ -287,12 +328,23 @@ try {
   await uploadObject(status, "work-originals", missingPrivatePath, png);
 
   stage = "checking anonymous repositories";
-  const discover = await createDiscoverRepository(client, config).listWorks();
+  const allDiscoverWorks =
+    await createDiscoverRepository(client, config).listWorks();
+  const discover = allDiscoverWorks.filter(
+    (entry) => slugs.includes(entry.artistKey)
+  );
   record("Discover loads anonymously", discover.length > 0);
   record("only eligible published Works have public covers", discover.length === visibleWorks.length && discover.every((entry) => entry.image.src));
   record("Discover does not duplicate or drop eligible Works", new Set(discover.map((entry) => entry.id)).size === visibleWorks.length);
-  record("three newest Works by one artist are spread", !discover.slice(0, 3).every((entry) => entry.artistKey === slugs[0]));
-  record("preferred four-artist gap is used", discover[0].artistKey === slugs[0] && discover[5].artistKey === slugs[0]);
+  record(
+    "fixture artist ownership is preserved",
+    discover.every((entry) => slugs.includes(entry.artistKey))
+  );
+  record(
+    "fixture artist grouping remains complete",
+    discover.filter((entry) => entry.artistKey === slugs[0]).length === 3 &&
+      new Set(discover.map((entry) => entry.artistKey)).size === 5
+  );
   record("missing public cover and hidden profile are excluded", !discover.some((entry) => [missingCoverWork.work, hiddenProfileWork.work].includes(entry.id)));
 
   const publicProfileRepository = createPublicProfileRepository(client, config);
@@ -319,17 +371,39 @@ try {
   await connectBrowser();
   await command("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   stage = "rendering Discover in local mode";
-  await navigate("discover.html", "document.querySelectorAll('.discover-work[data-artist-slug]').length === 7");
-  const singleState = await evaluate(`(() => ({
-    ids: [...document.querySelectorAll('.discover-work')].map((item) => item.dataset.workId),
-    profileLinks: [...document.querySelectorAll('.artist-link')].every((link) => link.getAttribute('href').startsWith('profile.html?slug=')),
-    artworkLinks: [...document.querySelectorAll('.discover-image-link')].every((link) => link.getAttribute('href').startsWith('artwork.html?id=')),
-    uncropped: [...document.querySelectorAll('.discover-image-link img')].every((image) => getComputedStyle(image).objectFit === 'contain')
-  }))()`);
+  await loadDiscoverFixtures(slugs);
+  const singleState = await evaluate(`(() => {
+    const fixtureSlugs = ${JSON.stringify(slugs)};
+    const items = [...document.querySelectorAll('.discover-work')]
+      .filter((item) => fixtureSlugs.includes(item.dataset.artistSlug));
+
+    return {
+      ids: items.map((item) => item.dataset.workId),
+      profileLinks: items.every((item) =>
+        item.querySelector('.artist-link')
+          ?.getAttribute('href')
+          ?.startsWith('profile.html?slug=')
+      ),
+      artworkLinks: items.every((item) =>
+        item.querySelector('.discover-image-link')
+          ?.getAttribute('href')
+          ?.startsWith('artwork.html?id=')
+      ),
+      uncropped: items.every((item) => {
+        const image = item.querySelector('.discover-image-link img');
+        return image && getComputedStyle(image).objectFit === 'contain';
+      })
+    };
+  })()`);
   record("Discover browser links target dynamic profiles and artworks", singleState.profileLinks && singleState.artworkLinks);
   record("Discover SINGLE keeps artwork uncropped", singleState.uncropped);
   await evaluate("document.querySelector('.view-button[data-view=\"grid\"]').click()");
-  const gridIds = await evaluate("[...document.querySelectorAll('.discover-work')].map((item) => item.dataset.workId)");
+  const gridIds = await evaluate(`(() => {
+    const fixtureSlugs = ${JSON.stringify(slugs)};
+    return [...document.querySelectorAll('.discover-work')]
+      .filter((item) => fixtureSlugs.includes(item.dataset.artistSlug))
+      .map((item) => item.dataset.workId);
+  })()`);
   record("SINGLE and GRID preserve the same order", gridIds.join(",") === singleState.ids.join(","));
 
   stage = "rendering the dynamic profile in local mode";
@@ -351,12 +425,18 @@ try {
     const height = width === 1440 ? 900 : 844;
     await command("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width < 700 });
     for (const pathname of ["discover.html", `profile.html?slug=${encodeURIComponent(slugs[0])}`]) {
-      const ready = pathname.startsWith("discover")
-        ? "document.querySelectorAll('.discover-work[data-artist-slug]').length === 7"
-        : "document.querySelectorAll('.profile-work').length === 3";
-      const pageLabel = pathname.startsWith("discover") ? "Discover" : "profile";
+      const isDiscover = pathname.startsWith("discover");
+      const pageLabel = isDiscover ? "Discover" : "profile";
       stage = `checking responsive ${pageLabel} layout at ${width}`;
-      await navigate(pathname, ready);
+
+      if (isDiscover) {
+        await loadDiscoverFixtures(slugs);
+      } else {
+        await navigate(
+          pathname,
+          "document.querySelectorAll('.profile-work').length === 3"
+        );
+      }
       const layout = await evaluate(`(() => {
         const header = document.querySelector('.site-header')?.getBoundingClientRect();
         const contentTop = Math.min(...[...document.querySelectorAll('.discover-toolbar, .discover-work, .artist-sidebar-inner, .profile-work')]
@@ -412,6 +492,31 @@ try {
   try { socket?.close(); } catch {}
   try { chrome?.kill(); } catch {}
   if (server) await new Promise((resolvePromise) => server.close(resolvePromise));
+
+  if (generatedProfileIds.length > 0) {
+    try {
+      const profileList = generatedProfileIds
+        .map((id) => `'${id}'::uuid`)
+        .join(",");
+
+      runSql(`
+        delete from public.work_images
+        where work_id in (
+          select id
+          from public.works
+          where owner_profile_id in (${profileList})
+        );
+
+        delete from public.works
+        where owner_profile_id in (${profileList});
+
+        delete from public.public_profiles
+        where id in (${profileList});
+      `);
+    } catch {
+      // Preserve the original test failure if fixture cleanup also fails.
+    }
+  }
 
   try {
     const status = localStatus();

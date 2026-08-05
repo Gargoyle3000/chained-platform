@@ -8,6 +8,7 @@
   <title>Discover — CHAINED</title>
 
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="auth/auth.css">
 </head>
 
 <body class="discover-page" data-view="single">
@@ -25,7 +26,7 @@
       <a href="archive.html">ARCHIVE</a>
       <a href="agenda.html">AGENDA</a>
 <span class="profile-nav-group">
-  <a href="profile-peer-vink.html">
+  <a data-own-profile-link href="profile-peer-vink.html">
     PROFILE
   </a>
 
@@ -308,6 +309,7 @@
   </main>
 
 
+  <script type="module" src="auth/public-navigation.mjs"></script>
   <script src="discover.js"></script>
   <script src="saved-works.js"></script>
 

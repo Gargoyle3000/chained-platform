@@ -1,4 +1,6 @@
 import { FRONTEND_MODES } from "./auth/config.mjs";
+import { readApplicationSession } from "./auth/session.mjs";
+import { applyAuthenticatedNavigation } from "./auth/navigation.mjs";
 import { getPublicProfileRepository } from "./data/public-profile-repository.mjs";
 import { createFollowService } from "./data/follow-service.mjs";
 import {
@@ -215,6 +217,18 @@ async function initialiseFollowControl(client, identity) {
   });
 }
 
+async function initialiseAuthenticatedProfileNavigation(client) {
+  try {
+    const applicationSession = await readApplicationSession(client);
+
+    if (applicationSession.kind !== "active") return;
+
+    await applyAuthenticatedNavigation(client);
+  } catch (error) {
+    console.error("Profile authenticated navigation unavailable.", error);
+  }
+}
+
 async function initialiseProfile() {
   const slug = new URLSearchParams(window.location.search).get("slug");
   if (!isValidProfileSlug(slug)) {
@@ -236,6 +250,7 @@ async function initialiseProfile() {
     }
 
     renderProfile(result);
+    await initialiseAuthenticatedProfileNavigation(runtime.client);
     await initialiseFollowControl(runtime.client, result.followIdentity);
   } catch {
     hideFollowControl();

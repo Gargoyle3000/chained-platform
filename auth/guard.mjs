@@ -5,6 +5,7 @@ import {
 } from "./auth-logic.mjs";
 import { getFrontendRuntime } from "./supabase-client.mjs";
 import { readApplicationSession } from "./session.mjs";
+import { applyAuthenticatedNavigation } from "./navigation.mjs";
 
 const guardFlag = "__chainedAuthGuardInitialized";
 
@@ -54,38 +55,6 @@ function redirectToLogin() {
   window.location.replace(loginLocation());
 }
 
-function renderSessionIndicator(client) {
-  if (document.querySelector(".auth-session-indicator")) return;
-
-  const navigation = document.querySelector(".main-nav");
-  if (!navigation) return;
-
-  const indicator = document.createElement("span");
-  indicator.className = "auth-session-indicator";
-
-  const state = document.createElement("span");
-  state.textContent = "SIGNED IN";
-
-  const logout = document.createElement("button");
-  logout.className = "auth-logout-button";
-  logout.type = "button";
-  logout.textContent = "[ LOG OUT ]";
-  logout.setAttribute("aria-label", "Log out of CHAINED");
-
-  logout.addEventListener("click", async () => {
-    if (logout.disabled) return;
-    logout.disabled = true;
-    try {
-      await client.auth.signOut();
-    } finally {
-      window.location.replace("login.html");
-    }
-  });
-
-  indicator.append(state, logout);
-  navigation.append(indicator);
-}
-
 async function authorize(client) {
   const applicationSession = await readApplicationSession(client);
 
@@ -104,7 +73,11 @@ async function authorize(client) {
     return false;
   }
 
-  renderSessionIndicator(client);
+  try {
+    await applyAuthenticatedNavigation(client);
+  } catch (error) {
+    console.error("Authenticated navigation unavailable.", error);
+  }
   revealProtectedContent(FRONTEND_MODES.LOCAL_SUPABASE);
   return true;
 }

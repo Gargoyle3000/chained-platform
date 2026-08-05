@@ -187,3 +187,32 @@ body[data-auth-protected="true"] > main {
     font-size: clamp(38px, 15vw, 70px);
   }
 }
+
+/* AUTHENTICATED HEADER */
+
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  margin-left: auto;
+  pointer-events: none;
+}
+
+.header-actions .auth-session-indicator,
+.header-actions .main-nav {
+  pointer-events: auto;
+}
+
+.header-actions .auth-session-indicator {
+  justify-content: flex-end;
+  font-size: var(--font-nav);
+  line-height: 1;
+}
+
+@media (max-width: 720px) {
+  .header-actions {
+    width: 100%;
+    align-items: flex-end;
+  }
+}
