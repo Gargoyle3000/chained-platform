@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   "use strict";
 
   const { getWorkRepository, getPrototypeWorkCount } = await import("./data/work-repository.mjs");
+  const { renderDashboardAccountIdentity } = await import("./data/dashboard-context.mjs");
   const workList = document.querySelector("#dashboard-work-list");
   const totalElement = document.querySelector("#dashboard-works-total");
   const breakdownElement = document.querySelector("#dashboard-works-breakdown");
@@ -164,6 +165,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       const count = await getPrototypeWorkCount().catch(() => 0);
       if (count) { noticeElement.textContent = `LOCAL PROTOTYPE WORKS HAVE NOT BEEN IMPORTED. (${count})`; noticeElement.hidden = false; }
       const profiles = await repository.listManagedProfiles();
+      renderDashboardAccountIdentity(profiles);
+
       if (!profiles.length) {
         addWorkLink.setAttribute("aria-disabled", "true");
         addWorkLink.removeAttribute("href");
@@ -172,8 +175,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
       await renderWorks(profiles.map((profile) => profile.id));
-    } else await renderWorks();
-  } catch { setError("WORKS ARE CURRENTLY UNAVAILABLE"); workList.replaceChildren(emptyState("WORKS UNAVAILABLE")); }
+    } else {
+      renderDashboardAccountIdentity([], "prototype");
+      await renderWorks();
+    }
+  } catch {
+    renderDashboardAccountIdentity([], "error");
+    setError("WORKS ARE CURRENTLY UNAVAILABLE");
+    workList.replaceChildren(emptyState("WORKS UNAVAILABLE"));
+  }
 
   window.addEventListener("beforeunload", releaseUrls);
 });

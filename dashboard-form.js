@@ -3,6 +3,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     getWorkRepository,
     getPrototypeWorkCount
   } = await import("./data/work-repository.mjs");
+  const { renderDashboardAccountIdentity } =
+    await import("./data/dashboard-context.mjs");
   const {
     publicationReadiness,
     createIdempotencyState,
@@ -927,13 +929,15 @@ Object.values(materialOptions).forEach((options) => {
         }
         const profiles = await workStore.listManagedProfiles();
         populateOwnerProfiles(profiles);
+        renderDashboardAccountIdentity(profiles);
         if (!profiles.length) {
           showFormStatus("ARTIST PROFILE SETUP REQUIRED", true);
           setEditorBusy(true);
           return;
         }
+      } else {
+        renderDashboardAccountIdentity([], "prototype");
       }
-
       if (!currentWorkId) {
         updateLifecycleControls(null);
         return;
@@ -953,7 +957,13 @@ Object.values(materialOptions).forEach((options) => {
       if (localSupabaseMode) profileSelect.disabled = true;
       await populateForm(work);
     } catch {
-      showFormStatus(localSupabaseMode ? "WORK IS CURRENTLY UNAVAILABLE" : "LOCAL WORK STORAGE IS UNAVAILABLE", true);
+      renderDashboardAccountIdentity([], "error");
+      showFormStatus(
+        localSupabaseMode
+          ? "WORK IS CURRENTLY UNAVAILABLE"
+          : "LOCAL WORK STORAGE IS UNAVAILABLE",
+        true
+      );
     }
   }
 
