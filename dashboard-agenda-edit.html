@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
 
-  <title>Edit Presentation — CHAINED Dashboard</title>
+  <title>Add Agenda Item &mdash; CHAINED Dashboard</title>
 
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="dashboard.css">
@@ -74,13 +74,16 @@
             WORKS
           </a>
 
-          <a
-            class="is-active"
-            href="dashboard-presentations.html">
+          <a href="dashboard-presentations.html">
             PRESENTATIONS
           </a>
 
-          <a href="dashboard-agenda.html">AGENDA</a>
+          <a
+            class="is-active"
+            href="dashboard-agenda.html">
+            AGENDA
+          </a>
+
           <span>CV</span>
           <span>PRESS</span>
           <span>SETTINGS</span>
@@ -102,18 +105,18 @@
 
       <header class="dashboard-content-header">
         <div>
-          <p id="presentation-editor-context">
-            PRESENTATIONS / ADD PRESENTATION
+          <p id="agenda-editor-context">
+            AGENDA / ADD AGENDA ITEM
           </p>
 
-          <h2 id="presentation-editor-heading">
-            NEW PRESENTATION
+          <h2 id="agenda-editor-heading">
+            NEW AGENDA ITEM
           </h2>
         </div>
 
         <a
           class="text-action dashboard-cancel"
-          href="dashboard-presentations.html">
+          href="dashboard-agenda.html">
           [ CANCEL ]
         </a>
       </header>
@@ -121,15 +124,15 @@
 
       <p
         class="dashboard-inline-error"
-        id="presentation-form-error"
+        id="agenda-form-error"
         role="alert"
         aria-live="polite"
         hidden></p>
 
 
       <form
-        class="work-form presentation-form"
-        id="presentation-form"
+        class="work-form agenda-form"
+        id="agenda-form"
         novalidate>
 
         <section class="work-form-section">
@@ -138,8 +141,8 @@
             <p>01</p>
 
             <div>
-              <h3>BASIC INFORMATION</h3>
-              <p>THE CORE DETAILS OF THE PRESENTATION</p>
+              <h3>CONNECTION</h3>
+              <p>CREATE AN INDEPENDENT ITEM OR LINK IT TO A PRESENTATION</p>
             </div>
           </header>
 
@@ -148,63 +151,26 @@
 
             <label
               class="work-form-field work-form-field-wide"
-              id="presentation-owner-field"
+              id="agenda-owner-field"
               hidden>
-              <span>PRESENTATION FOR</span>
+              <span>AGENDA ITEM FOR</span>
 
               <select
-                id="presentation-owner-profile"
+                id="agenda-owner-profile"
                 name="owner-profile"></select>
             </label>
 
 
-            <label class="work-form-field">
-              <span>TYPE</span>
+            <label class="work-form-field work-form-field-wide">
+              <span>LINK TO PRESENTATION</span>
 
-              <select name="activity-type">
-                <option value="">SELECT TYPE</option>
-                <option value="solo-exhibition">
-                  SOLO EXHIBITION
-                </option>
-                <option value="group-exhibition">
-                  GROUP EXHIBITION
-                </option>
-                <option value="art-fair">
-                  ART FAIR
-                </option>
-                <option value="residency">
-                  RESIDENCY
-                </option>
-                <option value="project">
-                  PROJECT
-                </option>
-                <option value="performance">
-                  PERFORMANCE
-                </option>
-                <option value="talk-lecture">
-                  TALK / LECTURE
-                </option>
-                <option value="screening">
-                  SCREENING
-                </option>
-                <option value="publication">
-                  PUBLICATION
-                </option>
-                <option value="other">
-                  OTHER
+              <select
+                id="agenda-activity"
+                name="activity-id">
+                <option value="">
+                  NO PRESENTATION / INDEPENDENT AGENDA ITEM
                 </option>
               </select>
-            </label>
-
-
-            <label class="work-form-field">
-              <span>TITLE</span>
-
-              <input
-                type="text"
-                name="title"
-                maxlength="300"
-                placeholder="PRESENTATION TITLE">
             </label>
 
           </div>
@@ -218,8 +184,10 @@
             <p>02</p>
 
             <div>
-              <h3>PLACE AND DATE</h3>
-              <p>WHERE AND WHEN THE PRESENTATION TAKES PLACE</p>
+              <h3>AGENDA ITEM</h3>
+              <p>
+                TITLE AND LOCATION MAY BE INHERITED FROM A LINKED PRESENTATION
+              </p>
             </div>
           </header>
 
@@ -227,37 +195,52 @@
           <div class="work-form-fields">
 
             <label class="work-form-field">
-              <span>VENUE / ORGANISATION</span>
+              <span>TYPE</span>
+
+              <select name="occurrence-type">
+                <option value="">SELECT TYPE</option>
+                <option value="opening">OPENING</option>
+                <option value="artist-talk">ARTIST TALK</option>
+                <option value="finissage">FINISSAGE</option>
+                <option value="open-studio">OPEN STUDIO</option>
+                <option value="performance">PERFORMANCE</option>
+                <option value="screening">SCREENING</option>
+                <option value="guided-tour">GUIDED TOUR</option>
+                <option value="workshop">WORKSHOP</option>
+                <option value="talk-lecture">TALK / LECTURE</option>
+                <option value="other">OTHER</option>
+              </select>
+            </label>
+
+
+            <label class="work-form-field">
+              <span>TITLE</span>
 
               <input
                 type="text"
-                name="venue-name"
+                name="title-override"
                 maxlength="300"
-                placeholder="VENUE OR ORGANISATION">
+                placeholder="AGENDA ITEM TITLE">
             </label>
 
+          </div>
 
-            <label class="work-form-field">
-              <span>CITY</span>
-
-              <input
-                type="text"
-                name="city"
-                maxlength="160"
-                placeholder="CITY">
-            </label>
+        </section>
 
 
-            <label class="work-form-field">
-              <span>COUNTRY</span>
+        <section class="work-form-section">
 
-              <input
-                type="text"
-                name="country"
-                maxlength="160"
-                placeholder="COUNTRY">
-            </label>
+          <header class="work-form-section-header">
+            <p>03</p>
 
+            <div>
+              <h3>DATE AND TIME</h3>
+              <p>WHEN VISITORS CAN ATTEND</p>
+            </div>
+          </header>
+
+
+          <div class="work-form-fields">
 
             <label class="work-form-field">
               <span>START DATE</span>
@@ -276,44 +259,33 @@
                 name="end-date">
             </label>
 
-          </div>
 
-        </section>
+            <label class="work-form-field">
+              <span>START TIME</span>
 
-
-        <section class="work-form-section">
-
-          <header class="work-form-section-header">
-            <p>03</p>
-
-            <div>
-              <h3>CONTEXT</h3>
-              <p>OPTIONAL INFORMATION ABOUT THE PRESENTATION</p>
-            </div>
-          </header>
+              <input
+                type="time"
+                name="start-time">
+            </label>
 
 
-          <div class="work-form-fields">
+            <label class="work-form-field">
+              <span>END TIME</span>
 
-            <label class="work-form-field work-form-field-wide">
-              <span>DESCRIPTION</span>
-
-              <textarea
-                name="description"
-                rows="7"
-                maxlength="50000"
-                placeholder="ADD A SHORT DESCRIPTION"></textarea>
+              <input
+                type="time"
+                name="end-time">
             </label>
 
 
             <label class="work-form-field work-form-field-wide">
-              <span>EXTERNAL URL</span>
+              <span>TIME ZONE</span>
 
               <input
-                type="url"
-                name="external-url"
-                maxlength="2048"
-                placeholder="HTTPS://">
+                type="text"
+                name="time-zone"
+                maxlength="80"
+                placeholder="EUROPE/AMSTERDAM">
             </label>
 
           </div>
@@ -327,8 +299,50 @@
             <p>04</p>
 
             <div>
+              <h3>LOCATION</h3>
+              <p>
+                LEAVE EMPTY TO USE THE LINKED PRESENTATION LOCATION
+              </p>
+            </div>
+          </header>
+
+
+          <div class="work-form-fields">
+
+            <label class="work-form-field">
+              <span>VENUE / ORGANISATION</span>
+
+              <input
+                type="text"
+                name="venue-name-override"
+                maxlength="300"
+                placeholder="VENUE OR ORGANISATION">
+            </label>
+
+
+            <label class="work-form-field">
+              <span>CITY</span>
+
+              <input
+                type="text"
+                name="city-override"
+                maxlength="160"
+                placeholder="CITY">
+            </label>
+
+          </div>
+
+        </section>
+
+
+        <section class="work-form-section">
+
+          <header class="work-form-section-header">
+            <p>05</p>
+
+            <div>
               <h3>PLACEMENT</h3>
-              <p>CHOOSE WHERE THIS RECORD WILL EVENTUALLY APPEAR</p>
+              <p>CHOOSE WHETHER THIS ITEM APPEARS IN THE PUBLIC AGENDA</p>
             </div>
           </header>
 
@@ -338,27 +352,13 @@
             <label>
               <input
                 type="checkbox"
-                name="show-in-presentations"
+                name="show-in-agenda"
                 checked>
 
               <span>
-                SHOW IN PRESENTATIONS
+                SHOW IN AGENDA
                 <small>
-                  USE THIS RECORD ON THE PUBLIC PRESENTATIONS PAGE
-                </small>
-              </span>
-            </label>
-
-
-            <label>
-              <input
-                type="checkbox"
-                name="include-in-cv">
-
-              <span>
-                INCLUDE IN CV
-                <small>
-                  USE THIS RECORD AS AN AUTOMATIC CV ENTRY
+                  USE THIS ITEM ON THE PUBLIC AGENDA PAGE
                 </small>
               </span>
             </label>
@@ -370,7 +370,7 @@
 
         <p
           class="work-form-status"
-          id="presentation-form-status"
+          id="agenda-form-status"
           role="status"
           aria-live="polite"
           hidden></p>
@@ -378,32 +378,16 @@
 
         <footer class="work-form-actions">
 
-
-          <a
+          <button
             class="text-action"
-            id="presentation-add-agenda"
-            href="dashboard-agenda-edit.html"
-            hidden>
-            [ + ADD AGENDA MOMENT ]
-          </a>
-<button
-            class="text-action"
-            id="presentation-delete"
+            id="agenda-delete"
             type="button"
             hidden>
-            [ DELETE PRESENTATION ]
+            [ DELETE AGENDA ITEM ]
           </button>
 
           <button
-            class="text-action"
-            id="presentation-publication"
-            type="button"
-            hidden>
-            [ PUBLISH ]
-          </button>
-
-          <button
-            class="text-action presentation-form-save"
+            class="text-action agenda-form-save"
             type="submit">
             [ SAVE DRAFT ]
           </button>
@@ -417,7 +401,7 @@
   </main>
 
 
-  <script src="dashboard-presentation-form.js?v=1"></script>
+  <script src="dashboard-agenda-form.js?v=1"></script>
 
 </body>
 </html>

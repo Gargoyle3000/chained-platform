@@ -24,6 +24,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelector("#presentation-delete");
   const publicationButton =
     document.querySelector("#presentation-publication");
+
+  const agendaButton =
+    document.querySelector("#presentation-add-agenda");
   const saveButton =
     document.querySelector(".presentation-form-save");
 
@@ -161,6 +164,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     deleteButton.hidden = !editing;
     publicationButton.hidden = !editing;
+    agendaButton.hidden = !editing;
+
+    if (editing) {
+      agendaButton.href =
+        `dashboard-agenda-edit.html?presentation=${encodeURIComponent(
+          presentation.id
+        )}`;
+    }
 
     if (editing) {
       const published =

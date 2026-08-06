@@ -213,6 +213,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     const publicationAction =
       createPublicationAction(item, reload);
 
+    const edit = document.createElement("a");
+
+    edit.className = "text-action";
+
+    edit.href =
+      `dashboard-agenda-edit.html?id=${encodeURIComponent(
+        item.id
+      )}`;
+
+    edit.textContent = "[ EDIT ]";
+
+    edit.setAttribute(
+      "aria-label",
+      `Edit ${item.title || "untitled Agenda item"}`
+    );
+
     const remove = createTextAction(
       "DELETE",
       `Delete ${item.title || "untitled Agenda item"}`
@@ -286,7 +302,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     information.append(title, metadata, placement);
-    actions.append(publicationAction, remove);
+    actions.append(edit, publicationAction, remove);
     statusArea.append(status, actions, confirmation);
     row.append(information, statusArea);
 
@@ -301,6 +317,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     text.textContent = message;
 
     state.append(text);
+
+    if (message === "NO AGENDA ITEMS ADDED") {
+      const link = document.createElement("a");
+
+      link.className = "text-action";
+      link.href = "dashboard-agenda-edit.html";
+      link.textContent = "[ + ADD AGENDA ITEM ]";
+
+      state.append(link);
+    }
 
     return state;
   }
