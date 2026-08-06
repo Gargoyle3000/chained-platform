@@ -1030,3 +1030,73 @@
     will-change: transform;
   }
 }
+/* DASHBOARD AGENDA */
+
+.dashboard-agenda-list {
+  display: grid;
+  gap: 28px;
+}
+
+.dashboard-agenda-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 28px;
+
+  padding: 18px 0;
+}
+
+.dashboard-agenda-row h3 {
+  margin: 0 0 8px;
+
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 400;
+}
+
+.dashboard-agenda-row p,
+.dashboard-agenda-row span {
+  margin: 0;
+
+  font-size: var(--font-meta);
+}
+
+.dashboard-agenda-information {
+  min-width: 0;
+}
+
+.dashboard-agenda-placement {
+  margin-top: 8px !important;
+
+  font-size: 9px !important;
+}
+
+.dashboard-agenda-status {
+  display: grid;
+  justify-items: end;
+  gap: 12px;
+}
+
+.dashboard-agenda-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 18px;
+}
+
+@media (max-width: 700px) {
+  .dashboard-agenda-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 14px;
+    padding: 0;
+  }
+
+  .dashboard-agenda-status {
+    justify-items: start;
+  }
+
+  .dashboard-agenda-actions {
+    justify-content: flex-start;
+  }
+}

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
 
-  <title>Presentations — CHAINED Dashboard</title>
+  <title>Agenda &mdash; CHAINED Dashboard</title>
 
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="dashboard.css">
@@ -72,12 +72,16 @@
             WORKS
           </a>
 
-          <a
-            class="is-active"
-            href="dashboard-presentations.html">
+          <a href="dashboard-presentations.html">
             PRESENTATIONS
           </a>
-          <a href="dashboard-agenda.html">AGENDA</a>
+
+          <a
+            class="is-active"
+            href="dashboard-agenda.html">
+            AGENDA
+          </a>
+
           <span>CV</span>
           <span>PRESS</span>
           <span>SETTINGS</span>
@@ -88,7 +92,7 @@
           class="dashboard-public-link"
           data-own-profile-link
           href="profile-peer-vink.html">
-          VIEW PUBLIC PROFILE ↗
+          VIEW PUBLIC PROFILE &nearr;
         </a>
 
       </div>
@@ -99,16 +103,10 @@
 
       <header class="dashboard-content-header">
         <div>
-          <p>PRESENTATIONS</p>
+          <p>AGENDA</p>
 
-          <h2>MANAGE YOUR PRESENTATIONS</h2>
+          <h2>MANAGE YOUR AGENDA</h2>
         </div>
-
-        <a
-          class="text-action dashboard-add-presentation"
-          href="dashboard-presentation-edit.html">
-          [ + ADD PRESENTATION ]
-        </a>
       </header>
 
 
@@ -117,41 +115,40 @@
         <header class="dashboard-section-header">
           <div>
             <p class="dashboard-label">
-              ALL PRESENTATIONS
+              ALL AGENDA ITEMS
             </p>
 
-            <h2 id="dashboard-presentations-breakdown">
-              LOADING PRESENTATIONS
+            <h2 id="dashboard-agenda-breakdown">
+              LOADING AGENDA
             </h2>
           </div>
 
-          <span id="dashboard-presentations-total">—</span>
+          <span id="dashboard-agenda-total">&mdash;</span>
         </header>
 
         <p
           class="dashboard-inline-error"
-          id="dashboard-presentations-error"
+          id="dashboard-agenda-error"
           role="alert"
           hidden></p>
 
         <p
           class="dashboard-local-notice"
-          id="dashboard-presentations-notice"
+          id="dashboard-agenda-notice"
           role="status"
           hidden></p>
 
         <div
-          class="dashboard-presentation-list"
-          id="dashboard-presentation-list"
+          class="dashboard-agenda-list"
+          id="dashboard-agenda-list"
           aria-live="polite"></div>
 
       </section>
 
     </section>
-
   </main>
 
-  <script src="dashboard-presentations.js?v=1"></script>
+  <script src="dashboard-agenda.js?v=1"></script>
 
 </body>
 </html>
