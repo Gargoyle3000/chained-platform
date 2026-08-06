@@ -324,6 +324,7 @@ test("public profiles continue stable Work and cover batches until complete", as
   let coverRequests = 0;
   const request = async (_config, table, query) => {
     if (table === "public_profiles") return [profile()];
+    if (table === "profile_activities") return [];
     if (table === "works") {
       const offset = Number(query.get("offset"));
       workOffsets.push(offset);
