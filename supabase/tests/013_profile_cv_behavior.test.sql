@@ -203,14 +203,17 @@ values (
 );
 
 
-select is_empty(
+select results_eq(
   $$
-    select id
+    select count(*)::bigint
       from public.cv_categories
      where profile_id =
        '93200000-0000-4000-8000-000000000001'
   $$,
-  'a Presentation excluded from CV creates no category'
+  $$
+    values (10::bigint)
+  $$,
+  'artist profile starts with ten fixed CV categories'
 );
 
 
@@ -250,15 +253,22 @@ reset role;
 
 select results_eq(
   $$
-    select category_type
-      from public.cv_categories
-     where profile_id =
-       '93200000-0000-4000-8000-000000000001'
+    select c.category_type
+      from public.cv_entries as e
+      join public.cv_categories as c
+        on c.id = e.category_id
+     where e.source_activity_id =
+       '93300000-0000-4000-8000-000000000001'
   $$,
   $$
-    values ('exhibition'::varchar)
+    select private.cv_category_type_for_activity(
+      pa.activity_type
+    )
+      from public.profile_activities as pa
+     where pa.id =
+       '93300000-0000-4000-8000-000000000001'
   $$,
-  'including a Presentation creates the Exhibitions category'
+  'included Presentation enters its matching fixed category'
 );
 
 
@@ -586,22 +596,13 @@ select set_config(
 
 select lives_ok(
   $$
-    insert into public.cv_categories (
-      profile_id,
-      category_type,
-      label,
-      display_order,
-      is_visible
-    )
-    values (
-      '93200000-0000-4000-8000-000000000001',
-      'education',
-      'EDUCATION',
-      1,
-      true
-    )
+    update public.cv_categories
+       set is_visible = true
+     where profile_id =
+       '93200000-0000-4000-8000-000000000001'
+       and category_type = 'education'
   $$,
-  'profile owner can create a CV category'
+  'profile owner can manage a fixed CV category'
 );
 
 
@@ -618,13 +619,13 @@ select throws_ok(
       '93200000-0000-4000-8000-000000000001',
       'education',
       'STUDIES',
-      2,
+      99,
       true
     )
   $$,
   '23505',
   null,
-  'duplicate stable category type is rejected'
+  'duplicate fixed CV category is rejected'
 );
 
 
@@ -642,7 +643,7 @@ select lives_ok(
     )
     select
       c.id,
-      '2014–2018',
+      '2014-2018',
       'BA FINE ARTS',
       'AKV ST. JOOST',
       'DEN BOSCH, NL',
@@ -697,22 +698,13 @@ select set_config(
 
 select lives_ok(
   $$
-    insert into public.cv_categories (
-      profile_id,
-      category_type,
-      label,
-      display_order,
-      is_visible
-    )
-    values (
-      '93200000-0000-4000-8000-000000000001',
-      'award',
-      'AWARDS',
-      2,
-      true
-    )
+    update public.cv_categories
+       set is_visible = true
+     where profile_id =
+       '93200000-0000-4000-8000-000000000001'
+       and category_type = 'award'
   $$,
-  'active profile editor can manage CV structure'
+  'active profile editor can manage fixed CV structure'
 );
 
 
@@ -737,9 +729,9 @@ select throws_ok(
     )
     values (
       '93200000-0000-4000-8000-000000000001',
-      'grant',
-      'GRANTS',
-      3,
+      'publication',
+      'PUBLICATIONS',
+      99,
       true
     )
   $$,
@@ -901,7 +893,7 @@ select throws_ok(
     from public.cv_categories as c
     where c.profile_id =
       '93200000-0000-4000-8000-000000000001'
-      and c.category_type = 'exhibition'
+      and c.category_type = 'group_presentation'
   $$,
   '42501',
   null,
