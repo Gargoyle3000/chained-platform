@@ -1,4 +1,4 @@
-﻿-- Presentations are stored as profile activities.
+-- Presentations are stored as profile activities.
 -- Concrete Agenda moments are stored as activity occurrences.
 
 create table public.profile_activities (
