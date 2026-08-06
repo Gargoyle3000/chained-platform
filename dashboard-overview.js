@@ -4,7 +4,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { getWorkRepository } =
     await import("./data/work-repository.mjs");
   const { getPresentationRepository } =
-    await import("./data/presentation-repository.mjs");  const { renderDashboardAccountIdentity } =
+    await import("./data/presentation-repository.mjs");
+  const { renderDashboardAccountIdentity } =
     await import("./data/dashboard-context.mjs");
 
   const totalElement = document.querySelector("#dashboard-work-total");
@@ -16,7 +17,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   );
   const presentationBreakdownElement = document.querySelector(
     "#dashboard-presentation-breakdown"
-  );  const recentTotalElement = document.querySelector(
+  );
+  const recentPresentationTotalElement = document.querySelector(
+    "#dashboard-recent-presentation-total"
+  );
+  const recentPresentationList = document.querySelector(
+    "#dashboard-recent-presentation-list"
+  );
+  const recentTotalElement = document.querySelector(
     "#dashboard-recent-total"
   );
   const recentList = document.querySelector(
@@ -40,6 +48,150 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     errorElement.textContent = message;
     errorElement.hidden = !message;
+  }
+
+  function initialiseRecentScrollIndicators() {
+    const desktopQuery =
+      window.matchMedia("(min-width: 1101px)");
+
+    const bindings = [
+      ...document.querySelectorAll(
+        ".dashboard-latest-column"
+      )
+    ].map((column) => {
+      const list = column.querySelector(
+        ".dashboard-work-list, " +
+        ".dashboard-recent-presentation-list"
+      );
+
+      const indicator = column.querySelector(
+        ".dashboard-scroll-indicator"
+      );
+
+      const thumb = indicator?.querySelector(
+        ".dashboard-scroll-indicator-thumb"
+      );
+
+      if (!list || !indicator || !thumb) {
+        return null;
+      }
+
+      function update() {
+        const scrollable =
+          desktopQuery.matches &&
+          list.scrollHeight >
+            list.clientHeight + 1;
+
+        indicator.hidden = !scrollable;
+
+        if (!scrollable) {
+          thumb.style.transform =
+            "translateY(0)";
+          return;
+        }
+
+        indicator.style.top =
+          `${list.offsetTop}px`;
+
+        indicator.style.height =
+          `${list.clientHeight}px`;
+
+        const thumbHeight = 18;
+
+        const maximumScroll =
+          list.scrollHeight -
+          list.clientHeight;
+
+        const availableTravel =
+          Math.max(
+            0,
+            list.clientHeight -
+            thumbHeight
+          );
+
+        const progress =
+          maximumScroll > 0
+            ? list.scrollTop /
+              maximumScroll
+            : 0;
+
+        thumb.style.transform =
+          `translateY(${
+            Math.round(
+              availableTravel * progress
+            )
+          }px)`;
+      }
+
+      list.addEventListener(
+        "scroll",
+        update,
+        { passive: true }
+      );
+
+      column.addEventListener(
+        "wheel",
+        (event) => {
+          if (
+            !desktopQuery.matches ||
+            list.contains(event.target) ||
+            list.scrollHeight <=
+              list.clientHeight
+          ) {
+            return;
+          }
+
+          const previous =
+            list.scrollTop;
+
+          list.scrollTop +=
+            event.deltaY;
+
+          if (list.scrollTop !== previous) {
+            event.preventDefault();
+          }
+        },
+        { passive: false }
+      );
+
+      const resizeObserver =
+        new ResizeObserver(update);
+
+      resizeObserver.observe(column);
+      resizeObserver.observe(list);
+
+      const mutationObserver =
+        new MutationObserver(update);
+
+      mutationObserver.observe(list, {
+        childList: true,
+        subtree: true
+      });
+
+      return {
+        update,
+        resizeObserver,
+        mutationObserver
+      };
+    }).filter(Boolean);
+
+    function updateAll() {
+      bindings.forEach(
+        (binding) => binding.update()
+      );
+    }
+
+    desktopQuery.addEventListener(
+      "change",
+      updateAll
+    );
+
+    window.addEventListener(
+      "resize",
+      updateAll
+    );
+
+    updateAll();
   }
 
   function getCoverImage(work) {
@@ -169,6 +321,191 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
+  function parseTimestamp(value) {
+    const parsed = Date.parse(value);
+
+    return Number.isFinite(parsed)
+      ? parsed
+      : 0;
+  }
+
+  function formatPresentationDate(value) {
+    if (!value) return "";
+
+    const parsed = new Date(`${value}T00:00:00Z`);
+
+    if (Number.isNaN(parsed.getTime())) {
+      return "";
+    }
+
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC"
+    }).format(parsed).toUpperCase();
+  }
+
+  function formatPresentationDateRange(
+    startDate,
+    endDate
+  ) {
+    const start =
+      formatPresentationDate(startDate);
+
+    const end =
+      formatPresentationDate(endDate);
+
+    if (!start) return "DATE NOT SET";
+
+    if (!end || endDate === startDate) {
+      return start;
+    }
+
+    return `${start} — ${end}`;
+  }
+
+  function createRecentPresentationRow(
+    presentation
+  ) {
+    const row =
+      document.createElement("article");
+
+    const information =
+      document.createElement("div");
+
+    const title =
+      document.createElement("h3");
+
+    const editLink =
+      document.createElement("a");
+
+    const date =
+      document.createElement("p");
+
+    const status =
+      document.createElement("span");
+
+    row.className =
+      "dashboard-recent-presentation-row";
+
+    information.className =
+      "dashboard-recent-presentation-information";
+
+    editLink.href =
+      `dashboard-presentation-edit.html?id=${encodeURIComponent(
+        presentation.id
+      )}`;
+
+    editLink.textContent =
+      presentation.title || "UNTITLED";
+
+    editLink.setAttribute(
+      "aria-label",
+      `Edit ${
+        presentation.title ||
+        "untitled presentation"
+      }`
+    );
+
+    date.textContent =
+      formatPresentationDateRange(
+        presentation.startDate,
+        presentation.endDate
+      );
+
+    const published =
+      presentation.visibility === "published";
+
+    status.textContent =
+      published
+        ? "PUBLISHED"
+        : "DRAFT";
+
+    status.className =
+      published
+        ? "is-published"
+        : "is-draft";
+
+    title.append(editLink);
+    information.append(title, date);
+    row.append(information, status);
+
+    return row;
+  }
+
+  function createPresentationEmptyState(
+    message = "NO PRESENTATIONS ADDED",
+    includeAddLink = true
+  ) {
+    const emptyState =
+      document.createElement("div");
+
+    const text =
+      document.createElement("p");
+
+    emptyState.className =
+      "dashboard-empty-state";
+
+    text.textContent = message;
+    emptyState.append(text);
+
+    if (includeAddLink) {
+      const addLink =
+        document.createElement("a");
+
+      addLink.className = "text-action";
+      addLink.href =
+        "dashboard-presentation-edit.html";
+
+      addLink.textContent =
+        "[ + ADD PRESENTATION ]";
+
+      emptyState.append(addLink);
+    }
+
+    return emptyState;
+  }
+
+  function renderRecentPresentations(
+    presentations,
+    emptyMessage = "NO PRESENTATIONS ADDED",
+    includeAddLink = true
+  ) {
+    recentPresentationTotalElement.textContent =
+      `${presentations.length} ${
+        presentations.length === 1
+          ? "PRESENTATION"
+          : "PRESENTATIONS"
+      }`;
+
+    if (!presentations.length) {
+      recentPresentationList.replaceChildren(
+        createPresentationEmptyState(
+          emptyMessage,
+          includeAddLink
+        )
+      );
+
+      return;
+    }
+
+    const recentPresentations =
+      [...presentations]
+        .sort(
+          (first, second) =>
+            parseTimestamp(second.updatedAt) -
+            parseTimestamp(first.updatedAt)
+        )
+        .slice(0, 10);
+
+    recentPresentationList.replaceChildren(
+      ...recentPresentations.map(
+        createRecentPresentationRow
+      )
+    );
+  }
+
   function updatePresentationSummary(presentations) {
     const publishedCount = presentations.filter(
       (presentation) =>
@@ -210,6 +547,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           : await presentationRepository.listPresentations();
 
       updatePresentationSummary(presentations);
+      renderRecentPresentations(presentations);
     } catch (error) {
       console.error(
         "Could not load dashboard Presentation summary.",
@@ -217,6 +555,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
 
       updatePresentationSummary([]);
+      renderRecentPresentations(
+        [],
+        "PRESENTATIONS UNAVAILABLE",
+        false
+      );
+
       presentationBreakdownElement.textContent =
         "PRESENTATIONS UNAVAILABLE";
     }
@@ -238,7 +582,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     recentList.replaceChildren(
       ...await Promise.all(
-        works.slice(0, 3).map(createRecentWorkRow)
+        works.slice(0, 10).map(createRecentWorkRow)
       )
     );
   }
@@ -260,6 +604,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
         if (!profiles.length) {
           updateSummary([]);
+          updatePresentationSummary([]);
+
+          renderRecentPresentations(
+            [],
+            "ARTIST PROFILE SETUP REQUIRED",
+            false
+          );
+
           await renderRecentWorks(
             [],
             "ARTIST PROFILE SETUP REQUIRED",
@@ -288,6 +640,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       renderDashboardAccountIdentity([], "error");
       updateSummary([]);
+      updatePresentationSummary([]);
+
+      renderRecentPresentations(
+        [],
+        "PRESENTATIONS UNAVAILABLE",
+        false
+      );
+
       await renderRecentWorks(
         [],
         "WORKS UNAVAILABLE",
@@ -296,6 +656,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       setError("WORKS ARE CURRENTLY UNAVAILABLE");
     }
   }
+
+  initialiseRecentScrollIndicators();
 
   window.addEventListener("beforeunload", releaseObjectUrls);
   initialiseOverview();

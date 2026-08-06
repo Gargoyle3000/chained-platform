@@ -14,7 +14,7 @@
   <script type="module" src="auth/guard.mjs"></script>
 </head>
 
-<body class="dashboard-page" data-auth-protected="true">
+<body class="dashboard-page dashboard-overview-page" data-auth-protected="true">
 
   <header class="site-header">
     <a class="wordmark" href="discover.html">
@@ -102,6 +102,9 @@
 
       </header>
 
+      <div class="dashboard-overview-primary">
+
+
 
       <section class="dashboard-summary">
 
@@ -150,31 +153,9 @@
     </a>
   </article>
 
-
-  <article class="dashboard-summary-item">
-    <p class="dashboard-label">
-      UPCOMING EVENTS
-    </p>
-
-    <p class="dashboard-number">
-      2
-    </p>
-
-    <p>
-      NEXT EVENT: 14 AUG 2026
-    </p>
-
-    <button
-      class="text-action dashboard-summary-action"
-      type="button">
-      [ + ADD EVENT ]
-    </button>
-  </article>
-
 </section>
 
-
-      <section class="dashboard-section">
+<section class="dashboard-profile-status">
 
         <header class="dashboard-section-header">
           <div>
@@ -221,20 +202,17 @@
         </div>
 
       </section>
-
-
-      <section class="dashboard-section">
+      </div>
+      <section class="dashboard-section dashboard-latest-section">
 
         <header class="dashboard-section-header">
           <div>
             <p class="dashboard-label">
-              RECENT WORKS
+              LATEST UPDATES
             </p>
 
             <h2>YOUR LATEST UPDATES</h2>
           </div>
-
-          <span id="dashboard-recent-total">—</span>
         </header>
 
         <p
@@ -243,10 +221,55 @@
           role="alert"
           hidden></p>
 
+        <div class="dashboard-latest-grid">
+          <div class="dashboard-latest-main">
 
-        <div
-          class="dashboard-work-list"
-          id="dashboard-recent-work-list">
+          <section class="dashboard-latest-column">
+            <header class="dashboard-latest-column-header">
+              <p class="dashboard-label">
+                RECENT WORKS
+              </p>
+
+              <span id="dashboard-recent-total">—</span>
+            </header>
+
+            <div
+              class="dashboard-work-list"
+              id="dashboard-recent-work-list">
+            </div>
+
+            <span
+              class="dashboard-scroll-indicator"
+              aria-hidden="true"
+              hidden>
+              <span class="dashboard-scroll-indicator-thumb"></span>
+            </span>
+          </section>
+
+
+          <section class="dashboard-latest-column">
+            <header class="dashboard-latest-column-header">
+              <p class="dashboard-label">
+                RECENT PRESENTATION
+              </p>
+
+              <span id="dashboard-recent-presentation-total">—</span>
+            </header>
+
+            <div
+              class="dashboard-recent-presentation-list"
+              id="dashboard-recent-presentation-list">
+            </div>
+
+            <span
+              class="dashboard-scroll-indicator"
+              aria-hidden="true"
+              hidden>
+              <span class="dashboard-scroll-indicator-thumb"></span>
+            </span>
+          </section>
+
+          </div>
 
         </div>
 
