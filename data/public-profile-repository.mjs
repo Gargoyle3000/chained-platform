@@ -18,11 +18,20 @@ function inFilter(ids) {
 
 const PROFILE_WORK_PAGE_SIZE = 100;
 
-function withFollowIdentity(mapped, profile) {
+function withFollowIdentity(
+  mapped,
+  profile,
+  hasPublicPresentations = false
+) {
   if (mapped.kind !== "available") return mapped;
+
   return Object.freeze({
     ...mapped,
-    followIdentity: Object.freeze({ id: profile.id, slug: profile.slug })
+    hasPublicPresentations: Boolean(hasPublicPresentations),
+    followIdentity: Object.freeze({
+      id: profile.id,
+      slug: profile.slug
+    })
   });
 }
 
@@ -48,6 +57,24 @@ export function createPublicProfileRepository(
       });
       const profiles = await request(config, "public_profiles", profileQuery);
       if (!profiles[0]) return Object.freeze({ kind: "unavailable" });
+
+      const presentationQuery = new URLSearchParams({
+        select: "id",
+        owner_profile_id: `eq.${profiles[0].id}`,
+        visibility: "eq.published",
+        show_in_presentations: "eq.true",
+        published_at: "not.is.null",
+        limit: "1"
+      });
+
+      const publicPresentations = await request(
+        config,
+        "profile_activities",
+        presentationQuery
+      );
+
+      const hasPublicPresentations =
+        Boolean(publicPresentations[0]);
 
       const works = [];
       let offset = 0;
@@ -76,7 +103,8 @@ export function createPublicProfileRepository(
             [],
             (path) => createPublicImageUrl(client, path)
           ),
-          profiles[0]
+          profiles[0],
+          hasPublicPresentations
         );
       }
 
@@ -101,7 +129,11 @@ export function createPublicProfileRepository(
         (path) => createPublicImageUrl(client, path)
       );
 
-      return withFollowIdentity(mapped, profiles[0]);
+      return withFollowIdentity(
+        mapped,
+        profiles[0],
+        hasPublicPresentations
+      );
     }
   });
 }

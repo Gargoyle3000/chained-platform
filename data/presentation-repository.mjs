@@ -97,6 +97,12 @@ function createUnavailableRepository() {
     async updatePresentation() {
       throw new Error("PRESENTATIONS REQUIRE THE LOCAL DATABASE");
     },
+    async publishPresentation() {
+      throw new Error("PRESENTATIONS REQUIRE THE LOCAL DATABASE");
+    },
+    async unpublishPresentation() {
+      throw new Error("PRESENTATIONS REQUIRE THE LOCAL DATABASE");
+    },
     async deletePresentation() {
       throw new Error("PRESENTATIONS REQUIRE THE LOCAL DATABASE");
     }
@@ -208,6 +214,72 @@ export function createSupabasePresentationRepository(client) {
           .from("profile_activities")
           .select("id")
           .eq("id", record.id)
+          .maybeSingle();
+
+        if (current) {
+          throw new Error("THIS PRESENTATION CHANGED ELSEWHERE");
+        }
+
+        throw new Error("THIS PRESENTATION IS NOT AVAILABLE");
+      }
+
+      return databaseToPresentation(data);
+    },
+
+    async publishPresentation(id, expectedUpdatedAt) {
+      const presentationId = requireId(id);
+
+      const { data, error } = await client
+        .from("profile_activities")
+        .update({ visibility: "published" })
+        .eq("id", presentationId)
+        .eq("updated_at", expectedUpdatedAt)
+        .select(PRESENTATION_SELECT)
+        .maybeSingle();
+
+      if (error) {
+        console.error(error);
+        throw new Error("PRESENTATION COULD NOT BE PUBLISHED");
+      }
+
+      if (!data) {
+        const { data: current } = await client
+          .from("profile_activities")
+          .select("id")
+          .eq("id", presentationId)
+          .maybeSingle();
+
+        if (current) {
+          throw new Error("THIS PRESENTATION CHANGED ELSEWHERE");
+        }
+
+        throw new Error("THIS PRESENTATION IS NOT AVAILABLE");
+      }
+
+      return databaseToPresentation(data);
+    },
+
+    async unpublishPresentation(id, expectedUpdatedAt) {
+      const presentationId = requireId(id);
+
+      const { data, error } = await client
+        .from("profile_activities")
+        .update({ visibility: "draft" })
+        .eq("id", presentationId)
+        .eq("updated_at", expectedUpdatedAt)
+        .select(PRESENTATION_SELECT)
+        .maybeSingle();
+
+      if (error) {
+        console.error(error);
+        throw new Error("PRESENTATION COULD NOT BE UNPUBLISHED");
+      }
+
+      if (!data) {
+        const { data: current } = await client
+          .from("profile_activities")
+          .select("id")
+          .eq("id", presentationId)
           .maybeSingle();
 
         if (current) {

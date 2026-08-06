@@ -12,6 +12,9 @@ const worksContainer = document.querySelector("#works");
 const profileName = document.querySelector("#profile-name");
 const biography = document.querySelector("#profile-biography");
 const primaryProfileLink = document.querySelector("#profile-primary-link");
+const presentationsLink = document.querySelector(
+  "#profile-presentations-link"
+);
 const followControl = document.querySelector("#profile-follow-control");
 const followAction = document.querySelector("#profile-follow-action");
 const followStatus = document.querySelector("#profile-follow-status");
@@ -124,6 +127,7 @@ function renderUnavailable(connectionError = false) {
   document.title = "ARTIST PROFILE NOT AVAILABLE — CHAINED";
   profileName.textContent = "ARTIST PROFILE";
   biography.hidden = true;
+  presentationsLink.hidden = true;
   worksContainer.setAttribute("aria-busy", "false");
   worksContainer.replaceChildren(createState(
     connectionError ? "ARTIST PROFILE CURRENTLY UNAVAILABLE" : "ARTIST PROFILE NOT AVAILABLE",
@@ -137,6 +141,17 @@ function renderProfile(result) {
   document.title = `${profile.displayName} — CHAINED`;
   profileName.textContent = profile.displayName;
   primaryProfileLink.href = profileHref;
+
+  if (result.hasPublicPresentations) {
+    presentationsLink.href =
+      `profile-presentations.html?slug=${encodeURIComponent(
+        profile.slug
+      )}`;
+
+    presentationsLink.hidden = false;
+  } else {
+    presentationsLink.hidden = true;
+  }
 
   if (profile.biography) {
     biography.textContent = profile.biography;

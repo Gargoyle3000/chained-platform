@@ -3,14 +3,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const { getWorkRepository } =
     await import("./data/work-repository.mjs");
-  const { renderDashboardAccountIdentity } =
+  const { getPresentationRepository } =
+    await import("./data/presentation-repository.mjs");  const { renderDashboardAccountIdentity } =
     await import("./data/dashboard-context.mjs");
 
   const totalElement = document.querySelector("#dashboard-work-total");
   const breakdownElement = document.querySelector(
     "#dashboard-work-breakdown"
   );
-  const recentTotalElement = document.querySelector(
+  const presentationTotalElement = document.querySelector(
+    "#dashboard-presentation-total"
+  );
+  const presentationBreakdownElement = document.querySelector(
+    "#dashboard-presentation-breakdown"
+  );  const recentTotalElement = document.querySelector(
     "#dashboard-recent-total"
   );
   const recentList = document.querySelector(
@@ -162,6 +168,60 @@ document.addEventListener("DOMContentLoaded", async () => {
       `${works.length} ${works.length === 1 ? "WORK" : "WORKS"}`;
   }
 
+
+  function updatePresentationSummary(presentations) {
+    const publishedCount = presentations.filter(
+      (presentation) =>
+        presentation.visibility === "published"
+    ).length;
+
+    const draftCount =
+      presentations.length - publishedCount;
+
+    presentationTotalElement.textContent =
+      String(presentations.length);
+
+    presentationBreakdownElement.replaceChildren(
+      document.createTextNode(
+        `${publishedCount} PUBLISHED`
+      ),
+      document.createElement("br"),
+      document.createTextNode(
+        `${draftCount} DRAFTS`
+      )
+    );
+  }
+
+  async function loadPresentationSummary(profileIds = []) {
+    try {
+      const selected =
+        await getPresentationRepository();
+
+      const presentationRepository =
+        selected.repository;
+
+      await presentationRepository.initialise();
+
+      const presentations =
+        presentationRepository.mode === "local-supabase"
+          ? await presentationRepository.listPresentations(
+              profileIds
+            )
+          : await presentationRepository.listPresentations();
+
+      updatePresentationSummary(presentations);
+    } catch (error) {
+      console.error(
+        "Could not load dashboard Presentation summary.",
+        error
+      );
+
+      updatePresentationSummary([]);
+      presentationBreakdownElement.textContent =
+        "PRESENTATIONS UNAVAILABLE";
+    }
+  }
+
   async function renderRecentWorks(
     works,
     emptyMessage = "NO WORKS ADDED",
@@ -190,11 +250,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       await repository.initialise();
 
       let works = [];
+      let managedProfileIds = [];
 
       if (repository.mode === "local-supabase") {
         const profiles = await repository.listManagedProfiles();
         renderDashboardAccountIdentity(profiles);
-
+        managedProfileIds = profiles.map(
+          (profile) => profile.id
+        );
         if (!profiles.length) {
           updateSummary([]);
           await renderRecentWorks(
@@ -215,6 +278,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       setError();
       updateSummary(works);
+      await loadPresentationSummary(managedProfileIds);
       await renderRecentWorks(works);
     } catch (error) {
       console.error(

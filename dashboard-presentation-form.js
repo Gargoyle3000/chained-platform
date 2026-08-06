@@ -1,4 +1,4 @@
-﻿document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   "use strict";
 
   const { getPresentationRepository } =
@@ -22,6 +22,8 @@
     document.querySelector("#presentation-owner-profile");
   const deleteButton =
     document.querySelector("#presentation-delete");
+  const publicationButton =
+    document.querySelector("#presentation-publication");
   const saveButton =
     document.querySelector(".presentation-form-save");
 
@@ -100,6 +102,26 @@
     }
   }
 
+  function validatePublication(record) {
+    const requiredFields = [
+      ["TITLE", record.title],
+      ["TYPE", record.activityType],
+      ["VENUE", record.venueName],
+      ["CITY", record.city],
+      ["START DATE", record.startDate]
+    ];
+
+    const missingFields = requiredFields
+      .filter(([, value]) => !String(value || "").trim())
+      .map(([label]) => label);
+
+    if (missingFields.length) {
+      throw new Error(
+        `COMPLETE BEFORE PUBLISHING: ${missingFields.join(", ")}`
+      );
+    }
+  }
+
   function populateForm(presentation) {
     field("title").value = presentation.title || "";
     field("activity-type").value =
@@ -138,9 +160,23 @@
       : "Add Presentation — CHAINED Dashboard";
 
     deleteButton.hidden = !editing;
+    publicationButton.hidden = !editing;
 
     if (editing) {
+      const published =
+        presentation.visibility === "published";
+
       ownerSelect.disabled = true;
+
+      publicationButton.textContent = published
+        ? "[ UNPUBLISH ]"
+        : "[ PUBLISH ]";
+
+      saveButton.textContent = published
+        ? "[ SAVE CHANGES ]"
+        : "[ SAVE DRAFT ]";
+    } else {
+      saveButton.textContent = "[ SAVE DRAFT ]";
     }
   }
 
@@ -218,6 +254,71 @@
     return confirmation;
   }
 
+  publicationButton.addEventListener("click", async () => {
+    if (!currentPresentationId) return;
+
+    setError();
+    setStatus();
+
+    publicationButton.disabled = true;
+    saveButton.disabled = true;
+    deleteButton.disabled = true;
+
+    try {
+      let saved;
+
+      if (currentVisibility === "published") {
+        setStatus("UNPUBLISHING PRESENTATION");
+
+        saved = await repository.unpublishPresentation(
+          currentPresentationId,
+          expectedUpdatedAt
+        );
+      } else {
+        const record = readRecord();
+
+        validateRecord(record);
+        validatePublication(record);
+
+        setStatus("SAVING BEFORE PUBLICATION");
+
+        const draft = await repository.updatePresentation(
+          record,
+          expectedUpdatedAt
+        );
+
+        setStatus("PUBLISHING PRESENTATION");
+
+        saved = await repository.publishPresentation(
+          draft.id,
+          draft.updatedAt
+        );
+      }
+
+      currentPresentationId = saved.id;
+      expectedUpdatedAt = saved.updatedAt;
+      currentVisibility = saved.visibility;
+
+      populateForm(saved);
+      updateEditorState(saved);
+
+      setStatus(
+        saved.visibility === "published"
+          ? "PRESENTATION PUBLISHED"
+          : "PRESENTATION RETURNED TO DRAFT"
+      );
+    } catch (error) {
+      setStatus();
+      setError(
+        error?.message ||
+        "PRESENTATION STATUS COULD NOT BE CHANGED"
+      );
+    } finally {
+      publicationButton.disabled = false;
+      saveButton.disabled = false;
+      deleteButton.disabled = false;
+    }
+  });
   deleteButton.addEventListener("click", () => {
     if (!currentPresentationId) return;
 
@@ -253,7 +354,11 @@
     }
 
     saveButton.disabled = true;
-    setStatus("SAVING DRAFT");
+    setStatus(
+      currentVisibility === "published"
+        ? "SAVING CHANGES"
+        : "SAVING DRAFT"
+    );
 
     try {
       const saved = currentPresentationId
@@ -281,7 +386,11 @@
         )}`
       );
 
-      setStatus("DRAFT SAVED");
+      setStatus(
+        saved.visibility === "published"
+          ? "CHANGES SAVED"
+          : "DRAFT SAVED"
+      );
     } catch (error) {
       setStatus();
       setError(
