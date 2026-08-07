@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+
+  <title>Press &mdash; CHAINED Dashboard</title>
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="auth/auth.css">
+
+  <script type="module" src="auth/guard.mjs"></script>
+</head>
+
+<body class="dashboard-page" data-auth-protected="true">
+
+  <header class="site-header">
+    <a class="wordmark" href="discover.html">
+      &lt;CHAINED&gt;
+    </a>
+
+    <nav
+      class="main-nav main-nav-with-dashboard"
+      aria-label="Primary navigation">
+      <a href="discover.html">DISCOVER</a>
+      <a href="following.html">FOLLOWING</a>
+      <a href="archive.html">ARCHIVE</a>
+      <a href="agenda.html">AGENDA</a>
+
+      <span class="profile-nav-group">
+        <a data-own-profile-link href="profile.html">
+          PROFILE
+        </a>
+
+        <a
+          class="dashboard-link is-active"
+          href="dashboard.html"
+          aria-label="Open dashboard">
+          +
+        </a>
+      </span>
+    </nav>
+  </header>
+
+
+  <main class="dashboard-layout">
+
+    <aside class="dashboard-sidebar">
+      <div class="dashboard-sidebar-inner">
+
+        <header class="dashboard-intro">
+          <h1>DASHBOARD</h1>
+
+          <p
+            class="dashboard-account-identity"
+            data-dashboard-account-identity>
+            <span data-dashboard-profile-name>
+              PROFILE LOADING
+            </span><br>
+            <span data-dashboard-account-type>
+              ARTIST ACCOUNT
+            </span>
+          </p>
+        </header>
+
+
+        <nav
+          class="dashboard-navigation"
+          aria-label="Dashboard navigation">
+
+          <a href="dashboard.html">OVERVIEW</a>
+          <a href="dashboard-works.html">WORKS</a>
+          <a href="dashboard-presentations.html">
+            PRESENTATIONS
+          </a>
+          <a href="dashboard-agenda.html">AGENDA</a>
+          <a href="dashboard-cv.html">CV</a>
+
+          <a
+            class="is-active"
+            href="dashboard-press.html">
+            PRESS
+          </a>
+
+          <span>SETTINGS</span>
+        </nav>
+
+
+        <a
+          class="dashboard-public-link"
+          data-own-profile-link
+          href="profile.html">
+          VIEW PUBLIC PROFILE &nearr;
+        </a>
+
+      </div>
+    </aside>
+
+
+    <section class="dashboard-content">
+
+      <header class="dashboard-content-header">
+        <div>
+          <p>LIVE EDIT</p>
+          <h2>PRESS</h2>
+        </div>
+
+        <label
+          class="dashboard-press-profile-switch"
+          id="dashboard-press-profile-field"
+          hidden>
+          <span>PRESS FOR</span>
+          <select id="dashboard-press-profile"></select>
+        </label>
+      </header>
+
+
+      <p
+        class="dashboard-inline-error"
+        id="dashboard-press-error"
+        role="alert"
+        aria-live="polite"
+        hidden></p>
+
+      <p
+        class="dashboard-local-notice"
+        id="dashboard-press-notice"
+        role="status"
+        hidden></p>
+
+
+      <section class="dashboard-press-live">
+
+        <form
+          class="dashboard-press-form"
+          id="dashboard-press-add-form" novalidate>
+
+          <div class="dashboard-press-fields">
+
+            <label>
+              <span>YEAR</span>
+              <input
+                name="year"
+                type="text"
+                maxlength="40"
+                autocomplete="off"
+                required>
+            </label>
+
+            <label>
+              <span>TITLE</span>
+              <input
+                name="title"
+                type="text"
+                maxlength="300"
+                autocomplete="off"
+                required>
+            </label>
+
+            <label>
+              <span>AUTHOR</span>
+              <input
+                name="author"
+                type="text"
+                maxlength="300"
+                autocomplete="off">
+            </label>
+
+            <label>
+              <span>TEXT</span>
+              <textarea
+                name="body"
+                rows="5"></textarea>
+            </label>
+
+            <label>
+              <span>URL</span>
+              <input
+                name="url"
+                type="url"
+                placeholder="www.example.com"
+                autocomplete="off">
+            </label>
+
+          </div>
+
+          <button
+            class="text-action dashboard-press-add"
+            type="submit">
+            [ + ADD PRESS ITEM ]
+          </button>
+
+        </form>
+
+
+        <div
+          class="dashboard-press-list"
+          id="dashboard-press-list"
+          aria-live="polite"></div>
+
+      </section>
+
+    </section>
+  </main>
+
+  <script src="dashboard-press.js?v=1"></script>
+
+</body>
+</html>

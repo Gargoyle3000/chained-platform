@@ -326,6 +326,8 @@ test("public profiles continue stable Work and cover batches until complete", as
     if (table === "public_profiles") return [profile()];
     if (table === "profile_activities") return [];
     if (table === "activity_occurrences") return [];
+    if (table === "profile_press_items") return [];
+    if (table === "profile_press_items") return [];
     if (table === "cv_categories") return [];
     if (table === "works") {
       const offset = Number(query.get("offset"));

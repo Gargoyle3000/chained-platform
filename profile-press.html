@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
 
-  <title>CV — CHAINED</title>
+  <title>Press — CHAINED</title>
 
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="profile.css">
@@ -51,11 +51,11 @@
             class="profile-follow"
             id="profile-follow-control"
             hidden>
+
             <button
               class="text-action"
               id="profile-follow-action"
-              type="button"
-              aria-label="Follow this artist profile">
+              type="button">
               [ FOLLOW ]
             </button>
 
@@ -72,9 +72,7 @@
           class="artist-navigation"
           aria-label="Artist profile">
 
-          <a
-            id="profile-works-link"
-            href="profile.html">
+          <a id="profile-works-link" href="profile.html">
             WORKS
           </a>
 
@@ -93,15 +91,16 @@
           </a>
 
           <a
-            class="is-active"
             id="profile-cv-link"
-            href="profile-cv.html">
+            href="profile-cv.html"
+            hidden>
             CV
           </a>
+
           <a
+            class="is-active"
             id="profile-press-link"
-            href="profile-press.html"
-            hidden>
+            href="profile-press.html">
             PRESS
           </a>
 
@@ -112,15 +111,13 @@
 
 
     <section
-      class="artist-cv"
-      id="cv"
+      class="artist-profile-press"
+      id="profile-press"
       aria-live="polite"
       aria-busy="true">
 
-      <p
-        class="profile-works-state"
-        role="status">
-        LOADING CV
+      <p class="profile-works-state">
+        LOADING PRESS
       </p>
 
     </section>
@@ -130,7 +127,7 @@
 
   <script
     type="module"
-    src="profile-cv.js"></script>
+    src="profile-press.js"></script>
 
 </body>
 </html>

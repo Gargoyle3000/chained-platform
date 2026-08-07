@@ -1,20 +1,27 @@
 import { FRONTEND_MODES } from "./auth/config.mjs";
 import { readApplicationSession } from "./auth/session.mjs";
 import { applyAuthenticatedNavigation } from "./auth/navigation.mjs";
-import {
-  getPublicAgendaRepository
-} from "./data/public-agenda-repository.mjs";
+
 import {
   getPublicProfileRepository
 } from "./data/public-profile-repository.mjs";
-import { createFollowService } from "./data/follow-service.mjs";
+
+import {
+  getPublicPressRepository
+} from "./data/public-press-repository.mjs";
+
+import {
+  createFollowService
+} from "./data/follow-service.mjs";
+
 import {
   createPublicProfileLink,
   isValidProfileSlug
 } from "./data/public-work-mapping.mjs";
 
+
 const container =
-  document.querySelector("#profile-agenda");
+  document.querySelector("#profile-press");
 
 const profileName =
   document.querySelector("#profile-name");
@@ -36,7 +43,6 @@ const agendaLink =
 
 const cvLink =
   document.querySelector("#profile-cv-link");
-const pressLink = document.querySelector("#profile-press-link");
 
 const followControl =
   document.querySelector("#profile-follow-control");
@@ -47,165 +53,120 @@ const followAction =
 const followStatus =
   document.querySelector("#profile-follow-status");
 
-function cleanText(value) {
-  return String(value || "").trim();
-}
-
-function formatType(value) {
-  return cleanText(value)
-    .replaceAll("-", " ")
-    .replaceAll("_", " ")
-    .toUpperCase();
-}
-
-function parseDate(value) {
-  if (!value) return null;
-
-  const date =
-    new Date(`${value}T00:00:00`);
-
-  return Number.isNaN(date.getTime())
-    ? null
-    : date;
-}
-
-function formatDate(value) {
-  const date = parseDate(value);
-
-  if (!date) return "";
-
-  return new Intl.DateTimeFormat(
-    "en-GB",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric"
-    }
-  )
-    .format(date)
-    .toUpperCase();
-}
-
-function formatTime(value) {
-  return cleanText(value).slice(0, 5);
-}
-
-function formatTimeRange(start, end) {
-  const first = formatTime(start);
-  const second = formatTime(end);
-
-  if (!first) return "";
-  if (!second) return first;
-
-  return `${first}–${second}`;
-}
 
 function createState(message, isError = false) {
   const state =
     document.createElement("p");
 
   state.className = "profile-works-state";
-  state.classList.toggle("is-error", isError);
+  state.classList.toggle(
+    "is-error",
+    isError
+  );
+
   state.textContent = message;
 
   return state;
 }
 
-function createAgendaItem(item) {
+
+function createPressItem(item) {
   const article =
     document.createElement("article");
 
-  const date =
+  const year =
     document.createElement("p");
 
   const content =
     document.createElement("div");
 
-  const type =
-    document.createElement("p");
-
   const title =
     document.createElement("h2");
 
-  const details =
-    document.createElement("div");
+  const author =
+    document.createElement("p");
+
+  const body =
+    document.createElement("p");
 
   article.className =
-    "profile-agenda-item";
+    "profile-press-item";
 
-  date.className =
-    "profile-agenda-date";
+  year.className =
+    "profile-press-year";
 
-  date.textContent =
-    formatDate(item.startDate);
+  year.textContent =
+    item.yearLabel;
 
   content.className =
-    "profile-agenda-main";
+    "profile-press-content";
 
-  type.className =
-    "profile-agenda-type";
+  title.textContent =
+    item.title;
 
-  type.textContent =
-    formatType(item.occurrenceType);
+  content.append(title);
 
-  title.textContent = item.title;
+  if (item.author) {
+    author.className =
+      "profile-press-author";
 
-  content.append(type, title);
+    author.textContent =
+      item.author;
 
-  details.className =
-    "profile-agenda-details";
-
-  const time =
-    formatTimeRange(
-      item.startTime,
-      item.endTime
-    );
-
-  if (time) {
-    const line =
-      document.createElement("p");
-
-    line.textContent = time;
-    details.append(line);
+    content.append(author);
   }
 
-  const location = [
-    item.venueName,
-    item.city,
-    item.country
-  ].filter(Boolean);
+  if (item.body) {
+    body.className =
+      "profile-press-body";
 
-  if (location.length) {
-    const line =
-      document.createElement("p");
+    body.textContent =
+      item.body;
 
-    line.textContent =
-      location.join(", ");
+    content.append(body);
+  }
 
-    details.append(line);
+  if (item.url) {
+    const link =
+      document.createElement("a");
+
+    link.className =
+      "profile-press-link";
+
+    link.href = item.url;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    link.textContent = "[ READ ↗ ]";
+
+    content.append(link);
   }
 
   article.append(
-    date,
-    content,
-    details
+    year,
+    content
   );
 
   return article;
 }
 
+
 function hideFollowControl() {
   followControl.hidden = true;
   followAction.disabled = false;
-  followAction.removeAttribute("aria-busy");
+  followAction.removeAttribute(
+    "aria-busy"
+  );
+
   followStatus.textContent = "";
 }
 
+
 function renderFollowState(state) {
   if (
-    !["following", "not-following"].includes(
-      state.kind
-    )
+    ![
+      "following",
+      "not-following"
+    ].includes(state.kind)
   ) {
     hideFollowControl();
     return;
@@ -225,6 +186,7 @@ function renderFollowState(state) {
       : "[ FOLLOW ]";
 }
 
+
 async function initialiseFollowControl(
   client,
   identity
@@ -236,7 +198,9 @@ async function initialiseFollowControl(
 
   try {
     state =
-      await service.getFollowState(identity);
+      await service.getFollowState(
+        identity
+      );
   } catch {
     hideFollowControl();
     return;
@@ -245,9 +209,10 @@ async function initialiseFollowControl(
   renderFollowState(state);
 
   if (
-    !["following", "not-following"].includes(
-      state.kind
-    )
+    ![
+      "following",
+      "not-following"
+    ].includes(state.kind)
   ) {
     return;
   }
@@ -255,7 +220,9 @@ async function initialiseFollowControl(
   followAction.addEventListener(
     "click",
     async () => {
-      if (followAction.disabled) return;
+      if (followAction.disabled) {
+        return;
+      }
 
       const removing =
         state.kind === "following";
@@ -272,14 +239,20 @@ async function initialiseFollowControl(
       followAction.disabled = true;
 
       try {
-        await (
-          removing
-            ? service.unfollowProfile(identity)
-            : service.followProfile(identity)
-        );
+        if (removing) {
+          await service.unfollowProfile(
+            identity
+          );
+        } else {
+          await service.followProfile(
+            identity
+          );
+        }
 
         state =
-          await service.getFollowState(identity);
+          await service.getFollowState(
+            identity
+          );
 
         renderFollowState(state);
       } finally {
@@ -289,22 +262,30 @@ async function initialiseFollowControl(
   );
 }
 
+
 async function initialiseAuthenticatedNavigation(
   client
 ) {
   try {
     const session =
-      await readApplicationSession(client);
+      await readApplicationSession(
+        client
+      );
 
-    if (session.kind !== "active") return;
+    if (session.kind !== "active") {
+      return;
+    }
 
-    await applyAuthenticatedNavigation(client);
+    await applyAuthenticatedNavigation(
+      client
+    );
   } catch {
     // Public profile remains usable.
   }
 }
 
-async function initialiseProfileAgenda() {
+
+async function initialiseProfilePress() {
   const slug =
     new URLSearchParams(
       window.location.search
@@ -324,39 +305,54 @@ async function initialiseProfileAgenda() {
     const profileSelection =
       await getPublicProfileRepository();
 
-    const agendaSelection =
-      await getPublicAgendaRepository();
+    const pressSelection =
+      await getPublicPressRepository();
 
     if (
       profileSelection.runtime.mode !==
         FRONTEND_MODES.LOCAL_SUPABASE ||
       !profileSelection.repository ||
-      !agendaSelection.repository
+      !pressSelection.repository
     ) {
-      throw new Error("PUBLIC PROFILE UNAVAILABLE");
-    }
-
-    const result =
-      await profileSelection.repository.getProfile(
-        slug
+      throw new Error(
+        "PUBLIC PROFILE UNAVAILABLE"
       );
-
-    if (result.kind !== "available") {
-      throw new Error("PUBLIC PROFILE UNAVAILABLE");
     }
 
-    const profile = result.profile;
+    const [
+      profileResult,
+      pressResult
+    ] = await Promise.all([
+      profileSelection.repository.getProfile(
+        slug
+      ),
+      pressSelection.repository.getProfilePress(
+        slug
+      )
+    ]);
+
+    if (
+      profileResult.kind !== "available" ||
+      pressResult.kind !== "available"
+    ) {
+      throw new Error(
+        "PUBLIC PROFILE UNAVAILABLE"
+      );
+    }
+
+    const profile =
+      profileResult.profile;
 
     const items =
-      await agendaSelection.repository.listProfileAgenda(
-        result.followIdentity.id
-      );
+      pressResult.items;
 
     const profileHref =
-      createPublicProfileLink(profile.slug);
+      createPublicProfileLink(
+        profile.slug
+      );
 
     document.title =
-      `Agenda — ${profile.displayName} — CHAINED`;
+      `Press — ${profile.displayName} — CHAINED`;
 
     profileName.textContent =
       profile.displayName;
@@ -367,12 +363,9 @@ async function initialiseProfileAgenda() {
     worksLink.href =
       profileHref;
 
-    agendaLink.href =
-      `profile-agenda.html?slug=${encodeURIComponent(
-        profile.slug
-      )}`;
-
-    if (result.hasPublicPresentations) {
+    if (
+      profileResult.hasPublicPresentations
+    ) {
       presentationsLink.href =
         `profile-presentations.html?slug=${encodeURIComponent(
           profile.slug
@@ -381,7 +374,20 @@ async function initialiseProfileAgenda() {
       presentationsLink.hidden = false;
     }
 
-    if (result.hasPublicCv) {
+    if (
+      profileResult.hasPublicAgenda
+    ) {
+      agendaLink.href =
+        `profile-agenda.html?slug=${encodeURIComponent(
+          profile.slug
+        )}`;
+
+      agendaLink.hidden = false;
+    }
+
+    if (
+      profileResult.hasPublicCv
+    ) {
       cvLink.href =
         `profile-cv.html?slug=${encodeURIComponent(
           profile.slug
@@ -390,18 +396,7 @@ async function initialiseProfileAgenda() {
       cvLink.hidden = false;
     }
 
-    if (result.hasPublicPress) {
-    pressLink.href =
-      `profile-press.html?slug=${encodeURIComponent(
-        profile.slug
-      )}`;
-
-    pressLink.hidden = false;
-  } else {
-    pressLink.hidden = true;
-  }
-
-  if (profile.biography) {
+    if (profile.biography) {
       biography.textContent =
         profile.biography;
 
@@ -415,10 +410,10 @@ async function initialiseProfileAgenda() {
 
     container.replaceChildren(
       ...(items.length
-        ? items.map(createAgendaItem)
+        ? items.map(createPressItem)
         : [
             createState(
-              "NO CURRENT OR UPCOMING EVENTS"
+              "NO PUBLISHED PRESS"
             )
           ])
     );
@@ -429,11 +424,11 @@ async function initialiseProfileAgenda() {
 
     await initialiseFollowControl(
       profileSelection.runtime.client,
-      result.followIdentity
+      profileResult.followIdentity
     );
   } catch (error) {
     console.error(
-      "Profile Agenda unavailable.",
+      "Profile Press unavailable.",
       error
     );
 
@@ -446,11 +441,12 @@ async function initialiseProfileAgenda() {
 
     container.replaceChildren(
       createState(
-        "AGENDA CURRENTLY UNAVAILABLE",
+        "PRESS CURRENTLY UNAVAILABLE",
         true
       )
     );
   }
 }
 
-initialiseProfileAgenda();
+
+initialiseProfilePress();

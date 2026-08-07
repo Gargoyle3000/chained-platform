@@ -9,6 +9,9 @@ import {
 import {
   hasPublicAgendaForProfile
 } from "./public-agenda-repository.mjs";
+import {
+  hasPublicPressForProfile
+} from "./public-press-repository.mjs";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -300,6 +303,13 @@ export function createPublicCvRepository(
           request
         );
 
+      const hasPublicPress =
+        await hasPublicPressForProfile(
+          config,
+          profileRow.id,
+          request
+        );
+
       const categories =
         await getVisibleCategories(
           config,
@@ -317,6 +327,7 @@ export function createPublicCvRepository(
           hasPublicPresentations:
             Boolean(publicPresentations[0]),
           hasPublicAgenda,
+          hasPublicPress,
           categories: Object.freeze([])
         });
       }
@@ -458,6 +469,7 @@ export function createPublicCvRepository(
         hasPublicPresentations:
           Boolean(publicPresentations[0]),
         hasPublicAgenda,
+        hasPublicPress,
         categories: Object.freeze(
           mappedCategories
         )

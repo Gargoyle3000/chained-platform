@@ -17,6 +17,9 @@ import {
 import {
   hasPublicAgendaForProfile
 } from "./public-agenda-repository.mjs";
+import {
+  hasPublicPressForProfile
+} from "./public-press-repository.mjs";
 
 function inFilter(ids) {
   return `in.(${ids.join(",")})`;
@@ -29,7 +32,8 @@ function withFollowIdentity(
   profile,
   hasPublicPresentations = false,
   hasPublicCv = false,
-  hasPublicAgenda = false
+  hasPublicAgenda = false,
+  hasPublicPress = false
 ) {
   if (mapped.kind !== "available") return mapped;
 
@@ -38,6 +42,7 @@ function withFollowIdentity(
     hasPublicPresentations: Boolean(hasPublicPresentations),
     hasPublicCv: Boolean(hasPublicCv),
     hasPublicAgenda: Boolean(hasPublicAgenda),
+    hasPublicPress: Boolean(hasPublicPress),
     followIdentity: Object.freeze({
       id: profile.id,
       slug: profile.slug
@@ -100,6 +105,13 @@ export function createPublicProfileRepository(
           request
         );
 
+      const hasPublicPress =
+        await hasPublicPressForProfile(
+          config,
+          profiles[0].id,
+          request
+        );
+
       const works = [];
       let offset = 0;
       let workPage;
@@ -130,7 +142,8 @@ export function createPublicProfileRepository(
           profiles[0],
           hasPublicPresentations,
           hasPublicCv,
-          hasPublicAgenda
+          hasPublicAgenda,
+          hasPublicPress
         );
       }
 
@@ -160,7 +173,8 @@ export function createPublicProfileRepository(
         profiles[0],
         hasPublicPresentations,
         hasPublicCv,
-        hasPublicAgenda
+        hasPublicAgenda,
+        hasPublicPress
       );
     }
   });

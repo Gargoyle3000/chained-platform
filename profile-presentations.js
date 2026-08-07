@@ -26,6 +26,7 @@ const agendaLink =
   document.querySelector("#profile-agenda-link");
 const cvLink =
   document.querySelector("#profile-cv-link");
+const pressLink = document.querySelector("#profile-press-link");
 const followControl =
   document.querySelector("#profile-follow-control");
 const followAction =
@@ -258,6 +259,17 @@ function renderProfile(result) {
     cvLink.hidden = false;
   } else {
     cvLink.hidden = true;
+  }
+
+  if (result.hasPublicPress) {
+    pressLink.href =
+      `profile-press.html?slug=${encodeURIComponent(
+        profile.slug
+      )}`;
+
+    pressLink.hidden = false;
+  } else {
+    pressLink.hidden = true;
   }
 
   if (profile.biography) {

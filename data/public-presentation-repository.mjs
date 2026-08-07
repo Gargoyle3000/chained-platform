@@ -12,6 +12,9 @@ import {
 import {
   hasPublicAgendaForProfile
 } from "./public-agenda-repository.mjs";
+import {
+  hasPublicPressForProfile
+} from "./public-press-repository.mjs";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -147,6 +150,13 @@ export function createPublicPresentationRepository(
           request
         );
 
+      const hasPublicPress =
+        await hasPublicPressForProfile(
+          config,
+          profileRow.id,
+          request
+        );
+
       return Object.freeze({
         kind: "available",
         profile: Object.freeze({
@@ -155,7 +165,8 @@ export function createPublicPresentationRepository(
         }),
         presentations,
         hasPublicCv,
-        hasPublicAgenda
+        hasPublicAgenda,
+        hasPublicPress
       });
     }
   });

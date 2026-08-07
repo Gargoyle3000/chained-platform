@@ -520,3 +520,86 @@
     gap: 10px;
   }
 }
+/* PUBLIC PROFILE PRESS */
+
+.artist-profile-press {
+  min-width: 0;
+
+  display: grid;
+  align-content: start;
+  gap: clamp(64px, 8vw, 110px);
+
+  width: 100%;
+  max-width: 980px;
+}
+
+.profile-press-item {
+  display: grid;
+  grid-template-columns:
+    minmax(90px, 0.18fr)
+    minmax(0, 1fr);
+
+  gap: clamp(26px, 4vw, 60px);
+  align-items: start;
+}
+
+.profile-press-year {
+  margin: 0;
+
+  color: var(--accent);
+
+  font-size: var(--font-meta);
+  line-height: 1.45;
+}
+
+.profile-press-content {
+  min-width: 0;
+}
+
+.profile-press-content h2 {
+  margin: 0 0 8px;
+
+  font-size: clamp(18px, 2vw, 28px);
+  line-height: 1.12;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+
+.profile-press-author,
+.profile-press-body {
+  margin: 0;
+
+  font-size: var(--font-meta);
+  line-height: 1.55;
+}
+
+.profile-press-author {
+  margin-bottom: 18px;
+}
+
+.profile-press-body {
+  max-width: 760px;
+
+  white-space: pre-wrap;
+}
+
+.profile-press-link {
+  display: inline-block;
+
+  margin-top: 20px;
+
+  color: var(--accent);
+
+  font-size: var(--font-meta);
+}
+
+@media (max-width: 700px) {
+  .artist-profile-press {
+    gap: 64px;
+  }
+
+  .profile-press-item {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
