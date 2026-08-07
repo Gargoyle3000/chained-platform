@@ -347,6 +347,36 @@ async function initialiseProfileAgenda() {
 
     const profile = result.profile;
 
+    if (profile.showAgenda !== true) {
+      document.title =
+        "AGENDA NOT AVAILABLE — CHAINED";
+
+      profileName.textContent =
+        "ARTIST PROFILE";
+
+      biography.hidden = true;
+      worksLink.hidden = true;
+      presentationsLink.hidden = true;
+      agendaLink.hidden = true;
+      cvLink.hidden = true;
+      pressLink.hidden = true;
+
+      hideFollowControl();
+
+      container.setAttribute(
+        "aria-busy",
+        "false"
+      );
+
+      container.replaceChildren(
+        createState(
+          "ARTIST PROFILE NOT AVAILABLE"
+        )
+      );
+
+      return;
+    }
+
     const items =
       await agendaSelection.repository.listProfileAgenda(
         result.followIdentity.id
@@ -367,12 +397,15 @@ async function initialiseProfileAgenda() {
     worksLink.href =
       profileHref;
 
+    worksLink.hidden =
+      profile.showWorks !== true;
+
     agendaLink.href =
       `profile-agenda.html?slug=${encodeURIComponent(
         profile.slug
       )}`;
 
-    if (result.hasPublicPresentations) {
+    if (profile.showPresentations === true && result.hasPublicPresentations) {
       presentationsLink.href =
         `profile-presentations.html?slug=${encodeURIComponent(
           profile.slug
@@ -381,7 +414,7 @@ async function initialiseProfileAgenda() {
       presentationsLink.hidden = false;
     }
 
-    if (result.hasPublicCv) {
+    if (profile.showCv === true && result.hasPublicCv) {
       cvLink.href =
         `profile-cv.html?slug=${encodeURIComponent(
           profile.slug
@@ -390,7 +423,7 @@ async function initialiseProfileAgenda() {
       cvLink.hidden = false;
     }
 
-    if (result.hasPublicPress) {
+    if (profile.showPress === true && result.hasPublicPress) {
     pressLink.href =
       `profile-press.html?slug=${encodeURIComponent(
         profile.slug

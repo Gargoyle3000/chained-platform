@@ -10,8 +10,18 @@ import {
 
 const worksContainer = document.querySelector("#works");
 const profileName = document.querySelector("#profile-name");
+const alternativeName = document.querySelector("#profile-alternative-name");
+const profileMeta = document.querySelector("#profile-meta");
+const pronouns = document.querySelector("#profile-pronouns");
+const city = document.querySelector("#profile-city");
+const country = document.querySelector("#profile-country");
 const biography = document.querySelector("#profile-biography");
+const infoLinks = document.querySelector("#profile-info-links");
+const websiteLink = document.querySelector("#profile-website-link");
+const socialLink = document.querySelector("#profile-social-link");
+const contactLink = document.querySelector("#profile-contact-link");
 const primaryProfileLink = document.querySelector("#profile-primary-link");
+const worksLink = document.querySelector("#profile-works-link");
 const presentationsLink = document.querySelector(
   "#profile-presentations-link"
 );
@@ -26,6 +36,83 @@ function formatType(value) {
   return String(value || "").replaceAll("-", " ").toUpperCase();
 }
 
+function renderProfileInfo(profile) {
+  alternativeName.textContent = profile.alternativeName || "";
+  alternativeName.hidden = !profile.alternativeName;
+
+  pronouns.textContent = profile.pronouns || "";
+  pronouns.hidden = !profile.pronouns;
+
+  city.textContent = profile.city || "";
+  city.hidden = !profile.city;
+
+  country.textContent = profile.country || "";
+  country.hidden = !profile.country;
+
+  profileMeta.hidden =
+    !profile.pronouns &&
+    !profile.city &&
+    !profile.country;
+
+  if (profile.websiteUrl) {
+    websiteLink.href = profile.websiteUrl;
+    websiteLink.hidden = false;
+  } else {
+    websiteLink.removeAttribute("href");
+    websiteLink.hidden = true;
+  }
+
+  if (profile.socialUrl) {
+    socialLink.href = profile.socialUrl;
+    socialLink.hidden = false;
+  } else {
+    socialLink.removeAttribute("href");
+    socialLink.hidden = true;
+  }
+
+  if (profile.publicContactEmail) {
+    contactLink.href = `mailto:${profile.publicContactEmail}`;
+    contactLink.textContent = "EMAIL \u2197";
+    contactLink.hidden = false;
+  } else {
+    contactLink.removeAttribute("href");
+    contactLink.textContent = "";
+    contactLink.hidden = true;
+  }
+
+  infoLinks.hidden =
+    !profile.websiteUrl &&
+    !profile.socialUrl &&
+    !profile.publicContactEmail;
+}
+
+function hideProfileInfo() {
+  alternativeName.textContent = "";
+  alternativeName.hidden = true;
+
+  pronouns.textContent = "";
+  pronouns.hidden = true;
+
+  city.textContent = "";
+  city.hidden = true;
+
+  country.textContent = "";
+  country.hidden = true;
+
+  profileMeta.hidden = true;
+
+  websiteLink.removeAttribute("href");
+  websiteLink.hidden = true;
+
+  socialLink.removeAttribute("href");
+  socialLink.hidden = true;
+
+  contactLink.removeAttribute("href");
+  contactLink.textContent = "";
+  contactLink.hidden = true;
+
+  infoLinks.hidden = true;
+}
 function formatDimensions(work) {
   if (!Number.isFinite(work.height) || !Number.isFinite(work.width)) return "";
   const dimensions = [work.height, work.width];
@@ -129,8 +216,13 @@ function createWorkArticle(work) {
 function renderUnavailable(connectionError = false) {
   document.title = "ARTIST PROFILE NOT AVAILABLE — CHAINED";
   profileName.textContent = "ARTIST PROFILE";
+  hideProfileInfo();
   biography.hidden = true;
+  worksLink.hidden = true;
   presentationsLink.hidden = true;
+  agendaLink.hidden = true;
+  cvLink.hidden = true;
+  pressLink.hidden = true;
   worksContainer.setAttribute("aria-busy", "false");
   worksContainer.replaceChildren(createState(
     connectionError ? "ARTIST PROFILE CURRENTLY UNAVAILABLE" : "ARTIST PROFILE NOT AVAILABLE",
@@ -143,9 +235,13 @@ function renderProfile(result) {
   const profileHref = createPublicProfileLink(profile.slug);
   document.title = `${profile.displayName} — CHAINED`;
   profileName.textContent = profile.displayName;
+  renderProfileInfo(profile);
   primaryProfileLink.href = profileHref;
+  worksLink.href = profileHref;
+  worksLink.hidden =
+    profile.showWorks !== true;
 
-  if (result.hasPublicPresentations) {
+  if (profile.showPresentations === true && result.hasPublicPresentations) {
     presentationsLink.href =
       `profile-presentations.html?slug=${encodeURIComponent(
         profile.slug
@@ -156,7 +252,7 @@ function renderProfile(result) {
     presentationsLink.hidden = true;
   }
 
-  if (result.hasPublicAgenda) {
+  if (profile.showAgenda === true && result.hasPublicAgenda) {
     agendaLink.href =
       `profile-agenda.html?slug=${encodeURIComponent(
         profile.slug
@@ -167,7 +263,7 @@ function renderProfile(result) {
     agendaLink.hidden = true;
   }
 
-  if (result.hasPublicCv) {
+  if (profile.showCv === true && result.hasPublicCv) {
     cvLink.href =
       `profile-cv.html?slug=${encodeURIComponent(
         profile.slug
@@ -178,7 +274,7 @@ function renderProfile(result) {
     cvLink.hidden = true;
   }
 
-  if (result.hasPublicPress) {
+  if (profile.showPress === true && result.hasPublicPress) {
     pressLink.href =
       `profile-press.html?slug=${encodeURIComponent(
         profile.slug
@@ -197,11 +293,15 @@ function renderProfile(result) {
   }
 
   worksContainer.setAttribute("aria-busy", "false");
-  worksContainer.replaceChildren(
-    ...(works.length
-      ? works.map(createWorkArticle)
-      : [createState("NO PUBLISHED WORKS")])
-  );
+  if (profile.showWorks === true) {
+    worksContainer.replaceChildren(
+      ...(works.length
+        ? works.map(createWorkArticle)
+        : [createState("NO PUBLISHED WORKS")])
+    );
+  } else {
+    worksContainer.replaceChildren();
+  }
 }
 
 function hideFollowControl() {

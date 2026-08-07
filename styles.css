@@ -1026,3 +1026,57 @@ footer {
     min-height: 44px;
   }
 }
+
+/* PUBLIC ARTIST PROFILE INFO */
+
+.artist-alternative-name {
+  margin: 4px 0 0;
+  color: var(--green);
+  font-size: var(--font-nav);
+  line-height: 1;
+}
+
+.artist-profile-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-top: 4px;
+  color: var(--black);
+  font-size: var(--font-nav);
+  line-height: 1.2;
+}
+
+.artist-biography {
+  white-space: pre-line;
+}
+
+.artist-profile-links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-top: 14px;
+  color: var(--black);
+  font-size: var(--font-nav);
+  line-height: 1.2;
+}
+
+.artist-profile-links a {
+  text-decoration: none;
+}
+
+.artist-profile-links a:hover {
+  color: var(--green);
+}
+
+.artist-profile-meta[hidden],
+.artist-profile-links[hidden] {
+  display: none !important;
+}
+
+/* FOLLOW STATE */
+
+.profile-follow .text-action[data-following="true"] {
+  color: var(--green);
+}

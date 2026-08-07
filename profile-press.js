@@ -44,6 +44,9 @@ const agendaLink =
 const cvLink =
   document.querySelector("#profile-cv-link");
 
+const pressLink =
+  document.querySelector("#profile-press-link");
+
 const followControl =
   document.querySelector("#profile-follow-control");
 
@@ -343,6 +346,36 @@ async function initialiseProfilePress() {
     const profile =
       profileResult.profile;
 
+    if (profile.showPress !== true) {
+      document.title =
+        "PRESS NOT AVAILABLE — CHAINED";
+
+      profileName.textContent =
+        "ARTIST PROFILE";
+
+      biography.hidden = true;
+      worksLink.hidden = true;
+      presentationsLink.hidden = true;
+      agendaLink.hidden = true;
+      cvLink.hidden = true;
+      pressLink.hidden = true;
+
+      hideFollowControl();
+
+      container.setAttribute(
+        "aria-busy",
+        "false"
+      );
+
+      container.replaceChildren(
+        createState(
+          "ARTIST PROFILE NOT AVAILABLE"
+        )
+      );
+
+      return;
+    }
+
     const items =
       pressResult.items;
 
@@ -363,7 +396,11 @@ async function initialiseProfilePress() {
     worksLink.href =
       profileHref;
 
+    worksLink.hidden =
+      profile.showWorks !== true;
+
     if (
+      profile.showPresentations === true &&
       profileResult.hasPublicPresentations
     ) {
       presentationsLink.href =
@@ -375,6 +412,7 @@ async function initialiseProfilePress() {
     }
 
     if (
+      profile.showAgenda === true &&
       profileResult.hasPublicAgenda
     ) {
       agendaLink.href =
@@ -386,6 +424,7 @@ async function initialiseProfilePress() {
     }
 
     if (
+      profile.showCv === true &&
       profileResult.hasPublicCv
     ) {
       cvLink.href =

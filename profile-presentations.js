@@ -197,8 +197,11 @@ function renderUnavailable(connectionError = false) {
   profileName.textContent =
     "ARTIST PROFILE";
   biography.hidden = true;
+  worksLink.hidden = true;
+  presentationsLink.hidden = true;
   agendaLink.hidden = true;
   cvLink.hidden = true;
+  pressLink.hidden = true;
 
   presentationsContainer.setAttribute(
     "aria-busy",
@@ -236,10 +239,13 @@ function renderProfile(result) {
     profileHref;
   worksLink.href =
     profileHref;
+
+  worksLink.hidden =
+    profile.showWorks !== true;
   presentationsLink.href =
     presentationsHref;
 
-  if (result.hasPublicAgenda) {
+  if (profile.showAgenda === true && result.hasPublicAgenda) {
     agendaLink.href =
       `profile-agenda.html?slug=${encodeURIComponent(
         profile.slug
@@ -250,7 +256,7 @@ function renderProfile(result) {
     agendaLink.hidden = true;
   }
 
-  if (result.hasPublicCv) {
+  if (profile.showCv === true && result.hasPublicCv) {
     cvLink.href =
       `profile-cv.html?slug=${encodeURIComponent(
         profile.slug
@@ -261,7 +267,7 @@ function renderProfile(result) {
     cvLink.hidden = true;
   }
 
-  if (result.hasPublicPress) {
+  if (profile.showPress === true && result.hasPublicPress) {
     pressLink.href =
       `profile-press.html?slug=${encodeURIComponent(
         profile.slug
@@ -477,6 +483,13 @@ async function initialisePresentations() {
       );
 
     if (result.kind !== "available") {
+      renderUnavailable();
+      return;
+    }
+
+    if (
+      result.profile.showPresentations !== true
+    ) {
       renderUnavailable();
       return;
     }

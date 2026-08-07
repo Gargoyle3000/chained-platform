@@ -59,7 +59,8 @@
 }
 
 .profile-follow {
-  margin-bottom: 58px;
+  margin-top: 24px;
+  margin-bottom: 34px;
 }
 
 .profile-follow[hidden] {
@@ -72,6 +73,10 @@
 
   font-size: var(--font-meta);
   line-height: 1.45;
+}
+
+.profile-follow-status:empty {
+  display: none;
 }
 
 .artist-navigation {

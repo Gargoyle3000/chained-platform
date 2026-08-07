@@ -1502,3 +1502,175 @@
   font-size: var(--font-meta);
   line-height: 1.4;
 }
+
+/* DASHBOARD SETTINGS */
+
+.dashboard-settings-form {
+  width: 100%;
+  max-width: 1100px;
+}
+
+.dashboard-settings-group {
+  margin: 0 0 90px;
+}
+
+.dashboard-settings-heading {
+  margin: 0 0 34px;
+}
+
+.dashboard-settings-heading p,
+.dashboard-settings-heading h2 {
+  margin: 0;
+}
+
+.dashboard-settings-heading h2 {
+  margin-top: 4px;
+}
+
+.dashboard-settings-fields {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 28px 38px;
+}
+
+.dashboard-settings-fields label {
+  display: grid;
+  gap: 8px;
+}
+
+.dashboard-settings-fields label > span,
+.dashboard-settings-profile-switch > span,
+.dashboard-settings-account span,
+.dashboard-settings-visibility-row small {
+  font-size: var(--font-meta);
+}
+
+.dashboard-settings-wide {
+  grid-column: 1 / -1;
+}
+
+.dashboard-settings-fields input,
+.dashboard-settings-fields textarea,
+.dashboard-settings-profile-switch select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dashboard-settings-fields textarea {
+  resize: vertical;
+  min-height: 150px;
+}
+
+.dashboard-settings-visibility {
+  display: grid;
+  gap: 22px;
+}
+
+.dashboard-settings-visibility-row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: start;
+}
+
+.dashboard-settings-visibility-row > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.dashboard-settings-visibility-row small {
+  opacity: 0.6;
+}
+
+.dashboard-settings-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.dashboard-settings-actions .is-active {
+  color: var(--accent);
+}
+
+.dashboard-settings-actions button:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.dashboard-settings-account {
+  display: grid;
+  gap: 20px;
+}
+
+.dashboard-settings-account > div {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 0.35fr)
+    minmax(0, 1fr);
+  gap: 24px;
+}
+
+.dashboard-settings-account strong {
+  font: inherit;
+  font-weight: 400;
+}
+
+#settings-account-plan,
+#settings-account-legacy {
+  color: var(--accent);
+}
+
+.dashboard-settings-footer {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  margin-top: -28px;
+  padding-bottom: 80px;
+}
+
+#dashboard-settings-error {
+  width: max-content;
+  max-width: 100%;
+
+  margin: 0 0 34px;
+  padding: 10px 12px;
+
+  border: 1px solid var(--accent);
+
+  background: var(--white);
+  color: var(--black);
+
+  font-size: var(--font-meta);
+  line-height: 1.4;
+}
+
+.dashboard-settings-profile-switch {
+  display: grid;
+  gap: 6px;
+}
+
+@media (max-width: 760px) {
+  .dashboard-settings-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-settings-wide {
+    grid-column: auto;
+  }
+
+  .dashboard-settings-visibility-row {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-settings-actions {
+    justify-content: flex-start;
+  }
+
+  .dashboard-settings-account > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

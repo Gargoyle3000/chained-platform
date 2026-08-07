@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+
+  <title>Settings &mdash; CHAINED Dashboard</title>
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="auth/auth.css">
+
+  <script type="module" src="auth/guard.mjs"></script>
+</head>
+
+<body
+  class="dashboard-page"
+  data-auth-protected="true">
+
+  <header class="site-header">
+    <a class="wordmark" href="discover.html">
+      &lt;CHAINED&gt;
+    </a>
+
+    <nav
+      class="main-nav main-nav-with-dashboard"
+      aria-label="Primary navigation">
+
+      <a href="discover.html">DISCOVER</a>
+      <a href="following.html">FOLLOWING</a>
+      <a href="archive.html">ARCHIVE</a>
+      <a href="agenda.html">AGENDA</a>
+
+      <span class="profile-nav-group">
+        <a
+          data-own-profile-link
+          href="profile.html">
+          PROFILE
+        </a>
+
+        <a
+          class="dashboard-link is-active"
+          href="dashboard.html"
+          aria-label="Open dashboard">
+          +
+        </a>
+      </span>
+    </nav>
+  </header>
+
+
+  <main class="dashboard-layout">
+
+    <aside class="dashboard-sidebar">
+      <div class="dashboard-sidebar-inner">
+
+        <header class="dashboard-intro">
+          <h1>DASHBOARD</h1>
+
+          <p
+            class="dashboard-account-identity"
+            data-dashboard-account-identity>
+
+            <span data-dashboard-profile-name>
+              PROFILE LOADING
+            </span><br>
+
+            <span data-dashboard-account-type>
+              ARTIST ACCOUNT
+            </span>
+          </p>
+        </header>
+
+
+        <nav
+          class="dashboard-navigation"
+          aria-label="Dashboard navigation">
+
+          <a href="dashboard.html">
+            OVERVIEW
+          </a>
+
+          <a href="dashboard-works.html">
+            WORKS
+          </a>
+
+          <a href="dashboard-presentations.html">
+            PRESENTATIONS
+          </a>
+
+          <a href="dashboard-agenda.html">
+            AGENDA
+          </a>
+
+          <a href="dashboard-cv.html">
+            CV
+          </a>
+
+          <a href="dashboard-press.html">
+            PRESS
+          </a>
+
+          <a
+            class="is-active"
+            href="dashboard-settings.html">
+            SETTINGS
+          </a>
+        </nav>
+
+
+        <a
+          class="dashboard-public-link"
+          data-own-profile-link
+          href="profile.html">
+          VIEW PUBLIC PROFILE &nearr;
+        </a>
+
+      </div>
+    </aside>
+
+
+    <section class="dashboard-content">
+
+      <header class="dashboard-content-header">
+        <div>
+          <p>ACCOUNT</p>
+          <h2>SETTINGS</h2>
+        </div>
+
+        <label
+          class="dashboard-settings-profile-switch"
+          id="dashboard-settings-profile-field"
+          hidden>
+
+          <span>SETTINGS FOR</span>
+
+          <select
+            id="dashboard-settings-profile">
+          </select>
+        </label>
+      </header>
+
+
+      <p
+        class="dashboard-inline-error"
+        id="dashboard-settings-error"
+        role="alert"
+        aria-live="polite"
+        hidden></p>
+
+      <p
+        class="dashboard-local-notice"
+        id="dashboard-settings-notice"
+        role="status"
+        aria-live="polite"
+        hidden></p>
+
+
+      <form
+        class="dashboard-settings-form"
+        id="dashboard-settings-form"
+        novalidate>
+
+        <section class="dashboard-settings-group">
+          <header class="dashboard-settings-heading">
+            <p class="dashboard-label">
+              PROFILE INFO
+            </p>
+
+            <h2>ABOUT YOU</h2>
+          </header>
+
+
+          <div class="dashboard-settings-fields">
+
+            <label>
+              <span>DISPLAY NAME</span>
+
+              <input
+                name="display-name"
+                type="text"
+                maxlength="160"
+                autocomplete="name"
+                required>
+            </label>
+
+
+            <label>
+              <span>ALTERNATIVE NAME</span>
+
+              <input
+                name="alternative-name"
+                type="text"
+                maxlength="160"
+                autocomplete="off">
+            </label>
+
+
+            <label>
+              <span>CITY</span>
+
+              <input
+                name="city"
+                type="text"
+                maxlength="160"
+                autocomplete="address-level2">
+            </label>
+
+
+            <label>
+              <span>COUNTRY</span>
+
+              <input
+                name="country"
+                type="text"
+                maxlength="160"
+                autocomplete="country-name">
+            </label>
+
+
+            <label class="dashboard-settings-wide">
+              <span>BIOGRAPHY</span>
+
+              <textarea
+                name="biography"
+                rows="7"
+                maxlength="20000"></textarea>
+            </label>
+
+
+            <label>
+              <span>WEBSITE</span>
+
+              <input
+                name="website-url"
+                type="url"
+                maxlength="2048"
+                placeholder="www.example.com"
+                autocomplete="url">
+            </label>
+
+
+            <label>
+              <span>SOCIAL LINK</span>
+
+              <input
+                name="social-url"
+                type="url"
+                maxlength="2048"
+                placeholder="www.example.com/profile"
+                autocomplete="url">
+            </label>
+
+
+            <label>
+              <span>PRONOUNS</span>
+
+              <input
+                name="pronouns"
+                type="text"
+                maxlength="160"
+                autocomplete="off">
+            </label>
+
+
+            <label>
+              <span>PUBLIC CONTACT EMAIL</span>
+
+              <input
+                name="contact-email"
+                type="email"
+                maxlength="320"
+                autocomplete="email">
+            </label>
+
+          </div>
+        </section>
+
+
+        <section class="dashboard-settings-group">
+          <header class="dashboard-settings-heading">
+            <p class="dashboard-label">
+              PUBLIC PROFILE
+            </p>
+
+            <h2>PROFILE SECTIONS</h2>
+          </header>
+
+
+          <div class="dashboard-settings-visibility">
+
+            <div
+              class="dashboard-settings-visibility-row"
+              data-setting-control="publication"
+              data-value="published">
+
+              <div>
+                <span>PROFILE STATUS</span>
+                <small>
+                  CONTROL THE ENTIRE PUBLIC PROFILE
+                </small>
+              </div>
+
+              <div class="dashboard-settings-actions">
+                <button
+                  class="text-action"
+                  type="button"
+                  data-value="published">
+                  [ PUBLIC ]
+                </button>
+
+                <button
+                  class="text-action"
+                  type="button"
+                  data-value="draft">
+                  [ HIDDEN ]
+                </button>
+              </div>
+            </div>
+
+
+            <div
+              class="dashboard-settings-visibility-row"
+              data-setting-control="works"
+              data-value="true">
+
+              <div>
+                <span>WORKS</span>
+                <small>
+                  SHOW WHEN PUBLIC CONTENT EXISTS
+                </small>
+              </div>
+
+              <div class="dashboard-settings-actions">
+                <button class="text-action" type="button" data-value="true">
+                  [ SHOW ]
+                </button>
+                <button class="text-action" type="button" data-value="false">
+                  [ HIDE ]
+                </button>
+              </div>
+            </div>
+
+
+            <div
+              class="dashboard-settings-visibility-row"
+              data-setting-control="presentations"
+              data-value="true">
+
+              <div>
+                <span>PRESENTATIONS</span>
+                <small>
+                  SHOW WHEN PUBLIC CONTENT EXISTS
+                </small>
+              </div>
+
+              <div class="dashboard-settings-actions">
+                <button class="text-action" type="button" data-value="true">
+                  [ SHOW ]
+                </button>
+                <button class="text-action" type="button" data-value="false">
+                  [ HIDE ]
+                </button>
+              </div>
+            </div>
+
+
+            <div
+              class="dashboard-settings-visibility-row"
+              data-setting-control="agenda"
+              data-value="true">
+
+              <div>
+                <span>AGENDA</span>
+                <small>
+                  SHOW WHEN PUBLIC CONTENT EXISTS
+                </small>
+              </div>
+
+              <div class="dashboard-settings-actions">
+                <button class="text-action" type="button" data-value="true">
+                  [ SHOW ]
+                </button>
+                <button class="text-action" type="button" data-value="false">
+                  [ HIDE ]
+                </button>
+              </div>
+            </div>
+
+
+            <div
+              class="dashboard-settings-visibility-row"
+              data-setting-control="cv"
+              data-value="true">
+
+              <div>
+                <span>CV</span>
+                <small>
+                  SHOW WHEN PUBLIC CONTENT EXISTS
+                </small>
+              </div>
+
+              <div class="dashboard-settings-actions">
+                <button class="text-action" type="button" data-value="true">
+                  [ SHOW ]
+                </button>
+                <button class="text-action" type="button" data-value="false">
+                  [ HIDE ]
+                </button>
+              </div>
+            </div>
+
+
+            <div
+              class="dashboard-settings-visibility-row"
+              data-setting-control="press"
+              data-value="true">
+
+              <div>
+                <span>PRESS</span>
+                <small>
+                  SHOW WHEN PUBLIC CONTENT EXISTS
+                </small>
+              </div>
+
+              <div class="dashboard-settings-actions">
+                <button class="text-action" type="button" data-value="true">
+                  [ SHOW ]
+                </button>
+                <button class="text-action" type="button" data-value="false">
+                  [ HIDE ]
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+
+        <section class="dashboard-settings-group">
+          <header class="dashboard-settings-heading">
+            <p class="dashboard-label">
+              ACCOUNT &amp; MEMBERSHIP
+            </p>
+
+            <h2>YOUR ACCOUNT</h2>
+          </header>
+
+
+          <div class="dashboard-settings-account">
+
+            <div>
+              <span>LOGIN EMAIL</span>
+              <strong id="settings-account-email">
+                —
+              </strong>
+            </div>
+
+            <div>
+              <span>ACCOUNT STATUS</span>
+              <strong id="settings-account-status">
+                —
+              </strong>
+            </div>
+
+            <div>
+              <span>PLAN</span>
+              <strong id="settings-account-plan">
+                —
+              </strong>
+            </div>
+
+            <div
+              id="settings-legacy-row"
+              hidden>
+              <span>STATUS</span>
+              <strong id="settings-account-legacy">
+                —
+              </strong>
+            </div>
+
+          </div>
+        </section>
+
+
+        <footer class="dashboard-settings-footer">
+          <button
+            class="text-action"
+            id="dashboard-settings-save"
+            type="submit">
+            [ SAVE SETTINGS ]
+          </button>
+
+          <p
+            class="work-form-status"
+            id="dashboard-settings-status"
+            role="status"
+            aria-live="polite"
+            hidden></p>
+        </footer>
+
+      </form>
+
+    </section>
+  </main>
+
+
+  <script src="dashboard-settings.js?v=1"></script>
+
+</body>
+</html>

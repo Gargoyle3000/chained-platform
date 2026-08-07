@@ -4,8 +4,20 @@ export const PUBLIC_PROFILE_COLUMNS = Object.freeze([
   "slug",
   "display_name",
   "biography",
+  "alternative_name",
+  "city",
+  "country",
+  "website_url",
+  "social_url",
+  "pronouns",
+  "public_contact_email",
   "publication_status",
-  "published_at"
+  "published_at",
+  "show_works",
+  "show_presentations",
+  "show_agenda",
+  "show_cv",
+  "show_press"
 ]);
 
 export const PUBLIC_WORK_COLUMNS = Object.freeze([
@@ -112,7 +124,22 @@ export function mapPublishedArtistProfile(row) {
   return Object.freeze({
     slug: row.slug,
     displayName: cleanText(row.display_name),
-    biography: cleanText(row.biography)
+    biography: cleanText(row.biography),
+    alternativeName:
+      cleanText(row.alternative_name),
+    city: cleanText(row.city),
+    country: cleanText(row.country),
+    websiteUrl: cleanText(row.website_url),
+    socialUrl: cleanText(row.social_url),
+    pronouns: cleanText(row.pronouns),
+    publicContactEmail:
+      cleanText(row.public_contact_email),
+    showWorks: row.show_works !== false,
+    showPresentations:
+      row.show_presentations !== false,
+    showAgenda: row.show_agenda !== false,
+    showCv: row.show_cv !== false,
+    showPress: row.show_press !== false
   });
 }
 

@@ -48,6 +48,18 @@ function profile(id = IDS.profileA, slug = "artist-a", overrides = {}) {
     slug,
     display_name: slug.toUpperCase(),
     biography: "PUBLIC BIOGRAPHY",
+    alternativeName: "",
+    city: "",
+    country: "",
+    websiteUrl: "",
+    socialUrl: "",
+    pronouns: "",
+    publicContactEmail: "",
+    showWorks: true,
+    showPresentations: true,
+    showAgenda: true,
+    showCv: true,
+    showPress: true,
     publication_status: "published",
     published_at: "2026-08-01T00:00:00Z",
     ...overrides
@@ -107,7 +119,19 @@ test("published artist profiles map only supported public fields", () => {
   assert.deepEqual(mapPublishedArtistProfile(profile()), {
     slug: "artist-a",
     displayName: "ARTIST-A",
-    biography: "PUBLIC BIOGRAPHY"
+    biography: "PUBLIC BIOGRAPHY",
+    alternativeName: "",
+    city: "",
+    country: "",
+    websiteUrl: "",
+    socialUrl: "",
+    pronouns: "",
+    publicContactEmail: "",
+    showWorks: true,
+    showPresentations: true,
+    showAgenda: true,
+    showCv: true,
+    showPress: true
   });
 });
 

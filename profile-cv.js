@@ -105,8 +105,11 @@ function renderUnavailable(connectionError = false) {
     "ARTIST PROFILE";
 
   biography.hidden = true;
+  worksLink.hidden = true;
   presentationsLink.hidden = true;
   agendaLink.hidden = true;
+  cvLink.hidden = true;
+  pressLink.hidden = true;
 
   cvContainer.setAttribute(
     "aria-busy",
@@ -141,12 +144,15 @@ function renderProfile(result) {
   worksLink.href =
     profileHref;
 
+  worksLink.hidden =
+    profile.showWorks !== true;
+
   cvLink.href =
     `profile-cv.html?slug=${encodeURIComponent(
       profile.slug
     )}`;
 
-  if (result.hasPublicPresentations) {
+  if (profile.showPresentations === true && result.hasPublicPresentations) {
     presentationsLink.href =
       `profile-presentations.html?slug=${encodeURIComponent(
         profile.slug
@@ -157,7 +163,7 @@ function renderProfile(result) {
     presentationsLink.hidden = true;
   }
 
-  if (result.hasPublicAgenda) {
+  if (profile.showAgenda === true && result.hasPublicAgenda) {
     agendaLink.href =
       `profile-agenda.html?slug=${encodeURIComponent(
         profile.slug
@@ -168,7 +174,7 @@ function renderProfile(result) {
     agendaLink.hidden = true;
   }
 
-  if (result.hasPublicPress) {
+  if (profile.showPress === true && result.hasPublicPress) {
     pressLink.href =
       `profile-press.html?slug=${encodeURIComponent(
         profile.slug
@@ -392,6 +398,11 @@ async function initialiseCv() {
       await repository.getProfileCv(slug);
 
     if (result.kind !== "available") {
+      renderUnavailable();
+      return;
+    }
+
+    if (result.profile.showCv !== true) {
       renderUnavailable();
       return;
     }
