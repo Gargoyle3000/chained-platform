@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
 
-  <title>Presentations — CHAINED Dashboard</title>
+  <title>CV &mdash; CHAINED Dashboard</title>
 
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="dashboard.css">
@@ -53,7 +53,9 @@
         <header class="dashboard-intro">
           <h1>DASHBOARD</h1>
 
-          <p class="dashboard-account-identity" data-dashboard-account-identity>
+          <p
+            class="dashboard-account-identity"
+            data-dashboard-account-identity>
             <span data-dashboard-profile-name>PROFILE LOADING</span><br>
             <span data-dashboard-account-type>ARTIST ACCOUNT</span>
           </p>
@@ -63,22 +65,17 @@
         <nav
           class="dashboard-navigation"
           aria-label="Dashboard navigation">
-
-          <a href="dashboard.html">
-            OVERVIEW
-          </a>
-
-          <a href="dashboard-works.html">
-            WORKS
-          </a>
+          <a href="dashboard.html">OVERVIEW</a>
+          <a href="dashboard-works.html">WORKS</a>
+          <a href="dashboard-presentations.html">PRESENTATIONS</a>
+          <a href="dashboard-agenda.html">AGENDA</a>
 
           <a
             class="is-active"
-            href="dashboard-presentations.html">
-            PRESENTATIONS
+            href="dashboard-cv.html">
+            CV
           </a>
-          <a href="dashboard-agenda.html">AGENDA</a>
-          <a href="dashboard-cv.html">CV</a>
+
           <span>PRESS</span>
           <span>SETTINGS</span>
         </nav>
@@ -88,7 +85,7 @@
           class="dashboard-public-link"
           data-own-profile-link
           href="profile-peer-vink.html">
-          VIEW PUBLIC PROFILE ↗
+          VIEW PUBLIC PROFILE &nearr;
         </a>
 
       </div>
@@ -99,59 +96,45 @@
 
       <header class="dashboard-content-header">
         <div>
-          <p>PRESENTATIONS</p>
-
-          <h2>MANAGE YOUR PRESENTATIONS</h2>
+          <p>CV</p>
+          <h2>YOUR LIVE CV</h2>
         </div>
 
-        <a
-          class="text-action dashboard-add-presentation"
-          href="dashboard-presentation-edit.html">
-          [ + ADD PRESENTATION ]
-        </a>
+        <label
+          class="dashboard-cv-profile-switch"
+          id="dashboard-cv-profile-field"
+          hidden>
+          <span>CV FOR</span>
+
+          <select id="dashboard-cv-profile"></select>
+        </label>
       </header>
 
 
-      <section class="dashboard-section">
+      <p
+        class="dashboard-inline-error"
+        id="dashboard-cv-error"
+        role="alert"
+        aria-live="polite"
+        hidden></p>
 
-        <header class="dashboard-section-header">
-          <div>
-            <p class="dashboard-label">
-              ALL PRESENTATIONS
-            </p>
+      <p
+        class="dashboard-local-notice"
+        id="dashboard-cv-notice"
+        role="status"
+        hidden></p>
 
-            <h2 id="dashboard-presentations-breakdown">
-              LOADING PRESENTATIONS
-            </h2>
-          </div>
 
-          <span id="dashboard-presentations-total">—</span>
-        </header>
-
-        <p
-          class="dashboard-inline-error"
-          id="dashboard-presentations-error"
-          role="alert"
-          hidden></p>
-
-        <p
-          class="dashboard-local-notice"
-          id="dashboard-presentations-notice"
-          role="status"
-          hidden></p>
-
-        <div
-          class="dashboard-presentation-list"
-          id="dashboard-presentation-list"
-          aria-live="polite"></div>
-
-      </section>
+      <div
+        class="dashboard-cv-live"
+        id="dashboard-cv-live"
+        aria-live="polite"></div>
 
     </section>
 
   </main>
 
-  <script src="dashboard-presentations.js?v=1"></script>
+  <script src="dashboard-cv.js?v=2"></script>
 
 </body>
 </html>
