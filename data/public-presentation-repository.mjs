@@ -9,6 +9,9 @@ import {
 import {
   hasPublicCvForProfile
 } from "./public-cv-repository.mjs";
+import {
+  hasPublicAgendaForProfile
+} from "./public-agenda-repository.mjs";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -137,6 +140,13 @@ export function createPublicPresentationRepository(
           request
         );
 
+      const hasPublicAgenda =
+        await hasPublicAgendaForProfile(
+          config,
+          profileRow.id,
+          request
+        );
+
       return Object.freeze({
         kind: "available",
         profile: Object.freeze({
@@ -144,7 +154,8 @@ export function createPublicPresentationRepository(
           id: profileRow.id
         }),
         presentations,
-        hasPublicCv
+        hasPublicCv,
+        hasPublicAgenda
       });
     }
   });

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
 
-  <title>Presentations — CHAINED</title>
+  <title>Agenda — CHAINED</title>
 
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="profile.css">
@@ -22,6 +22,7 @@
       <a href="following.html">FOLLOWING</a>
       <a href="archive.html">ARCHIVE</a>
       <a href="agenda.html">AGENDA</a>
+
       <a
         class="is-active"
         id="profile-primary-link"
@@ -53,8 +54,7 @@
             <button
               class="text-action"
               id="profile-follow-action"
-              type="button"
-              aria-label="Follow this artist profile">
+              type="button">
               [ FOLLOW ]
             </button>
 
@@ -70,23 +70,22 @@
         <nav
           class="artist-navigation"
           aria-label="Artist profile">
-          <a
-            id="profile-works-link"
-            href="profile.html">
+
+          <a id="profile-works-link" href="profile.html">
             WORKS
           </a>
 
           <a
-            class="is-active"
             id="profile-presentations-link"
-            href="profile-presentations.html">
+            href="profile-presentations.html"
+            hidden>
             PRESENTATIONS
           </a>
 
           <a
+            class="is-active"
             id="profile-agenda-link"
-            href="profile-agenda.html"
-            hidden>
+            href="profile-agenda.html">
             AGENDA
           </a>
 
@@ -96,6 +95,7 @@
             hidden>
             CV
           </a>
+
         </nav>
 
       </div>
@@ -103,15 +103,15 @@
 
 
     <section
-      class="artist-presentations"
-      id="presentations"
+      class="artist-profile-agenda"
+      id="profile-agenda"
       aria-live="polite"
       aria-busy="true">
-      <p
-        class="profile-works-state"
-        role="status">
-        LOADING PRESENTATIONS
+
+      <p class="profile-works-state">
+        LOADING AGENDA
       </p>
+
     </section>
 
   </main>
@@ -119,7 +119,7 @@
 
   <script
     type="module"
-    src="profile-presentations.js"></script>
+    src="profile-agenda.js"></script>
 
 </body>
 </html>

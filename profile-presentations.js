@@ -22,6 +22,8 @@ const worksLink =
   document.querySelector("#profile-works-link");
 const presentationsLink =
   document.querySelector("#profile-presentations-link");
+const agendaLink =
+  document.querySelector("#profile-agenda-link");
 const cvLink =
   document.querySelector("#profile-cv-link");
 const followControl =
@@ -194,6 +196,7 @@ function renderUnavailable(connectionError = false) {
   profileName.textContent =
     "ARTIST PROFILE";
   biography.hidden = true;
+  agendaLink.hidden = true;
   cvLink.hidden = true;
 
   presentationsContainer.setAttribute(
@@ -234,6 +237,17 @@ function renderProfile(result) {
     profileHref;
   presentationsLink.href =
     presentationsHref;
+
+  if (result.hasPublicAgenda) {
+    agendaLink.href =
+      `profile-agenda.html?slug=${encodeURIComponent(
+        profile.slug
+      )}`;
+
+    agendaLink.hidden = false;
+  } else {
+    agendaLink.hidden = true;
+  }
 
   if (result.hasPublicCv) {
     cvLink.href =

@@ -459,3 +459,64 @@
     gap: 2px;
   }
 }
+/* PUBLIC PROFILE AGENDA */
+
+.artist-profile-agenda {
+  min-width: 0;
+
+  display: grid;
+  align-content: start;
+  gap: clamp(52px, 7vw, 90px);
+
+  width: 100%;
+  max-width: 980px;
+}
+
+.profile-agenda-item {
+  display: grid;
+  grid-template-columns:
+    minmax(110px, 0.22fr)
+    minmax(0, 1fr)
+    minmax(150px, 0.32fr);
+
+  gap: clamp(24px, 4vw, 60px);
+  align-items: start;
+}
+
+.profile-agenda-date,
+.profile-agenda-type,
+.profile-agenda-details p {
+  margin: 0;
+
+  font-size: var(--font-meta);
+  line-height: 1.45;
+}
+
+.profile-agenda-date,
+.profile-agenda-type {
+  color: var(--accent);
+}
+
+.profile-agenda-main h2 {
+  margin: 8px 0 0;
+
+  font-size: clamp(20px, 2vw, 30px);
+  line-height: 1.08;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+
+.profile-agenda-details p {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 700px) {
+  .artist-profile-agenda {
+    gap: 58px;
+  }
+
+  .profile-agenda-item {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}

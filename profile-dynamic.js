@@ -15,6 +15,7 @@ const primaryProfileLink = document.querySelector("#profile-primary-link");
 const presentationsLink = document.querySelector(
   "#profile-presentations-link"
 );
+const agendaLink = document.querySelector("#profile-agenda-link");
 const cvLink = document.querySelector("#profile-cv-link");
 const followControl = document.querySelector("#profile-follow-control");
 const followAction = document.querySelector("#profile-follow-action");
@@ -152,6 +153,17 @@ function renderProfile(result) {
     presentationsLink.hidden = false;
   } else {
     presentationsLink.hidden = true;
+  }
+
+  if (result.hasPublicAgenda) {
+    agendaLink.href =
+      `profile-agenda.html?slug=${encodeURIComponent(
+        profile.slug
+      )}`;
+
+    agendaLink.hidden = false;
+  } else {
+    agendaLink.hidden = true;
   }
 
   if (result.hasPublicCv) {

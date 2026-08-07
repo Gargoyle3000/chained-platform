@@ -14,6 +14,9 @@ import {
 import {
   hasPublicCvForProfile
 } from "./public-cv-repository.mjs";
+import {
+  hasPublicAgendaForProfile
+} from "./public-agenda-repository.mjs";
 
 function inFilter(ids) {
   return `in.(${ids.join(",")})`;
@@ -25,7 +28,8 @@ function withFollowIdentity(
   mapped,
   profile,
   hasPublicPresentations = false,
-  hasPublicCv = false
+  hasPublicCv = false,
+  hasPublicAgenda = false
 ) {
   if (mapped.kind !== "available") return mapped;
 
@@ -33,6 +37,7 @@ function withFollowIdentity(
     ...mapped,
     hasPublicPresentations: Boolean(hasPublicPresentations),
     hasPublicCv: Boolean(hasPublicCv),
+    hasPublicAgenda: Boolean(hasPublicAgenda),
     followIdentity: Object.freeze({
       id: profile.id,
       slug: profile.slug
@@ -88,6 +93,13 @@ export function createPublicProfileRepository(
           request
         );
 
+      const hasPublicAgenda =
+        await hasPublicAgendaForProfile(
+          config,
+          profiles[0].id,
+          request
+        );
+
       const works = [];
       let offset = 0;
       let workPage;
@@ -117,7 +129,8 @@ export function createPublicProfileRepository(
           ),
           profiles[0],
           hasPublicPresentations,
-          hasPublicCv
+          hasPublicCv,
+          hasPublicAgenda
         );
       }
 
@@ -146,7 +159,8 @@ export function createPublicProfileRepository(
         mapped,
         profiles[0],
         hasPublicPresentations,
-        hasPublicCv
+        hasPublicCv,
+        hasPublicAgenda
       );
     }
   });

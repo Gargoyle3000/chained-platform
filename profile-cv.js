@@ -28,6 +28,8 @@ const worksLink =
 const presentationsLink =
   document.querySelector("#profile-presentations-link");
 
+const agendaLink =
+  document.querySelector("#profile-agenda-link");
 const cvLink =
   document.querySelector("#profile-cv-link");
 
@@ -103,6 +105,7 @@ function renderUnavailable(connectionError = false) {
 
   biography.hidden = true;
   presentationsLink.hidden = true;
+  agendaLink.hidden = true;
 
   cvContainer.setAttribute(
     "aria-busy",
@@ -151,6 +154,17 @@ function renderProfile(result) {
     presentationsLink.hidden = false;
   } else {
     presentationsLink.hidden = true;
+  }
+
+  if (result.hasPublicAgenda) {
+    agendaLink.href =
+      `profile-agenda.html?slug=${encodeURIComponent(
+        profile.slug
+      )}`;
+
+    agendaLink.hidden = false;
+  } else {
+    agendaLink.hidden = true;
   }
 
   if (profile.biography) {
