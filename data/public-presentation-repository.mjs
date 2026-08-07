@@ -1,4 +1,4 @@
-﻿import { FRONTEND_MODES } from "../auth/config.mjs";
+import { FRONTEND_MODES } from "../auth/config.mjs";
 import { getFrontendRuntime } from "../auth/supabase-client.mjs";
 import { requestPublicRows } from "./public-data-request.mjs";
 import {
@@ -6,6 +6,9 @@ import {
   mapPublishedArtistProfile,
   PUBLIC_PROFILE_SELECT
 } from "./public-work-mapping.mjs";
+import {
+  hasPublicCvForProfile
+} from "./public-cv-repository.mjs";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -127,13 +130,21 @@ export function createPublicPresentationRepository(
         )
         .map(mapPresentation);
 
+      const hasPublicCv =
+        await hasPublicCvForProfile(
+          config,
+          profileRow.id,
+          request
+        );
+
       return Object.freeze({
         kind: "available",
         profile: Object.freeze({
           ...mappedProfile,
           id: profileRow.id
         }),
-        presentations
+        presentations,
+        hasPublicCv
       });
     }
   });

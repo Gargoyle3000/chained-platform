@@ -15,6 +15,7 @@ const primaryProfileLink = document.querySelector("#profile-primary-link");
 const presentationsLink = document.querySelector(
   "#profile-presentations-link"
 );
+const cvLink = document.querySelector("#profile-cv-link");
 const followControl = document.querySelector("#profile-follow-control");
 const followAction = document.querySelector("#profile-follow-action");
 const followStatus = document.querySelector("#profile-follow-status");
@@ -151,6 +152,17 @@ function renderProfile(result) {
     presentationsLink.hidden = false;
   } else {
     presentationsLink.hidden = true;
+  }
+
+  if (result.hasPublicCv) {
+    cvLink.href =
+      `profile-cv.html?slug=${encodeURIComponent(
+        profile.slug
+      )}`;
+
+    cvLink.hidden = false;
+  } else {
+    cvLink.hidden = true;
   }
 
   if (profile.biography) {

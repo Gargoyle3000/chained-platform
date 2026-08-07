@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
 
-  <title>Artist profile — CHAINED</title>
+  <title>CV — CHAINED</title>
 
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="profile.css">
@@ -22,7 +22,14 @@
       <a href="following.html">FOLLOWING</a>
       <a href="archive.html">ARCHIVE</a>
       <a href="agenda.html">AGENDA</a>
-      <a class="is-active" id="profile-primary-link" data-own-profile-link href="profile.html">PROFILE</a>
+
+      <a
+        class="is-active"
+        id="profile-primary-link"
+        data-own-profile-link
+        href="profile.html">
+        PROFILE
+      </a>
     </nav>
   </header>
 
@@ -34,8 +41,16 @@
 
         <header class="artist-intro">
           <h1 id="profile-name">ARTIST PROFILE</h1>
-          <p class="artist-biography" id="profile-biography" hidden></p>
-          <div class="profile-follow" id="profile-follow-control" hidden>
+
+          <p
+            class="artist-biography"
+            id="profile-biography"
+            hidden></p>
+
+          <div
+            class="profile-follow"
+            id="profile-follow-control"
+            hidden>
             <button
               class="text-action"
               id="profile-follow-action"
@@ -43,6 +58,7 @@
               aria-label="Follow this artist profile">
               [ FOLLOW ]
             </button>
+
             <p
               class="profile-follow-status"
               id="profile-follow-status"
@@ -51,8 +67,17 @@
           </div>
         </header>
 
-        <nav class="artist-navigation" aria-label="Artist profile">
-          <a class="is-active" id="profile-works-link" href="#works">WORKS</a>
+
+        <nav
+          class="artist-navigation"
+          aria-label="Artist profile">
+
+          <a
+            id="profile-works-link"
+            href="profile.html">
+            WORKS
+          </a>
+
           <a
             id="profile-presentations-link"
             href="profile-presentations.html"
@@ -61,9 +86,9 @@
           </a>
 
           <a
+            class="is-active"
             id="profile-cv-link"
-            href="profile-cv.html"
-            hidden>
+            href="profile-cv.html">
             CV
           </a>
 
@@ -74,17 +99,25 @@
 
 
     <section
-      class="artist-works"
-      id="works"
+      class="artist-cv"
+      id="cv"
       aria-live="polite"
       aria-busy="true">
-      <p class="profile-works-state" role="status">LOADING ARTIST PROFILE</p>
+
+      <p
+        class="profile-works-state"
+        role="status">
+        LOADING CV
+      </p>
+
     </section>
 
   </main>
 
 
-  <script type="module" src="profile-dynamic.js"></script>
+  <script
+    type="module"
+    src="profile-cv.js"></script>
 
 </body>
 </html>

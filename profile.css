@@ -393,3 +393,69 @@
     font-size: 28px;
   }
 }
+/* PUBLIC CV */
+
+.artist-cv {
+  min-width: 0;
+
+  display: grid;
+  align-content: start;
+  gap: clamp(64px, 8vw, 110px);
+
+  width: 100%;
+  max-width: 900px;
+}
+
+.profile-cv-category {
+  display: grid;
+  gap: 24px;
+}
+
+.profile-cv-category h2 {
+  margin: 0;
+
+  color: var(--accent);
+
+  font-size: var(--font-meta);
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+.profile-cv-entries {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-cv-entry {
+  display: grid;
+  grid-template-columns:
+    minmax(90px, 0.2fr)
+    minmax(0, 1fr);
+  gap: 24px;
+
+  font-size: var(--font-meta);
+  line-height: 1.45;
+}
+
+.profile-cv-entry p {
+  margin: 0;
+}
+
+.profile-cv-year {
+  white-space: nowrap;
+}
+
+.profile-cv-line {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 700px) {
+  .artist-cv {
+    gap: 70px;
+  }
+
+  .profile-cv-entry {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

@@ -11,6 +11,9 @@ import {
   PUBLIC_PROFILE_SELECT,
   PUBLIC_WORK_SELECT
 } from "./public-work-mapping.mjs";
+import {
+  hasPublicCvForProfile
+} from "./public-cv-repository.mjs";
 
 function inFilter(ids) {
   return `in.(${ids.join(",")})`;
@@ -21,13 +24,15 @@ const PROFILE_WORK_PAGE_SIZE = 100;
 function withFollowIdentity(
   mapped,
   profile,
-  hasPublicPresentations = false
+  hasPublicPresentations = false,
+  hasPublicCv = false
 ) {
   if (mapped.kind !== "available") return mapped;
 
   return Object.freeze({
     ...mapped,
     hasPublicPresentations: Boolean(hasPublicPresentations),
+    hasPublicCv: Boolean(hasPublicCv),
     followIdentity: Object.freeze({
       id: profile.id,
       slug: profile.slug
@@ -76,6 +81,13 @@ export function createPublicProfileRepository(
       const hasPublicPresentations =
         Boolean(publicPresentations[0]);
 
+      const hasPublicCv =
+        await hasPublicCvForProfile(
+          config,
+          profiles[0].id,
+          request
+        );
+
       const works = [];
       let offset = 0;
       let workPage;
@@ -104,7 +116,8 @@ export function createPublicProfileRepository(
             (path) => createPublicImageUrl(client, path)
           ),
           profiles[0],
-          hasPublicPresentations
+          hasPublicPresentations,
+          hasPublicCv
         );
       }
 
@@ -132,7 +145,8 @@ export function createPublicProfileRepository(
       return withFollowIdentity(
         mapped,
         profiles[0],
-        hasPublicPresentations
+        hasPublicPresentations,
+        hasPublicCv
       );
     }
   });

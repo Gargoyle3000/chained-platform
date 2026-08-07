@@ -2,84 +2,43 @@ import { FRONTEND_MODES } from "./auth/config.mjs";
 import { readApplicationSession } from "./auth/session.mjs";
 import { applyAuthenticatedNavigation } from "./auth/navigation.mjs";
 import {
-  getPublicPresentationRepository
-} from "./data/public-presentation-repository.mjs";
+  getPublicCvRepository
+} from "./data/public-cv-repository.mjs";
 import { createFollowService } from "./data/follow-service.mjs";
 import {
   createPublicProfileLink,
   isValidProfileSlug
 } from "./data/public-work-mapping.mjs";
 
-const presentationsContainer =
-  document.querySelector("#presentations");
+const cvContainer =
+  document.querySelector("#cv");
+
 const profileName =
   document.querySelector("#profile-name");
+
 const biography =
   document.querySelector("#profile-biography");
+
 const primaryProfileLink =
   document.querySelector("#profile-primary-link");
+
 const worksLink =
   document.querySelector("#profile-works-link");
+
 const presentationsLink =
   document.querySelector("#profile-presentations-link");
+
 const cvLink =
   document.querySelector("#profile-cv-link");
+
 const followControl =
   document.querySelector("#profile-follow-control");
+
 const followAction =
   document.querySelector("#profile-follow-action");
+
 const followStatus =
   document.querySelector("#profile-follow-status");
-
-function cleanText(value) {
-  return String(value || "").trim();
-}
-
-function formatType(value) {
-  return cleanText(value)
-    .replaceAll("_", " ")
-    .replaceAll("-", " ")
-    .toUpperCase();
-}
-
-function parseDate(value) {
-  if (!value) return null;
-
-  const parsed = new Date(`${value}T00:00:00Z`);
-
-  return Number.isNaN(parsed.getTime())
-    ? null
-    : parsed;
-}
-
-function formatDate(value) {
-  const parsed = parseDate(value);
-
-  if (!parsed) return "";
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC"
-  }).format(parsed).toUpperCase();
-}
-
-function formatDateRange(startDate, endDate) {
-  const start = formatDate(startDate);
-  const end = formatDate(endDate);
-
-  if (!start) return "";
-  if (!end || endDate === startDate) return start;
-
-  return `${start} — ${end}`;
-}
-
-function createPresentationLink(id) {
-  return /^[0-9a-f-]{36}$/i.test(String(id || ""))
-    ? `presentation.html?id=${encodeURIComponent(id)}`
-    : null;
-}
 
 function createState(message, isError = false) {
   const state = document.createElement("p");
@@ -92,119 +51,68 @@ function createState(message, isError = false) {
   return state;
 }
 
-function appendLine(container, value, className = "") {
-  const text = cleanText(value);
-
-  if (!text) return;
-
+function createCvEntry(entry) {
+  const row = document.createElement("div");
+  const year = document.createElement("p");
   const line = document.createElement("p");
 
-  if (className) {
-    line.className = className;
-  }
+  row.className = "profile-cv-entry";
 
-  line.textContent = text;
-  container.append(line);
+  year.className = "profile-cv-year";
+  year.textContent = entry.yearLabel;
+
+  line.className = "profile-cv-line";
+  line.textContent = entry.line;
+
+  row.append(year, line);
+
+  return row;
 }
 
-function createPresentationArticle(presentation) {
-  const article = document.createElement("article");
-  const metadata = document.createElement("div");
+function createCvCategory(category) {
+  const section = document.createElement("section");
   const heading = document.createElement("h2");
-  const detailLink =
-    createPresentationLink(presentation.id);
+  const entries = document.createElement("div");
 
-  article.className = "profile-presentation";
-  article.dataset.presentationId = presentation.id;
+  section.className = "profile-cv-category";
 
-  metadata.className = "profile-presentation-meta";
+  heading.textContent = category.label;
 
-  if (detailLink) {
-    const titleLink = document.createElement("a");
+  entries.className = "profile-cv-entries";
 
-    titleLink.href = detailLink;
-    titleLink.textContent = presentation.title;
-    heading.append(titleLink);
-  } else {
-    heading.textContent = presentation.title;
-  }
-
-  metadata.append(heading);
-
-  appendLine(
-    metadata,
-    formatType(presentation.activityType),
-    "profile-presentation-type"
+  entries.replaceChildren(
+    ...category.entries.map(
+      createCvEntry
+    )
   );
 
-  appendLine(
-    metadata,
-    formatDateRange(
-      presentation.startDate,
-      presentation.endDate
-    ),
-    "profile-presentation-date"
+  section.append(
+    heading,
+    entries
   );
 
-  const location = [
-    presentation.venueName,
-    presentation.city,
-    presentation.country
-  ].filter(Boolean).join(", ");
-
-  appendLine(
-    metadata,
-    location,
-    "profile-presentation-location"
-  );
-
-  if (presentation.description) {
-    appendLine(
-      metadata,
-      presentation.description,
-      "profile-presentation-description"
-    );
-  }
-
-  if (presentation.externalUrl) {
-    const externalLink =
-      document.createElement("a");
-
-    externalLink.className =
-      "profile-presentation-external";
-    externalLink.href =
-      presentation.externalUrl;
-    externalLink.target = "_blank";
-    externalLink.rel = "noreferrer";
-    externalLink.textContent =
-      "EXTERNAL LINK ↗";
-
-    metadata.append(externalLink);
-  }
-
-  article.append(metadata);
-
-  return article;
+  return section;
 }
 
 function renderUnavailable(connectionError = false) {
   document.title =
-    "PRESENTATIONS NOT AVAILABLE — CHAINED";
+    "CV NOT AVAILABLE — CHAINED";
 
   profileName.textContent =
     "ARTIST PROFILE";
-  biography.hidden = true;
-  cvLink.hidden = true;
 
-  presentationsContainer.setAttribute(
+  biography.hidden = true;
+  presentationsLink.hidden = true;
+
+  cvContainer.setAttribute(
     "aria-busy",
     "false"
   );
 
-  presentationsContainer.replaceChildren(
+  cvContainer.replaceChildren(
     createState(
       connectionError
-        ? "PRESENTATIONS CURRENTLY UNAVAILABLE"
+        ? "CV CURRENTLY UNAVAILABLE"
         : "ARTIST PROFILE NOT AVAILABLE",
       connectionError
     )
@@ -212,61 +120,61 @@ function renderUnavailable(connectionError = false) {
 }
 
 function renderProfile(result) {
-  const { profile, presentations } = result;
+  const { profile, categories } = result;
 
   const profileHref =
     createPublicProfileLink(profile.slug);
 
-  const presentationsHref =
-    `profile-presentations.html?slug=${encodeURIComponent(
-      profile.slug
-    )}`;
-
   document.title =
-    `Presentations — ${profile.displayName} — CHAINED`;
+    `CV — ${profile.displayName} — CHAINED`;
 
   profileName.textContent =
     profile.displayName;
 
   primaryProfileLink.href =
     profileHref;
+
   worksLink.href =
     profileHref;
-  presentationsLink.href =
-    presentationsHref;
 
-  if (result.hasPublicCv) {
-    cvLink.href =
-      `profile-cv.html?slug=${encodeURIComponent(
+  cvLink.href =
+    `profile-cv.html?slug=${encodeURIComponent(
+      profile.slug
+    )}`;
+
+  if (result.hasPublicPresentations) {
+    presentationsLink.href =
+      `profile-presentations.html?slug=${encodeURIComponent(
         profile.slug
       )}`;
 
-    cvLink.hidden = false;
+    presentationsLink.hidden = false;
   } else {
-    cvLink.hidden = true;
+    presentationsLink.hidden = true;
   }
 
   if (profile.biography) {
     biography.textContent =
       profile.biography;
+
     biography.hidden = false;
   } else {
     biography.hidden = true;
   }
 
-  presentationsContainer.setAttribute(
+  cvContainer.setAttribute(
     "aria-busy",
     "false"
   );
 
-  presentationsContainer.replaceChildren(
-    ...(presentations.length
-      ? presentations.map(
-          createPresentationArticle
+  cvContainer.replaceChildren(
+    ...(categories.length
+      ? categories.map(
+          createCvCategory
         )
       : [
           createState(
-            "NO PUBLISHED PRESENTATIONS"
+            "CV NOT PUBLISHED"
           )
         ])
   );
@@ -293,6 +201,7 @@ function renderFollowState(state) {
     state.kind === "following";
 
   followControl.hidden = false;
+
   followAction.dataset.following =
     String(isFollowing);
 
@@ -356,6 +265,7 @@ async function initialiseFollowControl(
       }
 
       followAction.disabled = true;
+
       followAction.setAttribute(
         "aria-busy",
         "true"
@@ -395,6 +305,7 @@ async function initialiseFollowControl(
             : "THE PROFILE COULD NOT BE FOLLOWED. TRY AGAIN.";
       } finally {
         followAction.disabled = false;
+
         followAction.removeAttribute(
           "aria-busy"
         );
@@ -403,16 +314,22 @@ async function initialiseFollowControl(
   );
 }
 
-async function initialiseAuthenticatedNavigation(
+async function initialiseAuthenticatedProfileNavigation(
   client
 ) {
   try {
-    const session =
+    const applicationSession =
       await readApplicationSession(client);
 
-    if (session.kind !== "active") return;
+    if (
+      applicationSession.kind !== "active"
+    ) {
+      return;
+    }
 
-    await applyAuthenticatedNavigation(client);
+    await applyAuthenticatedNavigation(
+      client
+    );
   } catch (error) {
     console.error(
       "Profile authenticated navigation unavailable.",
@@ -421,7 +338,7 @@ async function initialiseAuthenticatedNavigation(
   }
 }
 
-async function initialisePresentations() {
+async function initialiseCv() {
   const slug =
     new URLSearchParams(
       window.location.search
@@ -434,7 +351,7 @@ async function initialisePresentations() {
 
   try {
     const { runtime, repository } =
-      await getPublicPresentationRepository();
+      await getPublicCvRepository();
 
     if (
       runtime.mode !==
@@ -446,9 +363,7 @@ async function initialisePresentations() {
     }
 
     const result =
-      await repository.getProfilePresentations(
-        slug
-      );
+      await repository.getProfileCv(slug);
 
     if (result.kind !== "available") {
       renderUnavailable();
@@ -457,7 +372,7 @@ async function initialisePresentations() {
 
     renderProfile(result);
 
-    await initialiseAuthenticatedNavigation(
+    await initialiseAuthenticatedProfileNavigation(
       runtime.client
     );
 
@@ -468,10 +383,15 @@ async function initialisePresentations() {
         slug: result.profile.slug
       }
     );
-  } catch {
+  } catch (error) {
+    console.error(
+      "Public CV unavailable.",
+      error
+    );
+
     hideFollowControl();
     renderUnavailable(true);
   }
 }
 
-initialisePresentations();
+initialiseCv();
