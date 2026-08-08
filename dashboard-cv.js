@@ -593,7 +593,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     repository = selected.repository;
     await repository.initialise();
 
-    if (repository.mode !== "local-supabase") {
+    if (repository.mode !== "supabase") {
       renderDashboardAccountIdentity([], "prototype");
 
       setNotice(

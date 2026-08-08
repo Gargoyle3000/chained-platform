@@ -222,7 +222,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     image.alt = `${work.title || "Untitled"} cover image`;
 
     try {
-      if (repository.mode === "local-supabase") {
+      if (repository.mode === "supabase") {
         image.src =
           coverImage.publicPath && work.visibility === "published"
             ? repository.media.publicUrl(coverImage.publicPath)
@@ -540,7 +540,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       await presentationRepository.initialise();
 
       const presentations =
-        presentationRepository.mode === "local-supabase"
+        presentationRepository.mode === "supabase"
           ? await presentationRepository.listPresentations(
               profileIds
             )
@@ -596,7 +596,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       let works = [];
       let managedProfileIds = [];
 
-      if (repository.mode === "local-supabase") {
+      if (repository.mode === "supabase") {
         const profiles = await repository.listManagedProfiles();
         renderDashboardAccountIdentity(profiles);
         managedProfileIds = profiles.map(

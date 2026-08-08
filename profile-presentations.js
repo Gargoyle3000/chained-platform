@@ -470,7 +470,7 @@ async function initialisePresentations() {
 
     if (
       runtime.mode !==
-        FRONTEND_MODES.LOCAL_SUPABASE ||
+        FRONTEND_MODES.SUPABASE ||
       !repository
     ) {
       renderUnavailable();

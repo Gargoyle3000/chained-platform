@@ -255,6 +255,6 @@ test("mode boundary leaves prototype query-free and local Following Supabase-onl
   const prototype = resolveFollowingRepository({ mode: FRONTEND_MODES.PROTOTYPE });
   assert.equal(prototype.repository, null);
   assert.equal(FOLLOWING_DATA_SOURCE, "supabase-only");
-  const local = resolveFollowingRepository({ mode: FRONTEND_MODES.LOCAL_SUPABASE, client: {} });
-  assert.equal(local.repository.mode, FRONTEND_MODES.LOCAL_SUPABASE);
+  const local = resolveFollowingRepository({ mode: FRONTEND_MODES.SUPABASE, client: {} });
+  assert.equal(local.repository.mode, FRONTEND_MODES.SUPABASE);
 });

@@ -5,7 +5,7 @@ import { createSupabaseWorkRepository } from "./supabase-work-repository.mjs";
 
 export function selectWorkRepository(runtime, store = globalThis.ChainedWorkStore) {
   if (runtime.mode === FRONTEND_MODES.PROTOTYPE) return createIndexedDbWorkRepository(store);
-  if (runtime.mode === FRONTEND_MODES.LOCAL_SUPABASE && runtime.client) return createSupabaseWorkRepository(runtime.client, runtime.config);
+  if (runtime.mode === FRONTEND_MODES.SUPABASE && runtime.client) return createSupabaseWorkRepository(runtime.client, runtime.config);
   throw new Error("Work repository mode is invalid.");
 }
 

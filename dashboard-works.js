@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const image = document.createElement("img");
     image.alt = `${work.title || "Untitled"} cover image`;
     try {
-      if (repository.mode === "local-supabase") {
+      if (repository.mode === "supabase") {
         image.src = cover.publicPath && work.visibility === "published" ? repository.media.publicUrl(cover.publicPath) : await repository.media.privatePreview(cover);
       } else if (cover.blob) {
         image.src = URL.createObjectURL(cover.blob);
@@ -161,7 +161,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const selected = await getWorkRepository();
     repository = selected.repository;
     await repository.initialise();
-    if (repository.mode === "local-supabase") {
+    if (repository.mode === "supabase") {
       const count = await getPrototypeWorkCount().catch(() => 0);
       if (count) { noticeElement.textContent = `LOCAL PROTOTYPE WORKS HAVE NOT BEEN IMPORTED. (${count})`; noticeElement.hidden = false; }
       const profiles = await repository.listManagedProfiles();

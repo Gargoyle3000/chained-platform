@@ -16,7 +16,7 @@ test("adapter selection is explicit in prototype and local modes", () => {
   const store = { initialiseDatabase() {}, getAllWorks() {}, getWork() {}, createWork() {}, updateWork() {}, deleteWork() {} };
   assert.equal(selectWorkRepository({ mode: FRONTEND_MODES.PROTOTYPE }, store).mode, "prototype");
   const client = { storage: { from: () => ({ getPublicUrl: () => ({ data: {} }) }) } };
-  assert.equal(selectWorkRepository({ mode: FRONTEND_MODES.LOCAL_SUPABASE, client, config: {} }, store).mode, "local-supabase");
+  assert.equal(selectWorkRepository({ mode: FRONTEND_MODES.SUPABASE, client, config: {} }, store).mode, "supabase");
 });
 
 test("IndexedDB preservation boundary retains the legacy database and store", () => {

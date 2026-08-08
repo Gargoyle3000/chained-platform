@@ -265,7 +265,7 @@ async function ensureUpdatedRow({
 
 export function createSupabaseCvRepository(client) {
   return Object.freeze({
-    mode: "local-supabase",
+    mode: "supabase",
 
     initialise: async () => {},
 

@@ -97,7 +97,7 @@ function createPrototypeRepository() {
 
 function createSupabaseRepository(client) {
   return Object.freeze({
-    mode: FRONTEND_MODES.LOCAL_SUPABASE,
+    mode: FRONTEND_MODES.SUPABASE,
 
     initialise: async () => {},
 

@@ -126,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const { getFollowingRepository } = await import("./data/following-repository.mjs");
       const { appendFollowingPage } = await import("./data/following-mapping.mjs");
       const { runtime, repository } = await getFollowingRepository();
-      if (runtime.mode !== "local-supabase" || !repository) return;
+      if (runtime.mode !== "supabase" || !repository) return;
 
       const [hasFollows, firstPage] = await Promise.all([
         repository.hasAnyFollows(),
@@ -214,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function authReady(mode) {
-    if (mode === "local-supabase") initialiseLocalFollowing();
+    if (mode === "supabase") initialiseLocalFollowing();
     if (mode === "prototype") initialisePrototypeFollowing();
   }
 

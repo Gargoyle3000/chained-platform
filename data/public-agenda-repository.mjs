@@ -337,7 +337,7 @@ export function createPublicAgendaRepository(
   today = localToday()
 ) {
   return Object.freeze({
-    mode: FRONTEND_MODES.LOCAL_SUPABASE,
+    mode: FRONTEND_MODES.SUPABASE,
 
     async listAgenda() {
       const rows =

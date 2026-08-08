@@ -181,7 +181,7 @@ async function initialiseLocalDiscover() {
   const { createDiscoverBatchState } = await import("./data/discover-ordering.mjs");
   const { runtime, repository } = await getDiscoverRepository();
 
-  if (runtime.mode !== FRONTEND_MODES.LOCAL_SUPABASE || !repository) return;
+  if (runtime.mode !== FRONTEND_MODES.SUPABASE || !repository) return;
 
   try {
     const works = await repository.listWorks();

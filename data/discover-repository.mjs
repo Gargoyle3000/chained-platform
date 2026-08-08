@@ -26,7 +26,7 @@ export function createDiscoverRepository(
   candidateLimit = DISCOVER_CANDIDATE_LIMIT
 ) {
   return Object.freeze({
-    mode: FRONTEND_MODES.LOCAL_SUPABASE,
+    mode: FRONTEND_MODES.SUPABASE,
     candidateLimit,
 
     async listWorks() {

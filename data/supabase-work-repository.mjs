@@ -35,7 +35,7 @@ export function createSupabaseWorkRepository(client, config) {
   }
 
   return Object.freeze({
-    mode: "local-supabase",
+    mode: "supabase",
     media,
     initialise: async () => {},
     async listManagedProfiles() {

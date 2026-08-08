@@ -387,7 +387,7 @@ async function initialiseCv() {
 
     if (
       runtime.mode !==
-        FRONTEND_MODES.LOCAL_SUPABASE ||
+        FRONTEND_MODES.SUPABASE ||
       !repository
     ) {
       renderUnavailable();

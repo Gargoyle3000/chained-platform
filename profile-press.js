@@ -313,7 +313,7 @@ async function initialiseProfilePress() {
 
     if (
       profileSelection.runtime.mode !==
-        FRONTEND_MODES.LOCAL_SUPABASE ||
+        FRONTEND_MODES.SUPABASE ||
       !profileSelection.repository ||
       !pressSelection.repository
     ) {

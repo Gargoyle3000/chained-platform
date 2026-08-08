@@ -1,4 +1,4 @@
-﻿document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   "use strict";
 
   const { getPresentationRepository } =
@@ -316,7 +316,7 @@
     repository = selected.repository;
     await repository.initialise();
 
-    if (repository.mode !== "local-supabase") {
+    if (repository.mode !== "supabase") {
       renderDashboardAccountIdentity([], "prototype");
 
       noticeElement.textContent =

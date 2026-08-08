@@ -78,7 +78,7 @@ async function authorize(client) {
   } catch (error) {
     console.error("Authenticated navigation unavailable.", error);
   }
-  revealProtectedContent(FRONTEND_MODES.LOCAL_SUPABASE);
+  revealProtectedContent(FRONTEND_MODES.SUPABASE);
   return true;
 }
 
@@ -92,7 +92,7 @@ async function initializeGuard() {
     runtime = await getFrontendRuntime();
   } catch {
     showAccessUnavailable(
-      "LOCAL AUTHENTICATION CONFIGURATION IS UNAVAILABLE."
+      "AUTHENTICATION CONFIGURATION IS UNAVAILABLE."
     );
     return;
   }

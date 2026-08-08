@@ -40,13 +40,13 @@ async function initializeCallback() {
     runtime = await getFrontendRuntime();
   } catch {
     cleanCallbackLocation();
-    setState("ACCESS UNAVAILABLE", "LOCAL AUTHENTICATION CONFIGURATION IS UNAVAILABLE.");
+    setState("ACCESS UNAVAILABLE", "AUTHENTICATION CONFIGURATION IS UNAVAILABLE.");
     return;
   }
 
   if (runtime.mode === FRONTEND_MODES.PROTOTYPE) {
     cleanCallbackLocation();
-    setState("ACCESS UNAVAILABLE", "SIGN-IN IS AVAILABLE ONLY IN THE LOCAL SUPABASE ENVIRONMENT.");
+    setState("ACCESS UNAVAILABLE", "SIGN-IN IS UNAVAILABLE IN THIS ENVIRONMENT.");
     return;
   }
 

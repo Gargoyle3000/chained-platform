@@ -133,7 +133,7 @@ export function createPublicPressRepository(
   request = requestPublicRows
 ) {
   return Object.freeze({
-    mode: FRONTEND_MODES.LOCAL_SUPABASE,
+    mode: FRONTEND_MODES.SUPABASE,
 
     async getProfilePress(slug) {
       if (!isValidProfileSlug(slug)) {

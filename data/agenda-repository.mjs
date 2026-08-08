@@ -191,7 +191,7 @@ function createUnavailableRepository() {
 
 export function createSupabaseAgendaRepository(client) {
   return Object.freeze({
-    mode: "local-supabase",
+    mode: "supabase",
 
     initialise: async () => {},
 
@@ -424,7 +424,7 @@ export function createSupabaseAgendaRepository(client) {
 
 export function selectAgendaRepository(runtime) {
   if (
-    runtime.mode === FRONTEND_MODES.LOCAL_SUPABASE &&
+    runtime.mode === FRONTEND_MODES.SUPABASE &&
     runtime.client
   ) {
     return createSupabaseAgendaRepository(runtime.client);

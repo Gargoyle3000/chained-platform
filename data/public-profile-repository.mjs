@@ -56,7 +56,7 @@ export function createPublicProfileRepository(
   request = requestPublicRows
 ) {
   return Object.freeze({
-    mode: FRONTEND_MODES.LOCAL_SUPABASE,
+    mode: FRONTEND_MODES.SUPABASE,
 
     async getProfile(slug) {
       if (!isValidProfileSlug(slug)) {

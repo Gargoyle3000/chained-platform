@@ -66,7 +66,8 @@ try {
   $configuration = @"
 // Generated for the local Supabase stack. This file is intentionally untracked.
 export default Object.freeze({
-  mode: "local-supabase",
+  mode: "supabase",
+  target: "local",
   supabaseUrl: $apiJson,
   supabaseKey: $keyJson,
   callbackUrl: $callbackJson

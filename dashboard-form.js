@@ -910,7 +910,7 @@ Object.values(materialOptions).forEach((options) => {
     try {
       const selected = await getWorkRepository();
       workStore = selected.repository;
-      localSupabaseMode = workStore.mode === "local-supabase";
+      localSupabaseMode = workStore.mode === "supabase";
       await workStore.initialise();
 
       if (localSupabaseMode) {

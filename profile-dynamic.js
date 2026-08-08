@@ -389,7 +389,7 @@ async function initialiseProfile() {
 
   try {
     const { runtime, repository } = await getPublicProfileRepository();
-    if (runtime.mode !== FRONTEND_MODES.LOCAL_SUPABASE || !repository) {
+    if (runtime.mode !== FRONTEND_MODES.SUPABASE || !repository) {
       renderUnavailable();
       return;
     }

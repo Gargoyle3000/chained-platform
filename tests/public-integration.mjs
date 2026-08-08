@@ -365,7 +365,7 @@ try {
   record("public image retrieval works anonymously", publicImageResponse.ok);
   record("private original retrieval is denied anonymously", !privateImageResponse.ok);
 
-  stage = "checking local-supabase browser rendering";
+  stage = "checking supabase browser rendering";
   await startStaticServer();
   stage = "starting the local browser";
   await connectBrowser();

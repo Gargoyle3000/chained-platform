@@ -186,7 +186,7 @@ function createUnavailableRepository() {
 
 export function createSupabasePressRepository(client) {
   return Object.freeze({
-    mode: "local-supabase",
+    mode: "supabase",
 
     initialise: async () => {},
 
@@ -315,7 +315,7 @@ export function createSupabasePressRepository(client) {
 
 export function selectPressRepository(runtime) {
   if (
-    runtime.mode === FRONTEND_MODES.LOCAL_SUPABASE &&
+    runtime.mode === FRONTEND_MODES.SUPABASE &&
     runtime.client
   ) {
     return createSupabasePressRepository(

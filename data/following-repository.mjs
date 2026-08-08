@@ -12,7 +12,7 @@ export const FOLLOWING_DATA_SOURCE = "supabase-only";
 
 export function createFollowingRepository(client, pageSize = FOLLOWING_INITIAL_BATCH) {
   return Object.freeze({
-    mode: FRONTEND_MODES.LOCAL_SUPABASE,
+    mode: FRONTEND_MODES.SUPABASE,
 
     async hasAnyFollows() {
       const { data, error } = await client

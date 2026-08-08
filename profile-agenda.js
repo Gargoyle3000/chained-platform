@@ -329,7 +329,7 @@ async function initialiseProfileAgenda() {
 
     if (
       profileSelection.runtime.mode !==
-        FRONTEND_MODES.LOCAL_SUPABASE ||
+        FRONTEND_MODES.SUPABASE ||
       !profileSelection.repository ||
       !agendaSelection.repository
     ) {

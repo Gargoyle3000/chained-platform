@@ -679,7 +679,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await repository.initialise();
 
     if (
-      repository.mode !== "local-supabase"
+      repository.mode !== "supabase"
     ) {
       renderDashboardAccountIdentity(
         [],
