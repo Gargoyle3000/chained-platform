@@ -173,8 +173,7 @@ body[data-auth-protected="true"] > main {
 
 @media (max-width: 720px) {
   .auth-session-indicator {
-    grid-column: 1 / -1;
-    min-height: 44px;
+    min-height: 24px;
   }
 
   .auth-main,
@@ -212,7 +211,14 @@ body[data-auth-protected="true"] > main {
 
 @media (max-width: 720px) {
   .header-actions {
+    position: relative;
     width: 100%;
-    align-items: flex-end;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .header-actions .auth-session-indicator {
+    align-self: flex-end;
+    min-height: 24px;
   }
 }
