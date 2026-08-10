@@ -768,6 +768,22 @@ footer {
   margin-top: 18px;
 }
 
+.discover-meta .discover-archive-action {
+  display: block;
+  margin-top: 28px;
+  color: var(--black);
+}
+
+.discover-meta .discover-archive-action:hover,
+.discover-meta .discover-archive-action:focus-visible,
+.discover-meta .discover-archive-action.is-saved {
+  color: var(--green);
+}
+
+.discover-meta .discover-archive-action:disabled {
+  cursor: wait;
+}
+
 
 /* FULL VIEWPORT-CENTRED IMAGE */
 
@@ -856,6 +872,12 @@ footer {
 .discover-page[data-view="grid"] .discover-details,
 .discover-page[data-view="grid"] .save-work {
   display: none;
+}
+
+.discover-page[data-view="grid"] .discover-archive-action {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
 }
 
 .discover-page[data-view="grid"] .artist-link,

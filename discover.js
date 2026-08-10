@@ -92,7 +92,42 @@ function replaceBrokenImage(link) {
   link.replaceChildren(state);
 }
 
-function createDiscoverWork(work) {
+function updateArchiveAction(button, work, isSaved) {
+  button.classList.toggle("is-saved", isSaved);
+  button.setAttribute("aria-pressed", String(isSaved));
+  button.setAttribute(
+    "aria-label",
+    `${isSaved ? "Remove" : "Save"} ${work.title} ${isSaved ? "from" : "to"} Archive`
+  );
+}
+
+function createArchiveAction(work, archiveState, announce) {
+  const button = document.createElement("button");
+  button.className = "text-action discover-archive-action";
+  button.type = "button";
+  button.textContent = "+";
+  updateArchiveAction(button, work, archiveState.isSaved(work.id));
+
+  button.addEventListener("click", async () => {
+    if (button.disabled) return;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+
+    try {
+      const isSaved = await archiveState.toggle(work.id);
+      updateArchiveAction(button, work, isSaved);
+    } catch {
+      announce("ARCHIVE IS CURRENTLY UNAVAILABLE");
+    } finally {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+    }
+  });
+
+  return button;
+}
+
+function createDiscoverWork(work, archiveState = null, announceArchiveStatus = () => {}) {
   const article = document.createElement("article");
   const metadata = document.createElement("div");
   const artist = document.createElement("a");
@@ -139,6 +174,7 @@ function createDiscoverWork(work) {
     details.append(line);
   });
   if (details.childElementCount) metadata.append(details);
+  if (archiveState) metadata.append(createArchiveAction(work, archiveState, announceArchiveStatus));
 
   imageLink.className = "discover-image-link";
   imageLink.href = work.artworkHref;
@@ -150,6 +186,34 @@ function createDiscoverWork(work) {
 
   article.append(metadata, imageLink);
   return article;
+}
+
+async function loadDiscoverArchiveState() {
+  try {
+    const [
+      { FRONTEND_MODES },
+      { getArchiveRepository },
+      { readApplicationSession },
+      { createDiscoverArchiveState }
+    ] = await Promise.all([
+      import("./auth/config.mjs"),
+      import("./data/archive-repository.mjs"),
+      import("./auth/session.mjs"),
+      import("./data/discover-archive-state.mjs")
+    ]);
+    const { runtime, repository } = await getArchiveRepository();
+    if (runtime.mode !== FRONTEND_MODES.SUPABASE || !repository) return null;
+
+    const applicationSession = await readApplicationSession(runtime.client);
+    if (applicationSession.kind !== "active") return null;
+
+    return createDiscoverArchiveState(
+      repository,
+      await repository.listArchivedWorkIds()
+    );
+  } catch {
+    return null;
+  }
 }
 
 function createLoadMoreButton(onLoadMore) {
@@ -184,7 +248,10 @@ async function initialiseLocalDiscover() {
   if (runtime.mode !== FRONTEND_MODES.SUPABASE || !repository) return;
 
   try {
-    const works = await repository.listWorks();
+    const [works, archiveState] = await Promise.all([
+      repository.listWorks(),
+      loadDiscoverArchiveState()
+    ]);
     stream.setAttribute("aria-busy", "false");
     if (!works.length) {
       stream.replaceChildren(createState("NO PUBLISHED WORKS"));
@@ -193,10 +260,22 @@ async function initialiseLocalDiscover() {
 
     const batches = createDiscoverBatchState(works, DISCOVER_INITIAL_BATCH);
     let loadMoreRegion;
+    let announceArchiveStatus = () => {};
+    if (archiveState) {
+      const archiveStatus = document.createElement("p");
+      archiveStatus.className = "sr-only";
+      archiveStatus.setAttribute("aria-live", "polite");
+      stream.before(archiveStatus);
+      announceArchiveStatus = (message) => {
+        archiveStatus.textContent = message;
+      };
+    }
 
     const appendBatch = () => {
       const batch = batches.next();
-      stream.append(...batch.appended.map(createDiscoverWork));
+      stream.append(...batch.appended.map((work) => (
+        createDiscoverWork(work, archiveState, announceArchiveStatus)
+      )));
       if (!batch.hasMore) loadMoreRegion?.remove();
     };
 

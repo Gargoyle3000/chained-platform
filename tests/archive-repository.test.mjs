@@ -110,6 +110,19 @@ test("a new Archive lists as genuinely empty without public-data requests", asyn
   assert.equal(requests, 0);
 });
 
+test("Archive Work IDs use one private query and never request public metadata", async () => {
+  const client = archiveClient([
+    { work_id: IDS.workB },
+    { work_id: IDS.workA },
+    { work_id: "not-a-work" }
+  ]);
+  let requests = 0;
+  const repository = createArchiveRepository(client, config, async () => { requests += 1; return []; });
+  assert.deepEqual(await repository.listArchivedWorkIds(), [IDS.workB, IDS.workA]);
+  assert.deepEqual(client.calls, ["select"]);
+  assert.equal(requests, 0);
+});
+
 test("Archive listing preserves private save order and maps only public Work fields", async () => {
   const client = archiveClient([
     { work_id: IDS.workB, created_at: "2026-08-10T12:00:00Z" },

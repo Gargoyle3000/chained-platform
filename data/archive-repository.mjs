@@ -64,6 +64,15 @@ export function createArchiveRepository(client, config, request = requestPublicR
   return Object.freeze({
     mode: FRONTEND_MODES.SUPABASE,
 
+    async listArchivedWorkIds() {
+      const { data, error } = await client
+        .from("archive_items")
+        .select("work_id");
+      if (error) throw archiveError();
+
+      return Object.freeze(validWorkIds((data || []).map((item) => item?.work_id)));
+    },
+
     async listArchivedWorks() {
       const { data, error } = await client
         .from("archive_items")
