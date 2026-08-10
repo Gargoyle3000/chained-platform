@@ -29,11 +29,29 @@
 
   <main class="discover-main">
     <section class="discover-toolbar">
-      <div class="view-switch" aria-label="Choose view">
-        <span>VIEW:</span>
-        <button class="view-button is-active" type="button" data-view="single" aria-pressed="true">SINGLE</button>
-        <span>/</span>
-        <button class="view-button" type="button" data-view="grid" aria-pressed="false">GRID</button>
+      <div class="discover-toolbar-controls">
+        <div class="view-switch" aria-label="Choose view">
+          <span>VIEW:</span>
+          <button class="view-button is-active" type="button" data-view="single" aria-pressed="true">SINGLE</button>
+          <span>/</span>
+          <button class="view-button" type="button" data-view="grid" aria-pressed="false">GRID</button>
+        </div>
+
+        <div class="discover-filter" hidden>
+          <button
+            class="text-action discover-filter-trigger"
+            type="button"
+            aria-expanded="false"
+            aria-controls="discover-filter-menu">
+            [ FILTER ]
+          </button>
+
+          <div class="discover-filter-menu" id="discover-filter-menu" hidden>
+            <button class="discover-filter-close" type="button" aria-label="Close filter menu">×</button>
+            <div class="discover-filter-options" role="listbox" aria-label="Filter by format or discipline" aria-multiselectable="true"></div>
+            <button class="text-action discover-filter-clear" type="button" hidden>[ CLEAR FILTERS ]</button>
+          </div>
+        </div>
       </div>
     </section>
 

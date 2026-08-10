@@ -64,6 +64,7 @@ export const DISCOVER_WORK_SELECT = [
   "owner_profile_id",
   "title",
   "year_label",
+  "format_discipline",
   "visibility",
   "published_at"
 ].join(",");

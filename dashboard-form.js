@@ -1,3 +1,5 @@
+import { FORMAT_DISCIPLINES } from "./data/work-format-disciplines.mjs";
+
 document.addEventListener("DOMContentLoaded", async () => {
   const {
     getWorkRepository,
@@ -142,6 +144,7 @@ Object.values(materialOptions).forEach((options) => {
   let workStore = null;
   let localSupabaseMode = false;
   const form = document.querySelector(".work-form");
+  const formatSelect = form?.elements.namedItem("format");
   const editorHeading = document.querySelector("#work-editor-heading");
   const editorContext = document.querySelector("#work-editor-context");
   const formStatus = document.querySelector("#work-form-status");
@@ -175,6 +178,25 @@ Object.values(materialOptions).forEach((options) => {
   let currentWorkPublished = false;
   const publishAttempt = createIdempotencyState();
   const unpublishAttempt = createIdempotencyState();
+
+  function populateFormatDisciplines() {
+    if (!(formatSelect instanceof HTMLSelectElement)) return;
+
+    const selected = formatSelect.value;
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "SELECT FORMAT";
+    formatSelect.replaceChildren(
+      placeholder,
+      ...FORMAT_DISCIPLINES.map(({ value, label }) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        return option;
+      })
+    );
+    formatSelect.value = selected;
+  }
 
 
   function createImageId() {
@@ -1274,6 +1296,7 @@ Object.values(materialOptions).forEach((options) => {
   });
 
 
+  populateFormatDisciplines();
   updateMaterialPreview();
   initialiseEditor();
 });

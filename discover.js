@@ -1,6 +1,12 @@
 const page = document.body;
 const stream = document.querySelector(".discover-stream");
 const viewButtons = document.querySelectorAll(".view-button");
+const filterRoot = document.querySelector(".discover-filter");
+const filterTrigger = document.querySelector(".discover-filter-trigger");
+const filterMenu = document.querySelector(".discover-filter-menu");
+const filterOptions = document.querySelector(".discover-filter-options");
+const filterCloseButton = document.querySelector(".discover-filter-close");
+const filterClearButton = document.querySelector(".discover-filter-clear");
 const viewStorageKey = "chained-discover-view";
 const scrollStorageKey = "chained-discover-scroll";
 
@@ -229,6 +235,68 @@ function createLoadMoreButton(onLoadMore) {
   return region;
 }
 
+function setupDiscoverFilter(formatDisciplines, filterState, onSelectionChange) {
+  if (!filterRoot || !filterTrigger || !filterMenu || !filterOptions || !filterCloseButton || !filterClearButton) {
+    return;
+  }
+
+  filterRoot.hidden = false;
+
+  function setOpen(isOpen, returnFocus = false) {
+    filterMenu.hidden = !isOpen;
+    filterTrigger.setAttribute("aria-expanded", String(isOpen));
+    if (!isOpen && returnFocus) filterTrigger.focus();
+  }
+
+  function render() {
+    const selected = new Set(filterState.selected());
+    const hasSelection = selected.size > 0;
+    filterTrigger.classList.toggle("is-active", hasSelection);
+    filterClearButton.hidden = !hasSelection;
+    filterOptions.replaceChildren(
+      ...formatDisciplines.map(({ value, label }) => {
+        const option = document.createElement("button");
+        const isSelected = selected.has(value);
+        option.className = "discover-filter-option";
+        option.type = "button";
+        option.dataset.formatDiscipline = value;
+        option.setAttribute("role", "option");
+        option.setAttribute("aria-selected", String(isSelected));
+        option.classList.toggle("is-selected", isSelected);
+        option.textContent = label;
+        option.addEventListener("click", () => {
+          filterState.toggle(value);
+          render();
+          onSelectionChange(filterState.selected());
+        });
+        return option;
+      })
+    );
+  }
+
+  filterTrigger.addEventListener("click", () => {
+    const isOpen = filterTrigger.getAttribute("aria-expanded") === "true";
+    setOpen(!isOpen);
+  });
+  filterCloseButton.addEventListener("click", () => setOpen(false, true));
+  filterClearButton.addEventListener("click", () => {
+    filterState.clear();
+    render();
+    onSelectionChange([]);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !filterMenu.hidden) {
+      event.preventDefault();
+      setOpen(false, true);
+    }
+  });
+  document.addEventListener("click", (event) => {
+    if (!filterMenu.hidden && !filterRoot.contains(event.target)) setOpen(false);
+  });
+
+  render();
+}
+
 async function initialiseLocalDiscover() {
   const { FRONTEND_MODES } = await import("./auth/config.mjs");
   const { getFrontendConfig } = await import("./auth/supabase-client.mjs");
@@ -239,54 +307,93 @@ async function initialiseLocalDiscover() {
   stream.setAttribute("aria-busy", "true");
   stream.replaceChildren(createState("LOADING PUBLISHED WORKS"));
 
-  const { getDiscoverRepository, DISCOVER_INITIAL_BATCH } = await import(
-    "./data/discover-repository.mjs"
-  );
-  const { createDiscoverBatchState } = await import("./data/discover-ordering.mjs");
+  const [
+    { getDiscoverRepository, DISCOVER_INITIAL_BATCH },
+    { createDiscoverBatchState },
+    { createDiscoverFilterState, createDiscoverRequestGate },
+    { FORMAT_DISCIPLINES }
+  ] = await Promise.all([
+    import("./data/discover-repository.mjs"),
+    import("./data/discover-ordering.mjs"),
+    import("./data/discover-filter-state.mjs"),
+    import("./data/work-format-disciplines.mjs")
+  ]);
   const { runtime, repository } = await getDiscoverRepository();
 
   if (runtime.mode !== FRONTEND_MODES.SUPABASE || !repository) return;
 
-  try {
-    const [works, archiveState] = await Promise.all([
-      repository.listWorks(),
-      loadDiscoverArchiveState()
-    ]);
-    stream.setAttribute("aria-busy", "false");
-    if (!works.length) {
-      stream.replaceChildren(createState("NO PUBLISHED WORKS"));
-      return;
-    }
+  const filterState = createDiscoverFilterState();
+  const archiveStatePromise = loadDiscoverArchiveState();
+  let archiveState = null;
+  let archiveStatus = null;
+  let loadMoreRegion = null;
+  const requestGate = createDiscoverRequestGate();
 
-    const batches = createDiscoverBatchState(works, DISCOVER_INITIAL_BATCH);
-    let loadMoreRegion;
-    let announceArchiveStatus = () => {};
-    if (archiveState) {
-      const archiveStatus = document.createElement("p");
-      archiveStatus.className = "sr-only";
-      archiveStatus.setAttribute("aria-live", "polite");
-      stream.before(archiveStatus);
-      announceArchiveStatus = (message) => {
-        archiveStatus.textContent = message;
-      };
-    }
-
-    const appendBatch = () => {
-      const batch = batches.next();
-      stream.append(...batch.appended.map((work) => (
-        createDiscoverWork(work, archiveState, announceArchiveStatus)
-      )));
-      if (!batch.hasMore) loadMoreRegion?.remove();
-    };
-
-    stream.replaceChildren();
-    loadMoreRegion = createLoadMoreButton(appendBatch);
-    stream.after(loadMoreRegion);
-    appendBatch();
-  } catch {
-    stream.setAttribute("aria-busy", "false");
-    stream.replaceChildren(createState("PUBLISHED WORKS CURRENTLY UNAVAILABLE", true));
+  function announceArchiveStatus(message) {
+    if (archiveStatus) archiveStatus.textContent = message;
   }
+
+  function removeLoadMore() {
+    loadMoreRegion?.remove();
+    loadMoreRegion = null;
+  }
+
+  async function renderWorks(formatDisciplines = []) {
+    const version = requestGate.next();
+    const hasFilter = formatDisciplines.length > 0;
+    removeLoadMore();
+    stream.setAttribute("aria-busy", "true");
+    stream.replaceChildren(createState("LOADING PUBLISHED WORKS"));
+
+    try {
+      const works = await (hasFilter
+        ? repository.listWorks({ formatDisciplines })
+        : repository.listWorks());
+      if (!requestGate.isCurrent(version)) return;
+
+      archiveState ||= await archiveStatePromise;
+      if (!requestGate.isCurrent(version)) return;
+      if (archiveState && !archiveStatus) {
+        archiveStatus = document.createElement("p");
+        archiveStatus.className = "sr-only";
+        archiveStatus.setAttribute("aria-live", "polite");
+        stream.before(archiveStatus);
+      }
+
+      stream.setAttribute("aria-busy", "false");
+      if (!works.length) {
+        stream.replaceChildren(createState(
+          hasFilter ? "NO PUBLISHED WORKS MATCH FILTER" : "NO PUBLISHED WORKS"
+        ));
+        return;
+      }
+
+      const batches = createDiscoverBatchState(works, DISCOVER_INITIAL_BATCH);
+      const appendBatch = () => {
+        const batch = batches.next();
+        stream.append(...batch.appended.map((work) => (
+          createDiscoverWork(work, archiveState, announceArchiveStatus)
+        )));
+        if (!batch.hasMore) removeLoadMore();
+      };
+
+      stream.replaceChildren();
+      loadMoreRegion = createLoadMoreButton(appendBatch);
+      stream.after(loadMoreRegion);
+      appendBatch();
+    } catch {
+      if (!requestGate.isCurrent(version)) return;
+      stream.setAttribute("aria-busy", "false");
+      stream.replaceChildren(createState("PUBLISHED WORKS CURRENTLY UNAVAILABLE", true));
+    }
+  }
+
+  setupDiscoverFilter(
+    FORMAT_DISCIPLINES,
+    filterState,
+    (formatDisciplines) => renderWorks(formatDisciplines)
+  );
+  await renderWorks();
 }
 
 setView(readStoredView());

@@ -5,6 +5,7 @@ import {
   requestPublicRows
 } from "./public-data-request.mjs";
 import { spreadDiscoverWorks } from "./discover-ordering.mjs";
+import { canonicalizeFormatDisciplines } from "./work-format-disciplines.mjs";
 import {
   DISCOVER_PROFILE_SELECT,
   DISCOVER_WORK_SELECT,
@@ -29,7 +30,8 @@ export function createDiscoverRepository(
     mode: FRONTEND_MODES.SUPABASE,
     candidateLimit,
 
-    async listWorks() {
+    async listWorks({ formatDisciplines = [] } = {}) {
+      const selectedFormats = canonicalizeFormatDisciplines(formatDisciplines);
       const workQuery = new URLSearchParams({
         select: DISCOVER_WORK_SELECT,
         visibility: "eq.published",
@@ -37,6 +39,9 @@ export function createDiscoverRepository(
         order: "published_at.desc,id.asc",
         limit: String(candidateLimit)
       });
+      if (selectedFormats.length) {
+        workQuery.set("format_discipline", inFilter(selectedFormats));
+      }
       const works = await request(config, "works", workQuery);
       if (!works.length) return [];
 
