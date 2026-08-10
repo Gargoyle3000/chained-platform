@@ -65,6 +65,93 @@
   font-size: var(--font-meta);
 }
 
+.archive-tag-create {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.archive-tag-create input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--black);
+  padding: 6px 0;
+
+  background: transparent;
+  color: var(--black);
+  font: inherit;
+  font-size: var(--font-meta);
+  outline: none;
+}
+
+.archive-tag-create input:focus {
+  border-bottom-color: var(--accent);
+}
+
+.archive-tag-create .text-action,
+.archive-tag-row .text-action {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--black);
+  font: inherit;
+  font-size: var(--font-meta);
+  cursor: pointer;
+}
+
+.archive-tag-create .text-action:hover,
+.archive-tag-create .text-action:focus-visible,
+.archive-tag-row .text-action:hover,
+.archive-tag-row .text-action:focus-visible {
+  color: var(--accent);
+}
+
+.archive-tag-message {
+  margin: 10px 0 0;
+  color: var(--accent);
+  font-size: var(--font-meta);
+}
+
+.archive-tag-list {
+  margin-top: 16px;
+}
+
+.archive-tag-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 7px 0;
+
+  font-size: var(--font-meta);
+}
+
+.archive-tag-filter,
+.archive-tag-clear {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--black);
+  font: inherit;
+  font-size: var(--font-meta);
+  text-align: left;
+  cursor: pointer;
+}
+
+.archive-tag-filter:hover,
+.archive-tag-filter:focus-visible,
+.archive-tag-filter.is-active,
+.archive-tag-clear:hover,
+.archive-tag-clear:focus-visible {
+  color: var(--accent);
+}
+
+.archive-tag-clear {
+  display: block;
+  margin-top: 12px;
+}
+
 .archive-project,
 .archive-filter {
   display: flex;
@@ -212,6 +299,37 @@
   margin: 0;
 }
 
+.archive-work-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  margin-top: 10px;
+}
+
+.archive-assigned-tag-control {
+  position: relative;
+}
+
+.archive-work-tag {
+  border: 1px solid var(--black);
+  padding: 2px 5px;
+
+  background: var(--white);
+  color: var(--black);
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.archive-work-tag:hover,
+.archive-work-tag:focus-visible,
+.archive-work-tag[aria-expanded="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .archive-empty {
   margin: 80px 0;
 
@@ -224,7 +342,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0px;
+  gap: 5px;
 
   margin-top: 12px;
 }
@@ -232,6 +350,89 @@
 .archive-add-project,
 .archive-remove {
   font-size: 11px;
+}
+
+.archive-tag-assignment {
+  position: relative;
+}
+
+.archive-tag-assignment > button[aria-expanded="true"] {
+  color: var(--accent);
+}
+
+.archive-tag-menu {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  z-index: 20;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 160px;
+  padding: 9px;
+
+  border: 1px solid var(--black);
+  background: var(--white);
+}
+
+.archive-tag-management {
+  padding-top: 28px;
+}
+
+.archive-tag-menu[hidden] {
+  display: none;
+}
+
+.archive-tag-options {
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.archive-tag-options[hidden] {
+  display: none;
+}
+
+.archive-tag-menu button {
+  width: 100%;
+  padding: 3px 0;
+
+  border: 0;
+  background: transparent;
+  color: var(--black);
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.archive-tag-close {
+  position: absolute;
+  top: 4px;
+  right: 7px;
+
+  width: auto !important;
+  padding: 0 !important;
+
+  font-size: 16px !important;
+  line-height: 1;
+}
+
+.archive-tag-options button {
+  box-sizing: border-box;
+  height: 24px;
+  line-height: 18px;
+}
+
+.archive-tag-remove {
+  margin-top: 8px;
+  padding-top: 8px !important;
+  border-top: 1px solid var(--black) !important;
+}
+
+.archive-tag-menu button:hover,
+.archive-tag-menu button:focus-visible {
+  color: var(--accent);
 }
 
 .archive-project-menu {

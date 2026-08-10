@@ -41,6 +41,20 @@
           <h1>ARCHIVE</h1>
           <p class="archive-status">PRIVATE WORKSPACE</p>
         </section>
+
+        <section class="archive-sidebar-section archive-tags-section" aria-labelledby="archive-tags-heading">
+          <h2 id="archive-tags-heading">TAGS</h2>
+          <form class="archive-tag-create">
+            <label>
+              <span class="sr-only">New Archive tag</span>
+              <input type="text" name="archive-tag-name" maxlength="80" autocomplete="off" placeholder="TAG NAME" disabled>
+            </label>
+            <button class="text-action" type="submit" disabled>[ + NEW TAG ]</button>
+          </form>
+          <p class="archive-tag-message" role="status" hidden></p>
+          <button class="archive-tag-clear text-action" type="button" aria-label="Clear Archive tag filters" hidden>[ CLEAR ]</button>
+          <div class="archive-tag-list" aria-live="polite"></div>
+        </section>
       </div>
     </aside>
 

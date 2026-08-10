@@ -19,6 +19,11 @@ function validWorkIds(values) {
   return [...new Set((values || []).filter(isValidPublicWorkId))];
 }
 
+function normalizeTagName(value) {
+  const name = typeof value === "string" ? value.trim() : "";
+  return name.length > 0 && name.length <= 80 ? name : null;
+}
+
 function inFilter(ids) {
   return `in.(${ids.join(",")})`;
 }
@@ -73,6 +78,43 @@ export function createArchiveRepository(client, config, request = requestPublicR
       return Object.freeze(validWorkIds((data || []).map((item) => item?.work_id)));
     },
 
+    async listTags() {
+      const { data, error } = await client
+        .from("archive_tags")
+        .select("id,name,created_at")
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true });
+      if (error) throw archiveError();
+
+      return Object.freeze(
+        (Array.isArray(data) ? data : [])
+          .filter((tag) => isValidPublicWorkId(tag?.id) && normalizeTagName(tag?.name))
+          .map((tag) => Object.freeze({
+            id: tag.id,
+            name: normalizeTagName(tag.name),
+            createdAt: tag.created_at || null
+          }))
+      );
+    },
+
+    async listTagMemberships() {
+      const { data, error } = await client
+        .from("archive_item_tags")
+        .select("work_id,tag_id");
+      if (error) throw archiveError();
+
+      return Object.freeze(
+        (Array.isArray(data) ? data : [])
+          .filter((membership) => (
+            isValidPublicWorkId(membership?.work_id) && isValidPublicWorkId(membership?.tag_id)
+          ))
+          .map((membership) => Object.freeze({
+            workId: membership.work_id,
+            tagId: membership.tag_id
+          }))
+      );
+    },
+
     async listArchivedWorks() {
       const { data, error } = await client
         .from("archive_items")
@@ -110,6 +152,43 @@ export function createArchiveRepository(client, config, request = requestPublicR
         .from("archive_items")
         .delete()
         .eq("work_id", workId);
+      if (error) throw archiveError();
+    },
+
+    async createTag(name) {
+      const normalizedName = normalizeTagName(name);
+      if (!normalizedName) throw archiveError();
+
+      const { error } = await client
+        .from("archive_tags")
+        .insert({ name: normalizedName });
+      if (error) throw archiveError();
+    },
+
+    async deleteTag(tagId) {
+      if (!isValidPublicWorkId(tagId)) throw archiveError();
+      const { error } = await client
+        .from("archive_tags")
+        .delete()
+        .eq("id", tagId);
+      if (error) throw archiveError();
+    },
+
+    async assignTag(workId, tagId) {
+      if (!isValidPublicWorkId(workId) || !isValidPublicWorkId(tagId)) throw archiveError();
+      const { error } = await client
+        .from("archive_item_tags")
+        .insert({ work_id: workId, tag_id: tagId });
+      if (error) throw archiveError();
+    },
+
+    async removeTag(workId, tagId) {
+      if (!isValidPublicWorkId(workId) || !isValidPublicWorkId(tagId)) throw archiveError();
+      const { error } = await client
+        .from("archive_item_tags")
+        .delete()
+        .eq("work_id", workId)
+        .eq("tag_id", tagId);
       if (error) throw archiveError();
     }
   });

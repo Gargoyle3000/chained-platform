@@ -11,7 +11,9 @@ import {
 const IDS = Object.freeze({
   profile: "11111111-1111-4111-8111-111111111111",
   workA: "22222222-2222-4222-8222-222222222222",
-  workB: "33333333-3333-4333-8333-333333333333"
+  workB: "33333333-3333-4333-8333-333333333333",
+  tagA: "44444444-4444-4444-8444-444444444444",
+  tagB: "55555555-5555-4555-8555-555555555555"
 });
 
 const config = Object.freeze({
@@ -51,6 +53,60 @@ function archiveClient(items = [], failures = {}) {
               return Promise.resolve({ error: failures.remove ? { message: "private database message" } : null });
             }
           };
+        }
+      };
+    }
+  };
+  return client;
+}
+
+function tagClient(tags = [], memberships = [], failures = {}) {
+  const calls = [];
+  const client = {
+    calls,
+    storage: { from: () => ({ getPublicUrl: (path) => ({ data: { publicUrl: publicUrl(path) } }) }) },
+    from(table) {
+      if (table === "archive_tags") {
+        return {
+          select() {
+            calls.push("tag-select");
+            const builder = {
+              order() { return builder; },
+              then(resolve) { resolve({ data: failures.listTags ? null : tags, error: failures.listTags ? { message: "private" } : null }); }
+            };
+            return builder;
+          },
+          async insert(payload) {
+            calls.push({ tagInsert: payload });
+            return { error: failures.createTag ? { message: "private" } : null };
+          },
+          delete() {
+            calls.push("tag-delete");
+            const builder = {
+              eq(column, value) { calls.push({ tagEq: [column, value] }); return builder; },
+              then(resolve) { resolve({ error: failures.deleteTag ? { message: "private" } : null }); }
+            };
+            return builder;
+          }
+        };
+      }
+      assert.equal(table, "archive_item_tags");
+      return {
+        select() {
+          calls.push("membership-select");
+          return Promise.resolve({ data: failures.listMemberships ? null : memberships, error: failures.listMemberships ? { message: "private" } : null });
+        },
+        async insert(payload) {
+          calls.push({ membershipInsert: payload });
+          return { error: failures.assignTag ? { message: "private" } : null };
+        },
+        delete() {
+          calls.push("membership-delete");
+          const builder = {
+            eq(column, value) { calls.push({ membershipEq: [column, value] }); return builder; },
+            then(resolve) { resolve({ error: failures.removeTag ? { message: "private" } : null }); }
+          };
+          return builder;
         }
       };
     }
@@ -172,4 +228,49 @@ test("invalid work identities do not reach Archive mutations", async () => {
   await assert.rejects(() => repository.saveWork("not-a-work"), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
   await assert.rejects(() => repository.removeWork("not-a-work"), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
   assert.deepEqual(client.calls, []);
+});
+
+test("Archive tags and memberships each use one private batch query", async () => {
+  const client = tagClient(
+    [{ id: IDS.tagA, name: " Ritual ", created_at: "2026-08-10T00:00:00Z" }],
+    [{ work_id: IDS.workA, tag_id: IDS.tagA }]
+  );
+  const repository = createArchiveRepository(client, config);
+  assert.deepEqual(await repository.listTags(), [{ id: IDS.tagA, name: "Ritual", createdAt: "2026-08-10T00:00:00Z" }]);
+  assert.deepEqual(await repository.listTagMemberships(), [{ workId: IDS.workA, tagId: IDS.tagA }]);
+  assert.deepEqual(client.calls, ["tag-select", "membership-select"]);
+});
+
+test("Archive tag mutations send only normalized names and identifiers", async () => {
+  const client = tagClient();
+  const repository = createArchiveRepository(client, config);
+  await repository.createTag("  Ritual  ");
+  await repository.deleteTag(IDS.tagA);
+  await repository.assignTag(IDS.workA, IDS.tagA);
+  await repository.removeTag(IDS.workA, IDS.tagA);
+  assert.deepEqual(client.calls, [
+    { tagInsert: { name: "Ritual" } },
+    "tag-delete",
+    { tagEq: ["id", IDS.tagA] },
+    { membershipInsert: { work_id: IDS.workA, tag_id: IDS.tagA } },
+    "membership-delete",
+    { membershipEq: ["work_id", IDS.workA] },
+    { membershipEq: ["tag_id", IDS.tagA] }
+  ]);
+});
+
+test("Archive tag validation and private failures are sanitized", async () => {
+  const client = tagClient();
+  const repository = createArchiveRepository(client, config);
+  await assert.rejects(() => repository.createTag("   "), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => repository.deleteTag("not-a-tag"), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => repository.assignTag(IDS.workA, "not-a-tag"), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => repository.removeTag("not-a-work", IDS.tagA), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
+  assert.deepEqual(client.calls, []);
+
+  const failing = createArchiveRepository(tagClient([], [], { createTag: true, deleteTag: true, assignTag: true, removeTag: true }), config);
+  await assert.rejects(() => failing.createTag("Ritual"), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => failing.deleteTag(IDS.tagA), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => failing.assignTag(IDS.workA, IDS.tagA), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => failing.removeTag(IDS.workA, IDS.tagA), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
 });
