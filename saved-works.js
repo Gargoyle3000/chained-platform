@@ -1,14 +1,6 @@
 (() => {
   const storageKey = "chained-saved-work-ids";
 
-  const defaultSavedWorks = [
-    "the-new-order-i",
-    "birds-dont-sing",
-    "hey-man",
-    "medusa",
-    "mes"
-  ];
-
   function writeSavedWorks(ids, notify = true) {
     const uniqueIds = [...new Set(ids)];
 
@@ -34,7 +26,7 @@
     const storedValue = localStorage.getItem(storageKey);
 
     if (storedValue === null) {
-      return writeSavedWorks(defaultSavedWorks, false);
+      return [];
     }
 
     try {
