@@ -1024,7 +1024,6 @@
     width: 3px;
     height: 18px;
 
-    border-radius: 999px;
     background: var(--accent);
 
     will-change: transform;

@@ -241,6 +241,9 @@ function setupDiscoverFilter(formatDisciplines, filterState, onSelectionChange) 
   }
 
   filterRoot.hidden = false;
+  window.ChainedScrollIndicators?.attachScrollIndicator(filterOptions, {
+    host: filterMenu
+  });
 
   function setOpen(isOpen, returnFocus = false) {
     filterMenu.hidden = !isOpen;

@@ -42,6 +42,62 @@ html {
   scroll-behavior: smooth;
 }
 
+html.chained-page-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html.chained-page-scrollbar::-webkit-scrollbar,
+.chained-scrollable::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.chained-scrollable {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chained-scroll-indicator-host {
+  position: relative;
+}
+
+.chained-scroll-indicator,
+.chained-page-scroll-indicator {
+  position: absolute;
+  right: 0;
+
+  display: block;
+  width: 3px;
+
+  pointer-events: none;
+}
+
+.chained-page-scroll-indicator {
+  position: fixed;
+  top: 0;
+  z-index: 50;
+}
+
+.chained-scroll-indicator[hidden],
+.chained-page-scroll-indicator[hidden] {
+  display: none;
+}
+
+.chained-scroll-indicator-thumb,
+.chained-page-scroll-indicator-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  display: block;
+  width: 3px;
+
+  background: var(--accent);
+  will-change: transform;
+}
+
 body {
   margin: 0;
   background: var(--white);
@@ -740,35 +796,6 @@ footer {
   overflow-y: auto;
   flex-direction: column;
   align-items: flex-start;
-}
-
-.discover-filter-options,
-.archive-tag-options {
-  scrollbar-width: thin;
-  scrollbar-color: var(--accent) transparent;
-}
-
-.discover-filter-options::-webkit-scrollbar,
-.archive-tag-options::-webkit-scrollbar {
-  width: 3px;
-}
-
-.discover-filter-options::-webkit-scrollbar-track,
-.archive-tag-options::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.discover-filter-options::-webkit-scrollbar-thumb,
-.archive-tag-options::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: var(--accent);
-}
-
-.discover-filter-options::-webkit-scrollbar-button,
-.archive-tag-options::-webkit-scrollbar-button {
-  display: none;
-  width: 0;
-  height: 0;
 }
 
 .discover-filter-option {

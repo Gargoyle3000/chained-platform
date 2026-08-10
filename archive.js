@@ -162,6 +162,9 @@ function createAssignedTags(work) {
     });
 
     menu.append(close, options, remove);
+    window.ChainedScrollIndicators?.attachScrollIndicator(options, {
+      host: menu
+    });
     tagButton.addEventListener("click", () => {
       const isOpen = menu.hidden;
       menu.hidden = !isOpen;
@@ -231,6 +234,9 @@ function createTagAssignment(work) {
   });
 
   menu.append(close, options);
+  window.ChainedScrollIndicators?.attachScrollIndicator(options, {
+    host: menu
+  });
   container.append(toggle, menu);
   return container;
 }
