@@ -191,6 +191,16 @@ function createTagAssignment(work) {
   const menu = document.createElement("div");
   menu.className = "archive-tag-menu";
   menu.hidden = true;
+  menu.setAttribute("role", "menu");
+  const close = document.createElement("button");
+  close.className = "archive-tag-close";
+  close.type = "button";
+  close.textContent = "×";
+  close.setAttribute("aria-label", "Close tag menu");
+  close.addEventListener("click", () => {
+    menu.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+  });
   const options = document.createElement("div");
   options.className = "archive-tag-options";
 
@@ -220,7 +230,7 @@ function createTagAssignment(work) {
     toggle.setAttribute("aria-expanded", String(isOpen));
   });
 
-  menu.append(options);
+  menu.append(close, options);
   container.append(toggle, menu);
   return container;
 }

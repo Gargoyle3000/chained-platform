@@ -376,6 +376,10 @@
   background: var(--white);
 }
 
+.archive-tag-menu:not(.archive-tag-management) {
+  padding-top: 28px;
+}
+
 .archive-tag-management {
   padding-top: 28px;
 }
@@ -408,8 +412,8 @@
 
 .archive-tag-close {
   position: absolute;
-  top: 4px;
-  right: 7px;
+  top: 7px;
+  right: 8px;
 
   width: auto !important;
   padding: 0 !important;
