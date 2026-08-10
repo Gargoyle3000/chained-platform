@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
   function profileDestination(work) {
-    return createPublicProfileLink(work?.ownerProfileSlug) || "profile-peer-vink.html";
+    return createPublicProfileLink(work?.ownerProfileSlug) || "profile.html";
   }
 
 

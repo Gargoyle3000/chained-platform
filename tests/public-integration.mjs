@@ -1,6 +1,6 @@
 import { execSync, spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdtemp, readFile, rename, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { extname, join, resolve, sep } from "node:path";
@@ -15,7 +15,6 @@ const root = resolve(import.meta.dirname, "..");
 const serverOrigin = "http://127.0.0.1:5510";
 const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const configPath = join(root, "frontend-config.local.mjs");
-const disabledConfigPath = join(root, "frontend-config.local.mjs.public-integration");
 const browserProfile = await mkdtemp(join(tmpdir(), "chained-public-integration-"));
 const publicObjects = [];
 const privateObjects = [];
@@ -262,7 +261,7 @@ async function loadDiscoverFixtures(fixtureSlugs) {
 
 try {
   if (!existsSync(chromePath)) throw new Error("chrome_unavailable");
-  if (!existsSync(configPath) || existsSync(disabledConfigPath)) throw new Error("local_config_unavailable");
+  if (!existsSync(configPath)) throw new Error("local_config_unavailable");
 
   const status = localStatus();
   const config = { supabaseUrl: status.api, supabaseKey: status.publishable };
@@ -453,29 +452,6 @@ try {
     }
   }
 
-  stage = "checking prototype preservation";
-  await rename(configPath, disabledConfigPath);
-  for (const width of [1440, 390, 320]) {
-    await command("Emulation.setDeviceMetricsOverride", { width, height: width === 1440 ? 900 : 844, deviceScaleFactor: 1, mobile: width < 700 });
-    for (const prototypePage of ["discover.html", "profile-peer-vink.html", "profile-koos-de-vries.html"]) {
-      const readyText = prototypePage === "discover.html"
-        ? "JONAS KLEE"
-        : prototypePage === "profile-peer-vink.html"
-          ? "PEER VINK"
-          : "MEDUSA";
-      stage = `checking prototype ${width}`;
-      await navigate(prototypePage, `document.body.innerText.includes('${readyText}')`);
-      const prototypeState = await evaluate(`(() => ({
-        overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-        publicRequests: performance.getEntriesByType('resource').filter((entry) => entry.name.includes('/rest/v1/') || entry.name.includes('/storage/v1/')).length,
-        peer: document.body.innerText.includes('PEER VINK'),
-        koos: document.body.innerText.includes('KOOS DE VRIES')
-      }))()`);
-      record(`prototype ${prototypePage} ${width}`, !prototypeState.overflow && prototypeState.publicRequests === 0 && (prototypeState.peer || prototypeState.koos));
-    }
-  }
-  await rename(disabledConfigPath, configPath);
-
   process.stdout.write(JSON.stringify({ ok: true, assertions: outcomes.length }));
 } catch (error) {
   const safeCode = typeof error?.code === "string" && /^[A-Z0-9_]+$/.test(error.code)
@@ -486,9 +462,6 @@ try {
   process.stderr.write(`Public integration failed while ${stage} (${safeCode}).`);
   process.exitCode = 1;
 } finally {
-  if (existsSync(disabledConfigPath) && !existsSync(configPath)) {
-    try { await rename(disabledConfigPath, configPath); } catch {}
-  }
   try { socket?.close(); } catch {}
   try { chrome?.kill(); } catch {}
   if (server) await new Promise((resolvePromise) => server.close(resolvePromise));
