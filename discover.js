@@ -7,6 +7,7 @@ const filterMenu = document.querySelector(".discover-filter-menu");
 const filterOptions = document.querySelector(".discover-filter-options");
 const filterCloseButton = document.querySelector(".discover-filter-close");
 const filterClearButton = document.querySelector(".discover-filter-clear");
+const channelButtons = [...document.querySelectorAll("[data-discover-channel]")];
 const viewStorageKey = "chained-discover-view";
 const scrollStorageKey = "chained-discover-scroll";
 
@@ -89,6 +90,48 @@ function createState(message, isError = false) {
   state.setAttribute("role", "status");
   state.textContent = message;
   return state;
+}
+
+function createCuratedCollection(collection) {
+  const article = document.createElement("article");
+  article.className = "discover-curated-collection";
+  const href = `curated.html?id=${encodeURIComponent(collection.id)}`;
+  const preview = document.createElement("a");
+  preview.className = "discover-curated-preview";
+  preview.href = href;
+  preview.setAttribute("aria-label", `Open CURATED collection ${collection.title}`);
+  const firstWork = collection.works[0];
+  if (firstWork) {
+    const image = document.createElement("img");
+    image.src = firstWork.image.src;
+    image.alt = `${collection.title}: ${firstWork.title}`;
+    if (firstWork.image.width) image.width = firstWork.image.width;
+    if (firstWork.image.height) image.height = firstWork.image.height;
+    preview.append(image);
+  } else {
+    const empty = document.createElement("span");
+    empty.className = "discover-curated-preview-empty";
+    empty.textContent = "NO PUBLIC WORKS CURRENTLY AVAILABLE";
+    preview.append(empty);
+  }
+  const metadata = document.createElement("div");
+  metadata.className = "discover-curated-meta";
+  const label = document.createElement("p");
+  label.textContent = "CURATED";
+  const title = document.createElement("a");
+  title.href = href;
+  title.textContent = collection.title;
+  const publisher = document.createElement("span");
+  publisher.className = "discover-curated-publisher";
+  publisher.textContent = collection.publisher.name;
+  metadata.append(label, title, publisher);
+  if (collection.description) {
+    const description = document.createElement("p");
+    description.textContent = collection.description;
+    metadata.append(description);
+  }
+  article.append(preview, metadata);
+  return article;
 }
 
 function replaceBrokenImage(link) {
@@ -314,11 +357,13 @@ async function initialiseLocalDiscover() {
     { getDiscoverRepository, DISCOVER_INITIAL_BATCH },
     { createDiscoverBatchState },
     { createDiscoverFilterState, createDiscoverRequestGate },
+    { createDiscoverChannelState },
     { FORMAT_DISCIPLINES }
   ] = await Promise.all([
     import("./data/discover-repository.mjs"),
     import("./data/discover-ordering.mjs"),
     import("./data/discover-filter-state.mjs"),
+    import("./data/discover-channel-state.mjs"),
     import("./data/work-format-disciplines.mjs")
   ]);
   const { runtime, repository } = await getDiscoverRepository();
@@ -326,11 +371,13 @@ async function initialiseLocalDiscover() {
   if (runtime.mode !== FRONTEND_MODES.SUPABASE || !repository) return;
 
   const filterState = createDiscoverFilterState();
+  const channelState = createDiscoverChannelState();
   const archiveStatePromise = loadDiscoverArchiveState();
   let archiveState = null;
   let archiveStatus = null;
   let loadMoreRegion = null;
   const requestGate = createDiscoverRequestGate();
+  let curatedRepositoryPromise = null;
 
   function announceArchiveStatus(message) {
     if (archiveStatus) archiveStatus.textContent = message;
@@ -391,11 +438,53 @@ async function initialiseLocalDiscover() {
     }
   }
 
+  function setChannelControls(channel) {
+    channelButtons.forEach((button) => {
+      const active = button.dataset.discoverChannel === channel;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    filterRoot.hidden = channel !== "nosy";
+  }
+
+  async function renderCuratedCollections() {
+    const version = requestGate.next();
+    removeLoadMore();
+    stream.setAttribute("aria-busy", "true");
+    stream.replaceChildren(createState("LOADING CURATED COLLECTIONS"));
+    try {
+      curatedRepositoryPromise ||= import("./data/curated-repository.mjs")
+        .then(({ getCuratedRepository }) => getCuratedRepository());
+      const { repository: curatedRepository } = await curatedRepositoryPromise;
+      const collections = curatedRepository ? await curatedRepository.listCollections() : [];
+      if (!requestGate.isCurrent(version)) return;
+      stream.setAttribute("aria-busy", "false");
+      stream.replaceChildren(...(collections.length
+        ? collections.map(createCuratedCollection)
+        : [createState("NO PUBLISHED CURATED COLLECTIONS")]));
+    } catch {
+      if (!requestGate.isCurrent(version)) return;
+      stream.setAttribute("aria-busy", "false");
+      stream.replaceChildren(createState("CURATED IS CURRENTLY UNAVAILABLE", true));
+    }
+  }
+
+  function renderChannel(channel) {
+    setChannelControls(channel);
+    if (channel === "curated") return renderCuratedCollections();
+    return renderWorks(filterState.selected());
+  }
+
   setupDiscoverFilter(
     FORMAT_DISCIPLINES,
     filterState,
     (formatDisciplines) => renderWorks(formatDisciplines)
   );
+  channelButtons.forEach((button) => button.addEventListener("click", () => {
+    const channel = channelState.select(button.dataset.discoverChannel);
+    void renderChannel(channel);
+  }));
+  setChannelControls(channelState.current());
   await renderWorks();
 }
 

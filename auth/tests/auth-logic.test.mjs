@@ -21,6 +21,13 @@ test("safe Work editor identifier is preserved", () => {
   );
 });
 
+test("safe Archive Project route is preserved", () => {
+  assert.equal(
+    resolveNextPage("archive-project.html?id=11111111-1111-4111-8111-111111111111"),
+    "archive-project.html?id=11111111-1111-4111-8111-111111111111"
+  );
+});
+
 test("external URL is rejected", () => {
   assert.equal(resolveNextPage("https://example.test/dashboard.html"), DEFAULT_DASHBOARD_PAGE);
 });
@@ -74,4 +81,3 @@ test("callback errors are sanitized and never reflected", () => {
   assert.equal(message.includes("private-value"), false);
   assert.equal(message.includes("database detail"), false);
 });
-

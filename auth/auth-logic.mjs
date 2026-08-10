@@ -6,6 +6,7 @@ export const PROTECTED_DASHBOARD_PAGES = Object.freeze([
   "dashboard-work-edit.html",
   "following.html",
   "archive.html",
+  "archive-project.html",
   "agenda.html"
 ]);
 
@@ -56,7 +57,7 @@ export function resolveNextPage(value) {
   }
 
   if (!query) return pathname;
-  if (pathname !== "dashboard-work-edit.html") {
+  if (!["dashboard-work-edit.html", "archive-project.html"].includes(pathname)) {
     return DEFAULT_DASHBOARD_PAGE;
   }
 
@@ -68,7 +69,9 @@ export function resolveNextPage(value) {
     keys[0] !== "id" ||
     parameters.getAll("id").length !== 1 ||
     !id ||
-    !/^[A-Za-z0-9-]{1,120}$/.test(id)
+    !(pathname === "dashboard-work-edit.html"
+      ? /^[A-Za-z0-9-]{1,120}$/.test(id)
+      : /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))
   ) {
     return DEFAULT_DASHBOARD_PAGE;
   }
@@ -103,4 +106,3 @@ export function sanitizeCallbackError(value) {
 
   return "THE SIGN-IN LINK IS INVALID OR HAS ALREADY BEEN USED.";
 }
-

@@ -742,6 +742,32 @@ footer {
   color: var(--accent);
 }
 
+.discover-channel-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-nav);
+}
+
+.discover-channel-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--black);
+  font: inherit;
+  cursor: pointer;
+}
+
+.discover-channel-button:hover,
+.discover-channel-button:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.discover-channel-button.is-active {
+  color: var(--accent);
+}
+
 .discover-filter {
   position: relative;
 }
@@ -918,6 +944,58 @@ footer {
   margin-top: 18px;
 }
 
+.discover-curated-collection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+  align-items: center;
+  gap: clamp(36px, 7vw, 130px);
+  min-height: calc(100svh - 116px);
+  padding: 48px 0 70px;
+}
+
+.discover-curated-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.discover-curated-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100svh - var(--header-height) - 80px);
+  width: auto;
+  height: auto;
+}
+
+.discover-curated-preview-empty {
+  display: block;
+  width: 100%;
+  padding: 36px 0;
+  font-size: var(--font-meta);
+  text-align: center;
+}
+
+.discover-curated-meta {
+  font-size: var(--font-meta);
+}
+
+.discover-curated-meta p {
+  margin: 0 0 16px;
+}
+
+.discover-curated-meta p:first-child,
+.discover-curated-publisher {
+  color: var(--accent);
+}
+
+.discover-curated-meta > a:first-of-type {
+  display: block;
+  margin-bottom: 16px;
+  font-size: 19px;
+  line-height: 1.12;
+}
+
 .discover-meta .discover-archive-action {
   display: block;
   margin-top: 28px;
@@ -1079,6 +1157,21 @@ footer {
   .discover-page[data-view="single"] .discover-image-link img {
     width: 100%;
     height: auto;
+    max-height: none;
+  }
+
+  .discover-curated-collection {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    min-height: 0;
+    padding: 45px 0 65px;
+  }
+
+  .discover-curated-preview { order: 1; }
+  .discover-curated-meta { order: 2; }
+
+  .discover-curated-preview img {
+    width: 100%;
     max-height: none;
   }
 }

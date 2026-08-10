@@ -24,6 +24,71 @@ function normalizeTagName(value) {
   return name.length > 0 && name.length <= 80 ? name : null;
 }
 
+function normalizeProjectTitle(value) {
+  const title = typeof value === "string" ? value.trim() : "";
+  return title.length > 0 && title.length <= 160 ? title : null;
+}
+
+function normalizeProjectDescription(value) {
+  const description = typeof value === "string" ? value.trim() : "";
+  return description.length <= 2000 ? description || null : null;
+}
+
+function mapProject(row) {
+  const title = normalizeProjectTitle(row?.title);
+  if (!isValidPublicWorkId(row?.id) || !title) return null;
+
+  return Object.freeze({
+    id: row.id,
+    title,
+    description: normalizeProjectDescription(row.description),
+    publisherProfileId: isValidPublicWorkId(row.publisher_profile_id)
+      ? row.publisher_profile_id
+      : null,
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null
+  });
+}
+
+function mapProjectItem(row) {
+  if (!isValidPublicWorkId(row?.project_id) || !isValidPublicWorkId(row?.work_id)) return null;
+  const position = Number(row.position);
+  if (!Number.isInteger(position) || position < 0) return null;
+
+  return Object.freeze({
+    projectId: row.project_id,
+    workId: row.work_id,
+    position,
+    addedAt: row.added_at || null
+  });
+}
+
+function mapPublisherProfile(row) {
+  const displayName = typeof row?.display_name === "string" ? row.display_name.trim() : "";
+  if (!isValidPublicWorkId(row?.id) || !displayName || !["curator", "institution"].includes(row.profile_type)) {
+    return null;
+  }
+
+  return Object.freeze({
+    id: row.id,
+    displayName,
+    slug: typeof row.slug === "string" ? row.slug : "",
+    profileType: row.profile_type
+  });
+}
+
+function mapProjectPublication(row) {
+  if (!isValidPublicWorkId(row?.project_id) || !isValidPublicWorkId(row?.id)) return null;
+  if (!["draft", "published"].includes(row.status)) return null;
+  return Object.freeze({
+    id: row.id,
+    projectId: row.project_id,
+    publisherProfileId: isValidPublicWorkId(row.publisher_profile_id) ? row.publisher_profile_id : null,
+    status: row.status,
+    publishedAt: row.published_at || null
+  });
+}
+
 function inFilter(ids) {
   return `in.(${ids.join(",")})`;
 }
@@ -152,6 +217,130 @@ export function createArchiveRepository(client, config, request = requestPublicR
         .from("archive_items")
         .delete()
         .eq("work_id", workId);
+      if (error) throw archiveError();
+    },
+
+    async listProjects() {
+      const { data, error } = await client
+        .from("archive_projects")
+        .select("id,title,description,publisher_profile_id,created_at,updated_at")
+        .order("updated_at", { ascending: false })
+        .order("id", { ascending: true });
+      if (error) throw archiveError();
+
+      return Object.freeze((Array.isArray(data) ? data : []).map(mapProject).filter(Boolean));
+    },
+
+    async createProject(title, description = "") {
+      const normalizedTitle = normalizeProjectTitle(title);
+      const normalizedDescription = normalizeProjectDescription(description);
+      if (!normalizedTitle || (typeof description === "string" && description.trim().length > 2000)) {
+        throw archiveError();
+      }
+      const { data, error } = await client
+        .from("archive_projects")
+        .insert({ title: normalizedTitle, description: normalizedDescription })
+        .select("id,title,description,publisher_profile_id,created_at,updated_at")
+        .single();
+      const project = mapProject(data);
+      if (error || !project) throw archiveError();
+      return project;
+    },
+
+    async updateProject(projectId, title, description = "") {
+      const normalizedTitle = normalizeProjectTitle(title);
+      const normalizedDescription = normalizeProjectDescription(description);
+      if (!isValidPublicWorkId(projectId) || !normalizedTitle || (typeof description === "string" && description.trim().length > 2000)) {
+        throw archiveError();
+      }
+      const { data, error } = await client
+        .from("archive_projects")
+        .update({ title: normalizedTitle, description: normalizedDescription })
+        .eq("id", projectId)
+        .select("id,title,description,publisher_profile_id,created_at,updated_at")
+        .single();
+      const project = mapProject(data);
+      if (error || !project) throw archiveError();
+      return project;
+    },
+
+    async deleteProject(projectId) {
+      if (!isValidPublicWorkId(projectId)) throw archiveError();
+      const { error } = await client
+        .from("archive_projects")
+        .delete()
+        .eq("id", projectId);
+      if (error) throw archiveError();
+    },
+
+    async listProjectItems() {
+      const { data, error } = await client
+        .from("archive_project_items")
+        .select("project_id,work_id,position,added_at")
+        .order("project_id", { ascending: true })
+        .order("position", { ascending: true })
+        .order("work_id", { ascending: true });
+      if (error) throw archiveError();
+
+      return Object.freeze((Array.isArray(data) ? data : []).map(mapProjectItem).filter(Boolean));
+    },
+
+    async listProjectPublications() {
+      const { data, error } = await client
+        .from("curated_collections")
+        .select("id,project_id,publisher_profile_id,status,published_at");
+      if (error) throw archiveError();
+      return Object.freeze((Array.isArray(data) ? data : []).map(mapProjectPublication).filter(Boolean));
+    },
+
+    async addProjectWork(projectId, workId) {
+      if (!isValidPublicWorkId(projectId) || !isValidPublicWorkId(workId)) throw archiveError();
+      const { error } = await client.rpc("add_archive_project_item", {
+        target_project_id: projectId,
+        target_work_id: workId
+      });
+      if (error) throw archiveError();
+    },
+
+    async removeProjectWork(projectId, workId) {
+      if (!isValidPublicWorkId(projectId) || !isValidPublicWorkId(workId)) throw archiveError();
+      const { error } = await client.rpc("remove_archive_project_item", {
+        target_project_id: projectId,
+        target_work_id: workId
+      });
+      if (error) throw archiveError();
+    },
+
+    async reorderProjectWorks(projectId, orderedWorkIds) {
+      const validIds = validWorkIds(orderedWorkIds);
+      if (!isValidPublicWorkId(projectId) || validIds.length !== (orderedWorkIds || []).length) throw archiveError();
+      const { error } = await client.rpc("reorder_archive_project_items", {
+        target_project_id: projectId,
+        ordered_work_ids: validIds
+      });
+      if (error) throw archiveError();
+    },
+
+    async listEligiblePublisherProfiles() {
+      const { data, error } = await client.rpc("list_manageable_curated_publisher_profiles");
+      if (error) throw archiveError();
+      return Object.freeze((Array.isArray(data) ? data : []).map(mapPublisherProfile).filter(Boolean));
+    },
+
+    async publishProject(projectId, publisherProfileId) {
+      if (!isValidPublicWorkId(projectId) || !isValidPublicWorkId(publisherProfileId)) throw archiveError();
+      const { error } = await client.rpc("publish_archive_project", {
+        target_project_id: projectId,
+        target_publisher_profile_id: publisherProfileId
+      });
+      if (error) throw archiveError();
+    },
+
+    async depublishProject(projectId) {
+      if (!isValidPublicWorkId(projectId)) throw archiveError();
+      const { error } = await client.rpc("depublish_archive_project", {
+        target_project_id: projectId
+      });
       if (error) throw archiveError();
     },
 

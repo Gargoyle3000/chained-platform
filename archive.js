@@ -1,5 +1,11 @@
 import { FRONTEND_MODES } from "./auth/config.mjs";
 import { getArchiveRepository } from "./data/archive-repository.mjs";
+import {
+  archiveProjectLocation,
+  filterArchiveProjectWorks,
+  orderedProjectWorks,
+  resolveArchiveProjectId
+} from "./data/archive-project-state.mjs";
 
 const page = document.querySelector(".archive-page");
 const grid = document.querySelector(".saved-grid");
@@ -13,6 +19,12 @@ const tagCreateButton = document.querySelector(".archive-tag-create button");
 const tagMessage = document.querySelector(".archive-tag-message");
 const tagClearButton = document.querySelector(".archive-tag-clear");
 const tagList = document.querySelector(".archive-tag-list");
+const projectList = document.querySelector(".archive-project-list");
+const projectContext = document.querySelector(".archive-project-context");
+const projectTitle = document.querySelector("#archive-current-project");
+const allWorksLabel = document.querySelector(".archive-all-works-label");
+const projectEditLink = document.querySelector(".archive-project-edit");
+const projectCloseButton = document.querySelector(".archive-project-close");
 const viewStorageKey = "chained-archive-view";
 
 let repository = null;
@@ -20,21 +32,15 @@ let works = [];
 let tags = [];
 let tagIdsByWork = new Map();
 let activeTagIds = new Set();
+let projects = [];
+let projectItems = [];
+let projectIdsByWork = new Map();
+let selectedProjectId = new URL(window.location.href).searchParams.get("project") || null;
+let openProjectMenu = null;
+let openWorkManagementMenu = null;
 
 function setResultCount(count) {
   resultCount.textContent = `${count} ${count === 1 ? "WORK" : "WORKS"}`;
-}
-
-function showEmpty(message) {
-  grid.replaceChildren();
-  emptyMessage.textContent = message;
-  emptyMessage.hidden = false;
-  grid.setAttribute("aria-busy", "false");
-}
-
-function showUpdateError() {
-  emptyMessage.textContent = "ARCHIVE COULD NOT BE UPDATED";
-  emptyMessage.hidden = false;
 }
 
 function setTagMessage(message = "") {
@@ -42,159 +48,94 @@ function setTagMessage(message = "") {
   tagMessage.hidden = !message;
 }
 
-function workSearchText(work) {
-  return [work.title, work.yearLabel, work.artistName, work.workType]
-    .filter(Boolean)
-    .join(" ")
-    .toLocaleLowerCase();
+function selectedProject() {
+  return projects.find((project) => project.id === selectedProjectId) || null;
+}
+
+function updateProjectLocation(projectId, mode) {
+  const nextLocation = archiveProjectLocation(window.location.href, projectId);
+  const currentLocation = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (nextLocation === currentLocation) return;
+  window.history[mode === "replace" ? "replaceState" : "pushState"]({}, document.title, nextLocation);
 }
 
 function tagIdsForWork(workId) {
   return tagIdsByWork.get(workId) || new Set();
 }
 
-function assignedTagsForWork(workId) {
-  const assignedTagIds = tagIdsForWork(workId);
-  return tags.filter((tag) => assignedTagIds.has(tag.id));
+function projectIdsForWork(workId) {
+  return projectIdsByWork.get(workId) || new Set();
 }
 
-function setTagMenuBusy(menu, busy) {
-  menu.querySelectorAll("button").forEach((button) => {
-    button.disabled = busy;
+function rebuildProjectIndexes() {
+  projectIdsByWork = new Map();
+  projectItems.forEach((item) => {
+    if (!projectIdsByWork.has(item.workId)) projectIdsByWork.set(item.workId, new Set());
+    projectIdsByWork.get(item.workId).add(item.projectId);
   });
 }
 
-async function removeAssignedTag(work, tag, menu, toggle) {
-  setTagMenuBusy(menu, true);
-  toggle.disabled = true;
-  try {
-    await repository.removeTag(work.id, tag.id);
-    tagIdsForWork(work.id).delete(tag.id);
-    renderWorks();
-  } catch {
-    setTagMenuBusy(menu, false);
-    toggle.disabled = false;
-    setTagMessage("TAG COULD NOT BE UPDATED");
-  }
-}
-
-async function replaceAssignedTag(work, currentTag, replacementTag, menu, toggle) {
-  setTagMenuBusy(menu, true);
-  toggle.disabled = true;
-  try {
-    await repository.assignTag(work.id, replacementTag.id);
-    try {
-      await repository.removeTag(work.id, currentTag.id);
-    } catch (error) {
-      try {
-        await repository.removeTag(work.id, replacementTag.id);
-      } catch {}
-      throw error;
-    }
-    const workTagIds = tagIdsForWork(work.id);
-    workTagIds.delete(currentTag.id);
-    workTagIds.add(replacementTag.id);
-    renderWorks();
-  } catch {
-    setTagMenuBusy(menu, false);
-    toggle.disabled = false;
-    setTagMessage("TAG COULD NOT BE UPDATED");
-  }
-}
-
-function createAssignedTags(work) {
-  const container = document.createElement("div");
-  container.className = "archive-work-tags";
-  container.setAttribute("aria-label", `Tags for ${work.title}`);
-
-  assignedTagsForWork(work.id).forEach((tag) => {
-    const tagControl = document.createElement("div");
-    tagControl.className = "archive-assigned-tag-control";
-    const tagButton = document.createElement("button");
-    tagButton.className = "archive-work-tag";
-    tagButton.type = "button";
-    tagButton.textContent = tag.name;
-    tagButton.setAttribute("aria-label", `Manage ${tag.name} tag on ${work.title}`);
-    tagButton.setAttribute("aria-haspopup", "menu");
-    tagButton.setAttribute("aria-expanded", "false");
-
-    const menu = document.createElement("div");
-    menu.className = "archive-tag-menu archive-tag-management";
-    menu.hidden = true;
-    menu.setAttribute("role", "menu");
-
-    const close = document.createElement("button");
-    close.className = "archive-tag-close";
-    close.type = "button";
-    close.textContent = "×";
-    close.setAttribute("aria-label", "Close tag menu");
-    close.addEventListener("click", () => {
-      menu.hidden = true;
-      tagButton.setAttribute("aria-expanded", "false");
-    });
-
-    const options = document.createElement("div");
-    options.className = "archive-tag-options";
-    const availableTags = tags.filter((availableTag) => (
-      availableTag.id !== tag.id && !tagIdsForWork(work.id).has(availableTag.id)
-    ));
-    availableTags.forEach((replacementTag) => {
-      const replacement = document.createElement("button");
-      replacement.type = "button";
-      replacement.textContent = replacementTag.name;
-      replacement.setAttribute("role", "menuitem");
-      replacement.setAttribute("aria-label", `Replace ${tag.name} with ${replacementTag.name} on ${work.title}`);
-      replacement.addEventListener("click", () => {
-        void replaceAssignedTag(work, tag, replacementTag, menu, tagButton);
-      });
-      options.append(replacement);
-    });
-    options.hidden = availableTags.length === 0;
-
-    const remove = document.createElement("button");
-    remove.className = "archive-tag-remove";
-    remove.type = "button";
-    remove.textContent = "[ REMOVE TAG ]";
-    remove.setAttribute("role", "menuitem");
-    remove.setAttribute("aria-label", `Remove ${tag.name} tag from ${work.title}`);
-    remove.addEventListener("click", () => {
-      void removeAssignedTag(work, tag, menu, tagButton);
-    });
-
-    menu.append(close, options, remove);
-    window.ChainedScrollIndicators?.attachScrollIndicator(options, {
-      host: menu
-    });
-    tagButton.addEventListener("click", () => {
-      const isOpen = menu.hidden;
-      menu.hidden = !isOpen;
-      tagButton.setAttribute("aria-expanded", String(isOpen));
-    });
-    tagControl.append(tagButton, menu);
-    container.append(tagControl);
-  });
-
-  return container;
-}
-
-function createTagAssignment(work) {
-  const assignedTagIds = tagIdsForWork(work.id);
-  const availableTags = tags.filter((tag) => !assignedTagIds.has(tag.id));
-  if (!availableTags.length) return null;
-
-  const container = document.createElement("div");
-  container.className = "archive-tag-assignment";
-  const toggle = document.createElement("button");
-  toggle.className = "text-action";
-  toggle.type = "button";
-  toggle.textContent = "[ + TAG ]";
+function closeProjectMenu(returnFocus = false) {
+  if (!openProjectMenu) return;
+  const { menu, toggle } = openProjectMenu;
+  menu.hidden = true;
   toggle.setAttribute("aria-expanded", "false");
-  toggle.setAttribute("aria-label", `Assign a tag to ${work.title}`);
+  openProjectMenu = null;
+  if (returnFocus) toggle.focus();
+}
+
+function closeWorkManagementMenu(returnFocus = false) {
+  if (!openWorkManagementMenu) return;
+  const { menu, toggle } = openWorkManagementMenu;
+  if (openProjectMenu && menu.contains(openProjectMenu.menu)) closeProjectMenu();
+  menu.querySelectorAll(".archive-tag-menu").forEach((tagMenu) => {
+    tagMenu.hidden = true;
+    const tagToggle = tagMenu.previousElementSibling;
+    if (tagToggle) tagToggle.setAttribute("aria-expanded", "false");
+  });
+  menu.dataset.open = "false";
+  toggle.setAttribute("aria-expanded", "false");
+  openWorkManagementMenu = null;
+  if (returnFocus) toggle.focus();
+}
+
+function createSupergridManagement(work) {
+  const toggle = document.createElement("button");
+  toggle.className = "archive-supergrid-management-trigger";
+  toggle.type = "button";
+  toggle.textContent = "[ ... ]";
+  toggle.setAttribute("aria-haspopup", "menu");
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.setAttribute("aria-label", `Manage ${work.title} in Archive`);
 
   const menu = document.createElement("div");
-  menu.className = "archive-tag-menu";
-  menu.hidden = true;
+  menu.className = "archive-supergrid-menu";
+  menu.id = `archive-management-${work.id}`;
+  menu.dataset.open = "false";
   menu.setAttribute("role", "menu");
+  toggle.setAttribute("aria-controls", menu.id);
+
+  const close = document.createElement("button");
+  close.className = "archive-supergrid-menu-close";
+  close.type = "button";
+  close.textContent = "×";
+  close.setAttribute("aria-label", "Close Work management menu");
+  close.addEventListener("click", () => closeWorkManagementMenu(true));
+
+  toggle.addEventListener("click", () => {
+    const isOpen = menu.dataset.open === "true";
+    closeWorkManagementMenu();
+    if (isOpen) return;
+    menu.dataset.open = "true";
+    toggle.setAttribute("aria-expanded", "true");
+    openWorkManagementMenu = { menu, toggle };
+  });
+
+  menu.append(close);
+  return { menu, toggle };
+}
+
+function createTagMenuClose(menu, toggle) {
   const close = document.createElement("button");
   close.className = "archive-tag-close";
   close.type = "button";
@@ -203,40 +144,203 @@ function createTagAssignment(work) {
   close.addEventListener("click", () => {
     menu.hidden = true;
     toggle.setAttribute("aria-expanded", "false");
+    toggle.focus();
   });
+  return close;
+}
+
+function setTagMenuBusy(menu, busy) {
+  menu.querySelectorAll("button").forEach((button) => { button.disabled = busy; });
+}
+
+function assignedTagsForWork(workId) {
+  return tags.filter((tag) => tagIdsForWork(workId).has(tag.id));
+}
+
+function createAssignedTags(work) {
+  const container = document.createElement("div");
+  container.className = "archive-work-tags";
+  container.setAttribute("aria-label", `Tags for ${work.title}`);
+  assignedTagsForWork(work.id).forEach((tag) => {
+    const control = document.createElement("div");
+    control.className = "archive-assigned-tag-control";
+    const toggle = document.createElement("button");
+    toggle.className = "archive-work-tag";
+    toggle.type = "button";
+    toggle.textContent = tag.name;
+    toggle.setAttribute("aria-label", `Manage ${tag.name} tag on ${work.title}`);
+    toggle.setAttribute("aria-haspopup", "menu");
+    toggle.setAttribute("aria-expanded", "false");
+    const menu = document.createElement("div");
+    menu.className = "archive-tag-menu archive-tag-management";
+    menu.hidden = true;
+    menu.setAttribute("role", "menu");
+    const options = document.createElement("div");
+    options.className = "archive-tag-options";
+    const available = tags.filter((candidate) => candidate.id !== tag.id && !tagIdsForWork(work.id).has(candidate.id));
+    available.forEach((replacementTag) => {
+      const replacement = document.createElement("button");
+      replacement.type = "button";
+      replacement.textContent = replacementTag.name;
+      replacement.setAttribute("role", "menuitem");
+      replacement.setAttribute("aria-label", `Replace ${tag.name} with ${replacementTag.name} on ${work.title}`);
+      replacement.addEventListener("click", async () => {
+        setTagMenuBusy(menu, true);
+        try {
+          await repository.assignTag(work.id, replacementTag.id);
+          try { await repository.removeTag(work.id, tag.id); } catch (error) {
+            try { await repository.removeTag(work.id, replacementTag.id); } catch {}
+            throw error;
+          }
+          tagIdsForWork(work.id).delete(tag.id);
+          tagIdsForWork(work.id).add(replacementTag.id);
+          renderWorks();
+        } catch { setTagMenuBusy(menu, false); setTagMessage("TAG COULD NOT BE UPDATED"); }
+      });
+      options.append(replacement);
+    });
+    options.hidden = available.length === 0;
+    const remove = document.createElement("button");
+    remove.className = "archive-tag-remove";
+    remove.type = "button";
+    remove.textContent = "[ REMOVE TAG ]";
+    remove.setAttribute("role", "menuitem");
+    remove.setAttribute("aria-label", `Remove ${tag.name} tag from ${work.title}`);
+    remove.addEventListener("click", async () => {
+      setTagMenuBusy(menu, true);
+      try {
+        await repository.removeTag(work.id, tag.id);
+        tagIdsForWork(work.id).delete(tag.id);
+        renderWorks();
+      } catch { setTagMenuBusy(menu, false); setTagMessage("TAG COULD NOT BE UPDATED"); }
+    });
+    menu.append(createTagMenuClose(menu, toggle), options, remove);
+    window.ChainedScrollIndicators?.attachScrollIndicator(options, { host: menu });
+    toggle.addEventListener("click", () => {
+      const isOpen = menu.hidden;
+      menu.hidden = !isOpen;
+      toggle.setAttribute("aria-expanded", String(isOpen));
+    });
+    control.append(toggle, menu);
+    container.append(control);
+  });
+  return container;
+}
+
+function createTagAssignment(work) {
+  const available = tags.filter((tag) => !tagIdsForWork(work.id).has(tag.id));
+  if (!available.length) return null;
+  const container = document.createElement("div");
+  container.className = "archive-tag-assignment";
+  const toggle = document.createElement("button");
+  toggle.className = "text-action";
+  toggle.type = "button";
+  toggle.textContent = "[ + TAG ]";
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.setAttribute("aria-label", `Assign a tag to ${work.title}`);
+  const menu = document.createElement("div");
+  menu.className = "archive-tag-menu";
+  menu.hidden = true;
+  menu.setAttribute("role", "menu");
   const options = document.createElement("div");
   options.className = "archive-tag-options";
-
-  availableTags.forEach((tag) => {
-    const assignTag = document.createElement("button");
-    assignTag.type = "button";
-    assignTag.textContent = tag.name;
-    assignTag.setAttribute("aria-label", `Assign ${tag.name} tag to ${work.title}`);
-    assignTag.addEventListener("click", async () => {
-      assignTag.disabled = true;
+  available.forEach((tag) => {
+    const assign = document.createElement("button");
+    assign.type = "button";
+    assign.textContent = tag.name;
+    assign.setAttribute("aria-label", `Assign ${tag.name} tag to ${work.title}`);
+    assign.addEventListener("click", async () => {
+      assign.disabled = true;
       try {
         await repository.assignTag(work.id, tag.id);
         if (!tagIdsByWork.has(work.id)) tagIdsByWork.set(work.id, new Set());
         tagIdsByWork.get(work.id).add(tag.id);
         renderWorks();
-      } catch {
-        assignTag.disabled = false;
-        setTagMessage("TAG COULD NOT BE UPDATED");
-      }
+      } catch { assign.disabled = false; setTagMessage("TAG COULD NOT BE UPDATED"); }
     });
-    options.append(assignTag);
+    options.append(assign);
   });
-
+  menu.append(createTagMenuClose(menu, toggle), options);
+  window.ChainedScrollIndicators?.attachScrollIndicator(options, { host: menu });
   toggle.addEventListener("click", () => {
     const isOpen = menu.hidden;
     menu.hidden = !isOpen;
     toggle.setAttribute("aria-expanded", String(isOpen));
   });
+  container.append(toggle, menu);
+  return container;
+}
 
-  menu.append(close, options);
-  window.ChainedScrollIndicators?.attachScrollIndicator(options, {
-    host: menu
+function createProjectMemberships(work) {
+  const memberships = projects.filter((project) => projectIdsForWork(work.id).has(project.id));
+  if (!memberships.length) return null;
+  const container = document.createElement("div");
+  container.className = "archive-work-projects";
+  memberships.forEach((project) => {
+    const button = document.createElement("button");
+    button.className = "archive-work-project";
+    button.type = "button";
+    button.textContent = project.title;
+    button.setAttribute("aria-label", `Open ${project.title} Project`);
+    button.addEventListener("click", () => void selectProject(project.id));
+    container.append(button);
   });
+  return container;
+}
+
+function createProjectAssignment(work) {
+  const available = projects.filter((project) => !projectIdsForWork(work.id).has(project.id));
+  if (!available.length) return null;
+  const container = document.createElement("div");
+  container.className = "archive-project-assignment";
+  const toggle = document.createElement("button");
+  toggle.className = "text-action archive-add-project";
+  toggle.type = "button";
+  toggle.textContent = "[ + PROJECT ]";
+  toggle.setAttribute("aria-haspopup", "menu");
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.setAttribute("aria-label", `Add ${work.title} to a Project`);
+  const menu = document.createElement("div");
+  menu.className = "archive-project-menu";
+  menu.hidden = true;
+  menu.setAttribute("role", "menu");
+  const close = document.createElement("button");
+  close.className = "archive-project-close-menu";
+  close.type = "button";
+  close.textContent = "×";
+  close.setAttribute("aria-label", "Close Project menu");
+  close.addEventListener("click", () => closeProjectMenu(true));
+  const options = document.createElement("div");
+  options.className = "archive-project-options";
+  available.forEach((project) => {
+    const add = document.createElement("button");
+    add.className = "archive-project-option";
+    add.type = "button";
+    add.textContent = project.title;
+    add.setAttribute("role", "menuitem");
+    add.setAttribute("aria-label", `Add ${work.title} to ${project.title}`);
+    add.addEventListener("click", async () => {
+      add.disabled = true;
+      try {
+        await repository.addProjectWork(project.id, work.id);
+        closeProjectMenu();
+        await loadProjectData();
+        renderProjects();
+        renderWorks();
+      } catch { add.disabled = false; setTagMessage("WORK COULD NOT BE ADDED TO PROJECT"); }
+    });
+    options.append(add);
+  });
+  toggle.addEventListener("click", () => {
+    const isOpen = menu.hidden;
+    closeProjectMenu();
+    if (!isOpen) return;
+    menu.hidden = false;
+    toggle.setAttribute("aria-expanded", "true");
+    openProjectMenu = { container, menu, toggle };
+  });
+  menu.append(close, options);
+  window.ChainedScrollIndicators?.attachScrollIndicator(options, { host: menu });
   container.append(toggle, menu);
   return container;
 }
@@ -244,8 +348,6 @@ function createTagAssignment(work) {
 function createSavedWork(work) {
   const article = document.createElement("article");
   article.className = "saved-work";
-  article.dataset.workId = work.id;
-
   const artworkLink = document.createElement("a");
   artworkLink.href = work.artworkHref;
   const image = document.createElement("img");
@@ -254,20 +356,17 @@ function createSavedWork(work) {
   if (work.image.width) image.width = work.image.width;
   if (work.image.height) image.height = work.image.height;
   artworkLink.append(image);
-
   const metadata = document.createElement("div");
   metadata.className = "saved-work-meta";
-  const profileLink = document.createElement("a");
-  profileLink.href = work.profileHref;
-  profileLink.textContent = work.artistName;
+  const artist = document.createElement("a");
+  artist.href = work.profileHref;
+  artist.textContent = work.artistName;
   const title = document.createElement("h2");
   title.textContent = work.title;
   const year = document.createElement("p");
   year.textContent = work.yearLabel;
-  const assignedTags = createAssignedTags(work);
   const actions = document.createElement("div");
   actions.className = "saved-work-actions";
-  const tagAssignment = createTagAssignment(work);
   const remove = document.createElement("button");
   remove.className = "text-action archive-remove";
   remove.type = "button";
@@ -275,46 +374,39 @@ function createSavedWork(work) {
   remove.setAttribute("aria-label", `Remove ${work.title} from Archive`);
   remove.addEventListener("click", async () => {
     remove.disabled = true;
-    article.setAttribute("aria-busy", "true");
-    try {
-      await repository.removeWork(work.id);
-      await loadArchive();
-    } catch {
-      remove.disabled = false;
-      article.removeAttribute("aria-busy");
-      showUpdateError();
-    }
+    try { await repository.removeWork(work.id); await loadArchive(); }
+    catch { remove.disabled = false; emptyMessage.textContent = "ARCHIVE COULD NOT BE UPDATED"; emptyMessage.hidden = false; }
   });
-
-  if (tagAssignment) actions.append(tagAssignment);
-  actions.append(remove);
-  metadata.append(profileLink, title, year, assignedTags, actions);
+  const tagAssignment = createTagAssignment(work);
+  const projectAssignment = createProjectAssignment(work);
+  const management = createSupergridManagement(work);
+  if (tagAssignment) management.menu.append(tagAssignment);
+  if (projectAssignment) management.menu.append(projectAssignment);
+  management.menu.append(remove);
+  actions.append(management.toggle, management.menu);
+  metadata.append(artist, title, year, createAssignedTags(work));
+  const memberships = createProjectMemberships(work);
+  if (memberships) metadata.append(memberships);
+  metadata.append(actions);
   article.append(artworkLink, metadata);
   return article;
 }
 
+function selectedProjectWorks() {
+  return orderedProjectWorks(works, projectItems, selectedProjectId);
+}
+
 function renderWorks() {
+  closeWorkManagementMenu();
+  closeProjectMenu();
   const searchTerm = searchInput.value.trim().toLocaleLowerCase();
-  const visibleWorks = works.filter((work) => {
-    const matchesSearch = !searchTerm || workSearchText(work).includes(searchTerm);
-    const assignedTagIds = tagIdsForWork(work.id);
-    const matchesTags = [...activeTagIds].every((tagId) => assignedTagIds.has(tagId));
-    return matchesSearch && matchesTags;
-  });
-  grid.replaceChildren(...visibleWorks.map(createSavedWork));
-  setResultCount(visibleWorks.length);
-  emptyMessage.hidden = visibleWorks.length !== 0;
-  if (!visibleWorks.length) {
-    if (searchTerm && activeTagIds.size) {
-      emptyMessage.textContent = "NO SAVED WORKS MATCH YOUR SEARCH AND TAG FILTERS";
-    } else if (searchTerm) {
-      emptyMessage.textContent = "NO SAVED WORKS MATCH YOUR SEARCH";
-    } else if (activeTagIds.size) {
-      emptyMessage.textContent = "NO SAVED WORKS MATCH ACTIVE TAG FILTERS";
-    } else {
-      emptyMessage.textContent = "NO SAVED WORKS";
-    }
-  }
+  const visible = filterArchiveProjectWorks(selectedProjectWorks(), searchTerm, activeTagIds, tagIdsForWork);
+  grid.replaceChildren(...visible.map(createSavedWork));
+  setResultCount(visible.length);
+  emptyMessage.hidden = visible.length !== 0;
+  if (!visible.length) emptyMessage.textContent = selectedProjectId
+    ? "NO SAVED WORKS MATCH THIS PROJECT"
+    : "NO SAVED WORKS";
   grid.setAttribute("aria-busy", "false");
 }
 
@@ -324,21 +416,15 @@ function renderTags() {
     const row = document.createElement("div");
     row.className = "archive-tag-row";
     const name = document.createElement("button");
-    const isActive = activeTagIds.has(tag.id);
+    const active = activeTagIds.has(tag.id);
     name.className = "archive-tag-filter";
     name.type = "button";
     name.textContent = tag.name;
-    name.setAttribute("aria-pressed", String(isActive));
-    name.setAttribute("aria-label", `${isActive ? "Deactivate" : "Activate"} ${tag.name} filter`);
-    name.classList.toggle("is-active", isActive);
+    name.classList.toggle("is-active", active);
+    name.setAttribute("aria-pressed", String(active));
     name.addEventListener("click", () => {
-      if (activeTagIds.has(tag.id)) {
-        activeTagIds.delete(tag.id);
-      } else {
-        activeTagIds.add(tag.id);
-      }
-      renderTags();
-      renderWorks();
+      if (activeTagIds.has(tag.id)) activeTagIds.delete(tag.id); else activeTagIds.add(tag.id);
+      renderTags(); renderWorks();
     });
     const remove = document.createElement("button");
     remove.className = "text-action";
@@ -349,15 +435,11 @@ function renderTags() {
       remove.disabled = true;
       try {
         await repository.deleteTag(tag.id);
-        tags = tags.filter((currentTag) => currentTag.id !== tag.id);
+        tags = tags.filter((entry) => entry.id !== tag.id);
         activeTagIds.delete(tag.id);
-        tagIdsByWork.forEach((tagIds) => tagIds.delete(tag.id));
-        renderTags();
-        renderWorks();
-      } catch {
-        remove.disabled = false;
-        setTagMessage("TAG COULD NOT BE DELETED");
-      }
+        tagIdsByWork.forEach((ids) => ids.delete(tag.id));
+        renderTags(); renderWorks();
+      } catch { remove.disabled = false; setTagMessage("TAG COULD NOT BE DELETED"); }
     });
     row.append(name, remove);
     tagList.append(row);
@@ -365,14 +447,32 @@ function renderTags() {
   tagClearButton.hidden = activeTagIds.size === 0;
 }
 
+function renderProjects() {
+  const project = selectedProject();
+  projectContext.hidden = !project;
+  allWorksLabel.hidden = Boolean(project);
+  if (project) {
+    projectTitle.textContent = project.title;
+    projectEditLink.href = `archive-project.html?id=${encodeURIComponent(project.id)}`;
+  }
+  projectList.replaceChildren();
+  projects.forEach((entry) => {
+    const button = document.createElement("button");
+    button.className = "archive-project";
+    button.type = "button";
+    button.textContent = entry.title;
+    button.classList.toggle("is-active", entry.id === selectedProjectId);
+    button.setAttribute("aria-pressed", String(entry.id === selectedProjectId));
+    button.addEventListener("click", () => void selectProject(entry.id));
+    projectList.append(button);
+  });
+}
+
 async function loadTagData() {
-  const [loadedTags, memberships] = await Promise.all([
-    repository.listTags(),
-    repository.listTagMemberships()
-  ]);
+  const [loadedTags, memberships] = await Promise.all([repository.listTags(), repository.listTagMemberships()]);
   tags = [...loadedTags];
-  const availableTagIds = new Set(tags.map((tag) => tag.id));
-  activeTagIds = new Set([...activeTagIds].filter((tagId) => availableTagIds.has(tagId)));
+  const validIds = new Set(tags.map((tag) => tag.id));
+  activeTagIds = new Set([...activeTagIds].filter((id) => validIds.has(id)));
   tagIdsByWork = new Map();
   memberships.forEach(({ workId, tagId }) => {
     if (!tagIdsByWork.has(workId)) tagIdsByWork.set(workId, new Set());
@@ -380,79 +480,74 @@ async function loadTagData() {
   });
 }
 
+async function loadProjectData() {
+  const [loadedProjects, loadedItems] = await Promise.all([repository.listProjects(), repository.listProjectItems()]);
+  projects = [...loadedProjects];
+  projectItems = [...loadedItems];
+  selectedProjectId = resolveArchiveProjectId(window.location.search, projects);
+  rebuildProjectIndexes();
+}
+
 async function loadArchive() {
   grid.setAttribute("aria-busy", "true");
-  emptyMessage.hidden = true;
   try {
-    const [loadedWorks] = await Promise.all([
-      repository.listArchivedWorks(),
-      loadTagData()
-    ]);
+    const [loadedWorks] = await Promise.all([repository.listArchivedWorks(), loadTagData(), loadProjectData()]);
     works = loadedWorks;
     searchInput.disabled = false;
     tagInput.disabled = false;
     tagCreateButton.disabled = false;
-    renderTags();
-    renderWorks();
+    renderTags(); renderProjects(); renderWorks();
   } catch {
-    searchInput.disabled = true;
-    tagInput.disabled = true;
-    tagCreateButton.disabled = true;
     setResultCount(0);
-    showEmpty("ARCHIVE IS CURRENTLY UNAVAILABLE");
+    emptyMessage.textContent = "ARCHIVE IS CURRENTLY UNAVAILABLE";
+    emptyMessage.hidden = false;
+    grid.setAttribute("aria-busy", "false");
   }
 }
 
-function setView(view) {
-  if (!viewButtons.some((button) => button.dataset.archiveView === view)) return;
-  page.dataset.view = view;
-  viewButtons.forEach((button) => {
-    const active = button.dataset.archiveView === view;
-    button.classList.toggle("is-active", active);
-    button.setAttribute("aria-pressed", String(active));
-  });
-  try {
-    localStorage.setItem(viewStorageKey, view);
-  } catch {}
+function selectProject(projectId, { history = "push" } = {}) {
+  const nextProjectId = projectId === null
+    ? null
+    : projects.some((project) => project.id === projectId) ? projectId : null;
+  selectedProjectId = nextProjectId;
+  if (history === "push") updateProjectLocation(nextProjectId, "push");
+  if (history === "replace") updateProjectLocation(nextProjectId, "replace");
+  renderProjects();
+  renderWorks();
 }
 
 function initialiseView() {
-  let storedView = "grid";
-  try {
-    storedView = localStorage.getItem(viewStorageKey) || storedView;
-  } catch {}
-  setView(storedView);
+  let view = "grid";
+  try { view = localStorage.getItem(viewStorageKey) || view; } catch {}
+  const setView = (selected) => {
+    if (!viewButtons.some((button) => button.dataset.archiveView === selected)) return;
+    closeWorkManagementMenu();
+    page.dataset.view = selected;
+    viewButtons.forEach((button) => {
+      const active = button.dataset.archiveView === selected;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    try { localStorage.setItem(viewStorageKey, selected); } catch {}
+  };
+  setView(view);
   viewButtons.forEach((button) => button.addEventListener("click", () => setView(button.dataset.archiveView)));
 }
 
-function initialiseTagCreation() {
-  tagClearButton.addEventListener("click", () => {
-    activeTagIds.clear();
-    renderTags();
-    renderWorks();
-  });
-
+function initialiseTags() {
+  tagClearButton.addEventListener("click", () => { activeTagIds.clear(); renderTags(); renderWorks(); });
   tagForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const name = tagInput.value.trim();
-    if (!name) {
-      setTagMessage("ENTER A TAG NAME");
-      return;
-    }
-
+    if (!name) return setTagMessage("ENTER A TAG NAME");
     tagCreateButton.disabled = true;
-    setTagMessage();
     try {
       await repository.createTag(name);
       tagInput.value = "";
       await loadTagData();
-      renderTags();
-      renderWorks();
-    } catch {
-      setTagMessage("TAG COULD NOT BE CREATED");
-    } finally {
-      tagCreateButton.disabled = false;
-    }
+      renderTags(); renderWorks();
+    } catch { setTagMessage("TAG COULD NOT BE CREATED"); }
+    finally { tagCreateButton.disabled = false; }
   });
 }
 
@@ -460,22 +555,28 @@ async function initialiseArchive() {
   initialiseView();
   const resolved = await getArchiveRepository();
   if (resolved.runtime.mode === FRONTEND_MODES.PROTOTYPE || !resolved.repository) {
-    setResultCount(0);
-    showEmpty("NO SAVED WORKS");
-    return;
+    setResultCount(0); emptyMessage.textContent = "NO SAVED WORKS"; emptyMessage.hidden = false; return;
   }
   repository = resolved.repository;
   searchInput.addEventListener("input", renderWorks);
-  initialiseTagCreation();
+  projectCloseButton.addEventListener("click", () => void selectProject(null));
+  window.addEventListener("popstate", () => {
+    void selectProject(resolveArchiveProjectId(window.location.search, projects), { history: "none" });
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (openWorkManagementMenu) { event.preventDefault(); closeWorkManagementMenu(true); return; }
+    if (openProjectMenu) { event.preventDefault(); closeProjectMenu(true); }
+  });
+  document.addEventListener("click", (event) => {
+    if (openWorkManagementMenu && !openWorkManagementMenu.menu.contains(event.target) && !openWorkManagementMenu.toggle.contains(event.target)) {
+      closeWorkManagementMenu();
+    }
+    if (openProjectMenu && !openProjectMenu.container.contains(event.target)) closeProjectMenu();
+  });
+  initialiseTags();
   await loadArchive();
 }
 
-function beginWhenAuthorised() {
-  if (document.body.dataset.authMode) {
-    void initialiseArchive();
-    return;
-  }
-  window.addEventListener("chained:auth-ready", () => void initialiseArchive(), { once: true });
-}
-
-beginWhenAuthorised();
+if (document.body.dataset.authMode) void initialiseArchive();
+else window.addEventListener("chained:auth-ready", () => void initialiseArchive(), { once: true });

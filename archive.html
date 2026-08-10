@@ -56,13 +56,26 @@
           <button class="archive-tag-clear text-action" type="button" aria-label="Clear Archive tag filters" hidden>[ CLEAR ]</button>
           <div class="archive-tag-list" aria-live="polite"></div>
         </section>
+
+        <section class="archive-sidebar-section archive-projects-section" aria-labelledby="archive-projects-heading">
+          <h2 id="archive-projects-heading">PROJECTS</h2>
+          <a class="archive-new-project text-action" href="archive-project.html">[ + NEW PROJECT ]</a>
+          <div class="archive-project-list" aria-live="polite"></div>
+        </section>
       </div>
     </aside>
 
     <section class="archive-content" aria-labelledby="archive-current-project">
       <header class="archive-content-header">
         <div>
-          <p class="archive-current-project" id="archive-current-project">SAVED WORKS</p>
+          <div class="archive-project-context" hidden>
+            <p class="archive-current-project" id="archive-current-project">SAVED WORKS</p>
+            <div class="archive-project-context-actions">
+              <a class="text-action archive-project-edit" href="archive-project.html">[ EDIT ]</a>
+              <button class="archive-project-close" type="button" aria-label="Close Project view">×</button>
+            </div>
+          </div>
+          <p class="archive-current-project archive-all-works-label">SAVED WORKS</p>
           <p class="archive-result-count" aria-live="polite">LOADING</p>
         </div>
 

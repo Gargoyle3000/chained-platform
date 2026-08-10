@@ -66,13 +66,14 @@
 }
 
 .archive-tag-create {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 13ch;
   align-items: baseline;
   gap: 10px;
 }
 
 .archive-tag-create input {
+  grid-column: 1 / -1;
   width: 100%;
   border: 0;
   border-bottom: 1px solid var(--black);
@@ -91,6 +92,7 @@
 
 .archive-tag-create .text-action,
 .archive-tag-row .text-action {
+  width: 100%;
   padding: 0;
   border: 0;
   background: transparent;
@@ -117,10 +119,21 @@
   margin-top: 16px;
 }
 
+.archive-project-list {
+  margin-top: 16px;
+}
+
+
+.archive-new-project {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: var(--font-meta);
+}
+
 .archive-tag-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 13ch;
   align-items: baseline;
-  justify-content: space-between;
   gap: 12px;
   margin: 7px 0;
 
@@ -137,6 +150,10 @@
   font-size: var(--font-meta);
   text-align: left;
   cursor: pointer;
+}
+
+.archive-tag-row .archive-tag-filter {
+  min-width: 0;
 }
 
 .archive-tag-filter:hover,
@@ -299,12 +316,69 @@
   margin: 0;
 }
 
+.archive-project-context {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
+.archive-project-context-actions {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.archive-project-close {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--black);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.archive-project-close:hover,
+.archive-project-close:focus-visible {
+  color: var(--accent);
+}
+
+.archive-all-works-label[hidden],
+.archive-project-context[hidden] {
+  display: none;
+}
+
 .archive-work-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 
   margin-top: 10px;
+}
+
+.archive-work-projects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.archive-work-project {
+  border: 1px solid var(--black);
+  padding: 2px 5px;
+  background: var(--white);
+  color: var(--black);
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.archive-work-project:hover,
+.archive-work-project:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .archive-assigned-tag-control {
@@ -347,6 +421,33 @@
   margin-top: 12px;
 }
 
+.archive-supergrid-management-trigger {
+  display: none;
+
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--black);
+  font: inherit;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.archive-supergrid-management-trigger:hover,
+.archive-supergrid-management-trigger:focus-visible,
+.archive-supergrid-management-trigger[aria-expanded="true"] {
+  color: var(--accent);
+}
+
+.archive-supergrid-menu {
+  display: contents;
+}
+
+.archive-supergrid-menu-close {
+  display: none;
+}
+
 .archive-add-project,
 .archive-remove {
   font-size: 11px;
@@ -354,6 +455,14 @@
 
 .archive-tag-assignment {
   position: relative;
+}
+
+.archive-project-assignment {
+  position: relative;
+}
+
+.archive-project-item-actions {
+  margin-top: 2px;
 }
 
 .archive-tag-assignment > button[aria-expanded="true"] {
@@ -446,8 +555,12 @@
   z-index: 20;
 
   min-width: 230px;
+  max-width: min(280px, calc(100vw - (var(--page-gutter) * 2)));
 
-  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 28px 12px 12px;
 
   border: 1px solid var(--black);
   background: var(--white);
@@ -457,12 +570,33 @@
   display: none;
 }
 
+.archive-project-options {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.archive-project-close-menu {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+
+  width: auto !important;
+  padding: 0 !important;
+
+  font-size: 16px !important;
+  line-height: 1;
+}
+
 .archive-project-option {
   display: block;
 
   width: 100%;
-  margin: 6px 0;
-  padding: 0;
+  margin: 0;
+  padding: 3px 0;
 
   border: 0;
   background: transparent;
@@ -473,6 +607,12 @@
   text-align: left;
 
   cursor: pointer;
+}
+
+.archive-project-options .archive-project-option {
+  box-sizing: border-box;
+  min-height: 24px;
+  line-height: 18px;
 }
 
 .archive-project-option:hover,
@@ -628,7 +768,96 @@
 }
 
 .archive-page[data-view="supergrid"] .saved-work-actions {
+  display: block;
+  position: relative;
+  margin-top: 7px;
+}
+
+.archive-page[data-view="supergrid"] .archive-supergrid-management-trigger {
+  display: inline-block;
+}
+
+.archive-page[data-view="supergrid"] .archive-supergrid-menu {
+  position: absolute;
+  top: 19px;
+  left: 0;
+  z-index: 30;
+
   display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  width: min(190px, calc(100vw - (var(--page-gutter) * 2)));
+  max-width: calc(100vw - (var(--page-gutter) * 2));
+  padding: 28px 10px 10px;
+
+  border: 1px solid var(--black);
+  background: var(--white);
+}
+
+.archive-page[data-view="supergrid"] .archive-supergrid-menu[data-open="true"] {
+  display: flex;
+}
+
+.archive-page[data-view="supergrid"] .archive-supergrid-menu-close {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+
+  display: block;
+  width: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--black);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.archive-page[data-view="supergrid"] .archive-supergrid-menu-close:hover,
+.archive-page[data-view="supergrid"] .archive-supergrid-menu-close:focus-visible {
+  color: var(--accent);
+}
+
+.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-tag-assignment,
+.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-project-assignment,
+.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-remove {
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+
+.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-tag-assignment > button,
+.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-project-assignment > button,
+.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-remove {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: var(--black);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 18px;
+  text-align: left;
+}
+
+.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-tag-assignment > button:hover,
+.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-tag-assignment > button:focus-visible,
+.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-project-assignment > button:hover,
+.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-project-assignment > button:focus-visible,
+.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-remove:hover,
+.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-remove:focus-visible {
+  color: var(--accent);
+}
+
+.archive-page[data-view="supergrid"] .archive-supergrid-menu .archive-tag-menu,
+.archive-page[data-view="supergrid"] .archive-supergrid-menu .archive-project-menu {
+  max-width: calc(100vw - (var(--page-gutter) * 2));
 }
 
 
