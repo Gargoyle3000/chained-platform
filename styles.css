@@ -1248,28 +1248,30 @@ footer {
     left: auto;
   }
 
-  .following-page[data-view="grid"] .discover-stream {
-    grid-template-columns: 1fr;
-  }
-
   .discover-page:not(.following-page)[data-discover-channel="curated"][data-view="grid"] .discover-stream {
     grid-template-columns: 1fr;
   }
 
+  .following-page[data-view="grid"] .discover-stream,
   .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .discover-stream {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 34px 12px;
   }
 
+  .following-page[data-view="grid"] .discover-meta,
   .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .discover-meta {
     padding-top: 8px;
   }
 
+  .following-page[data-view="grid"] .discover-meta h2,
   .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .discover-meta h2 {
     margin: 6px 0;
     font-size: 12px;
   }
 
+  .following-page[data-view="grid"] .artist-link,
+  .following-page[data-view="grid"] .year-link,
+  .following-page[data-view="grid"] .discover-archive-action,
   .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .artist-link,
   .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .year-link,
   .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .discover-archive-action {
