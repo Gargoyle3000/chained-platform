@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let workStore = null;
   const information = document.querySelector("#artwork-information");
   const content = document.querySelector("#artwork-content");
-  const primaryProfileLink = document.querySelector(".main-nav a:last-child");
+  const primaryProfileLink = document.querySelector("[data-own-profile-link]");
   const activeObjectUrls = new Set();
 
 
@@ -137,7 +137,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
-  function createInformation(work) {
+  function createInformation(work, archiveState = null, createArchiveAction = null) {
     const fragment = document.createDocumentFragment();
     const artist = document.createElement("a");
     const heading = document.createElement("h1");
@@ -202,6 +202,21 @@ document.addEventListener("DOMContentLoaded", async () => {
           work.photoCreditName,
           work.photoCreditUrl
         )
+      );
+    }
+
+    if (archiveState && createArchiveAction) {
+      const archiveStatus = document.createElement("p");
+      archiveStatus.className = "sr-only";
+      archiveStatus.setAttribute("aria-live", "polite");
+      fragment.append(
+        createArchiveAction(
+          work,
+          archiveState,
+          (message) => { archiveStatus.textContent = message; },
+          "artwork-save"
+        ),
+        archiveStatus
       );
     }
 
@@ -273,10 +288,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
-  function renderWork(work) {
+  function renderWork(work, archiveState = null, createArchiveAction = null) {
     if (primaryProfileLink) primaryProfileLink.href = profileDestination(work);
     document.title = `${work.title} — ${work.ownerProfileName || "PEER VINK"} — CHAINED`;
-    information.replaceChildren(createInformation(work));
+    information.replaceChildren(createInformation(work, archiveState, createArchiveAction));
     renderImages(work);
   }
 
@@ -306,7 +321,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      renderWork(work);
+      let archiveState = null;
+      let createArchiveAction = null;
+
+      try {
+        const { createArchiveWorkAction, loadArchiveWorkState } = await import("./data/archive-work-action.mjs");
+        archiveState = await loadArchiveWorkState();
+        createArchiveAction = createArchiveWorkAction;
+      } catch {
+        // Keep the public Work available if the private Archive control cannot load.
+      }
+
+      renderWork(work, archiveState, createArchiveAction);
     } catch (error) {
       renderUnavailable();
     }

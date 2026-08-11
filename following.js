@@ -4,7 +4,55 @@ document.addEventListener("DOMContentLoaded", () => {
   const stream = document.querySelector(".discover-stream");
   const emptyRegion = document.querySelector(".following-empty");
   const viewStorageKey = "chained-following-view";
+  const scrollStorageKey = "chained-following-scroll";
   let localInitialised = false;
+
+  function rememberScrollPosition() {
+    try {
+      sessionStorage.setItem(scrollStorageKey, JSON.stringify({
+        pathname: window.location.pathname,
+        scrollY: window.scrollY
+      }));
+      const url = new URL(window.location.href);
+      url.searchParams.set("restore", "following");
+      history.replaceState(history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    } catch {
+      // Work navigation remains functional when session storage is unavailable.
+    }
+  }
+
+  function restoreScrollPosition() {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("restore") !== "following") return () => {};
+
+    let savedScrollPosition = 0;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(scrollStorageKey) || "null");
+      if (saved?.pathname === window.location.pathname) {
+        savedScrollPosition = Number(saved.scrollY) || 0;
+      }
+    } catch {
+      savedScrollPosition = 0;
+    }
+
+    history.scrollRestoration = "manual";
+    let restored = false;
+    return () => {
+      if (restored) return;
+      restored = true;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: savedScrollPosition, left: 0, behavior: "instant" });
+          try {
+            sessionStorage.removeItem(scrollStorageKey);
+          } catch {
+            // The restored position does not depend on removing the preference.
+          }
+          history.replaceState({}, "", window.location.pathname);
+        });
+      });
+    };
+  }
 
   function readStoredView() {
     try {
@@ -45,7 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
     link.replaceChildren(state);
   }
 
-  function createFollowingWork(work) {
+  function createFollowingWork(work, archiveState = null, createArchiveAction = null, announceArchiveStatus = () => {}) {
     const article = document.createElement("article");
     const metadata = document.createElement("div");
     const artist = document.createElement("a");
@@ -77,6 +125,10 @@ document.addEventListener("DOMContentLoaded", () => {
       year.className = "year-link";
       year.textContent = work.yearLabel;
       metadata.append(year);
+    }
+
+    if (archiveState && createArchiveAction) {
+      metadata.append(createArchiveAction(work, archiveState, announceArchiveStatus, "discover-archive-action"));
     }
 
     imageLink.className = "discover-image-link";
@@ -123,15 +175,34 @@ document.addEventListener("DOMContentLoaded", () => {
     stream.replaceChildren(createState("LOADING FOLLOWING"));
 
     try {
-      const { getFollowingRepository } = await import("./data/following-repository.mjs");
-      const { appendFollowingPage } = await import("./data/following-mapping.mjs");
+      const [
+        { getFollowingRepository },
+        { appendFollowingPage },
+        { createArchiveWorkAction, loadArchiveWorkState }
+      ] = await Promise.all([
+        import("./data/following-repository.mjs"),
+        import("./data/following-mapping.mjs"),
+        import("./data/archive-work-action.mjs")
+      ]);
       const { runtime, repository } = await getFollowingRepository();
       if (runtime.mode !== "supabase" || !repository) return;
 
+      const archiveStatePromise = loadArchiveWorkState();
       const [hasFollows, firstPage] = await Promise.all([
         repository.hasAnyFollows(),
         repository.loadFollowingFeed()
       ]);
+      const archiveState = await archiveStatePromise;
+      let archiveStatus = null;
+      if (archiveState) {
+        archiveStatus = document.createElement("p");
+        archiveStatus.className = "sr-only";
+        archiveStatus.setAttribute("aria-live", "polite");
+        stream.before(archiveStatus);
+      }
+      const announceArchiveStatus = (message) => {
+        if (archiveStatus) archiveStatus.textContent = message;
+      };
       stream.setAttribute("aria-busy", "false");
 
       if (!hasFollows) {
@@ -155,11 +226,14 @@ document.addEventListener("DOMContentLoaded", () => {
       loadMore.setAttribute("aria-label", "Load more Works from followed profiles");
       loadMoreRegion.append(loadMore);
 
-      stream.replaceChildren(...visible.map(createFollowingWork));
+      stream.replaceChildren(...visible.map((work) => (
+        createFollowingWork(work, archiveState, createArchiveWorkAction, announceArchiveStatus)
+      )));
       emptyRegion.hidden = true;
       stream.hidden = false;
       stream.after(loadMoreRegion);
       loadMoreRegion.hidden = !hasMore;
+      restoreFeedPosition();
 
       loadMore.addEventListener("click", async () => {
         if (loadMore.disabled || !hasMore || !cursor) return;
@@ -169,7 +243,9 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
           const pageResult = await repository.loadFollowingFeed(cursor);
           const nextVisible = appendFollowingPage(visible, pageResult.items);
-          stream.append(...nextVisible.slice(visible.length).map(createFollowingWork));
+          stream.append(...nextVisible.slice(visible.length).map((work) => (
+            createFollowingWork(work, archiveState, createArchiveWorkAction, announceArchiveStatus)
+          )));
           visible = nextVisible;
           cursor = pageResult.nextCursor;
           hasMore = pageResult.hasMore;
@@ -222,6 +298,14 @@ document.addEventListener("DOMContentLoaded", () => {
   viewButtons.forEach((button) => {
     button.addEventListener("click", () => setView(button.dataset.view));
   });
+
+  document.addEventListener("click", (event) => {
+    if (event.target.closest(".discover-image-link, .discover-meta h2 a")) {
+      rememberScrollPosition();
+    }
+  });
+
+  const restoreFeedPosition = restoreScrollPosition();
 
   if (page.dataset.authMode) {
     authReady(page.dataset.authMode);

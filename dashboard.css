@@ -485,8 +485,7 @@
   .dashboard-layout {
     display: block;
 
-    padding-top:
-      calc(var(--header-height) + 44px);
+    padding-top: 32px;
   }
 
   .dashboard-sidebar-inner {

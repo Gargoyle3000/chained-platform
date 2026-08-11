@@ -59,6 +59,17 @@ body.artwork-page {
 
 .artwork-save {
   margin-top: 12px;
+  color: var(--black);
+}
+
+.artwork-save:hover,
+.artwork-save:focus-visible,
+.artwork-save.is-saved {
+  color: var(--green);
+}
+
+.artwork-save:disabled {
+  cursor: wait;
 }
 
 .artwork-back {

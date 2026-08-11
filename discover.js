@@ -10,6 +10,53 @@ const filterClearButton = document.querySelector(".discover-filter-clear");
 const channelButtons = [...document.querySelectorAll("[data-discover-channel]")];
 const viewStorageKey = "chained-discover-view";
 const scrollStorageKey = "chained-discover-scroll";
+const containedImageHitAreas = new Map();
+
+function updateContainedImageHitAreas() {
+  containedImageHitAreas.forEach((source, imageLink) => {
+    if (!imageLink.isConnected) {
+      containedImageHitAreas.delete(imageLink);
+      return;
+    }
+
+    const width = imageLink.clientWidth;
+    const height = imageLink.clientHeight;
+    if (!width || !height || !source.width || !source.height) return;
+
+    const frameRatio = width / height;
+    const imageRatio = source.width / source.height;
+    const imageWidth = frameRatio > imageRatio ? height * imageRatio : width;
+    const imageHeight = frameRatio > imageRatio ? height : width / imageRatio;
+    const horizontalInset = Math.max(0, (width - imageWidth) / 2);
+    const verticalInset = Math.max(0, (height - imageHeight) / 2);
+
+    imageLink.style.setProperty("--discover-image-hit-top", `${verticalInset}px`);
+    imageLink.style.setProperty("--discover-image-hit-right", `${horizontalInset}px`);
+    imageLink.style.setProperty("--discover-image-hit-bottom", `${verticalInset}px`);
+    imageLink.style.setProperty("--discover-image-hit-left", `${horizontalInset}px`);
+  });
+}
+
+function registerContainedImageHitArea(imageLink, image, source) {
+  const dimensions = {
+    width: Number(source?.width) || 0,
+    height: Number(source?.height) || 0
+  };
+
+  imageLink.dataset.containedHitArea = "true";
+  containedImageHitAreas.set(imageLink, dimensions);
+  image.addEventListener("load", () => {
+    if (!dimensions.width) dimensions.width = image.naturalWidth;
+    if (!dimensions.height) dimensions.height = image.naturalHeight;
+    updateContainedImageHitAreas();
+  }, { once: true });
+  requestAnimationFrame(updateContainedImageHitAreas);
+}
+
+if (typeof ResizeObserver === "function") {
+  const containedImageHitAreaObserver = new ResizeObserver(updateContainedImageHitAreas);
+  containedImageHitAreaObserver.observe(stream);
+}
 
 function readStoredView() {
   try {
@@ -39,7 +86,13 @@ function setView(view) {
 
 function rememberScrollPosition() {
   try {
-    sessionStorage.setItem(scrollStorageKey, String(window.scrollY));
+    sessionStorage.setItem(scrollStorageKey, JSON.stringify({
+      pathname: window.location.pathname,
+      scrollY: window.scrollY
+    }));
+    const url = new URL(window.location.href);
+    url.searchParams.set("restore", "discover");
+    history.replaceState(history.state, "", `${url.pathname}${url.search}${url.hash}`);
   } catch {
     // Navigation remains functional when session storage is unavailable.
   }
@@ -47,17 +100,23 @@ function rememberScrollPosition() {
 
 function restoreScrollPosition() {
   const url = new URL(window.location.href);
-  if (url.searchParams.get("restore") !== "1") return;
+  if (url.searchParams.get("restore") !== "discover") return () => {};
 
   let savedScrollPosition = 0;
   try {
-    savedScrollPosition = Number(sessionStorage.getItem(scrollStorageKey)) || 0;
+    const saved = JSON.parse(sessionStorage.getItem(scrollStorageKey) || "null");
+    if (saved?.pathname === window.location.pathname) {
+      savedScrollPosition = Number(saved.scrollY) || 0;
+    }
   } catch {
     savedScrollPosition = 0;
   }
 
   history.scrollRestoration = "manual";
-  window.addEventListener("load", () => {
+  let restored = false;
+  return () => {
+    if (restored) return;
+    restored = true;
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         window.scrollTo({ top: savedScrollPosition, left: 0, behavior: "instant" });
@@ -69,7 +128,7 @@ function restoreScrollPosition() {
         history.replaceState({}, "", window.location.pathname);
       });
     });
-  });
+  };
 }
 
 function formatType(value) {
@@ -141,42 +200,7 @@ function replaceBrokenImage(link) {
   link.replaceChildren(state);
 }
 
-function updateArchiveAction(button, work, isSaved) {
-  button.classList.toggle("is-saved", isSaved);
-  button.setAttribute("aria-pressed", String(isSaved));
-  button.setAttribute(
-    "aria-label",
-    `${isSaved ? "Remove" : "Save"} ${work.title} ${isSaved ? "from" : "to"} Archive`
-  );
-}
-
-function createArchiveAction(work, archiveState, announce) {
-  const button = document.createElement("button");
-  button.className = "text-action discover-archive-action";
-  button.type = "button";
-  button.textContent = "+";
-  updateArchiveAction(button, work, archiveState.isSaved(work.id));
-
-  button.addEventListener("click", async () => {
-    if (button.disabled) return;
-    button.disabled = true;
-    button.setAttribute("aria-busy", "true");
-
-    try {
-      const isSaved = await archiveState.toggle(work.id);
-      updateArchiveAction(button, work, isSaved);
-    } catch {
-      announce("ARCHIVE IS CURRENTLY UNAVAILABLE");
-    } finally {
-      button.disabled = false;
-      button.removeAttribute("aria-busy");
-    }
-  });
-
-  return button;
-}
-
-function createDiscoverWork(work, archiveState = null, announceArchiveStatus = () => {}) {
+function createDiscoverWork(work, archiveState = null, createArchiveAction = null, announceArchiveStatus = () => {}) {
   const article = document.createElement("article");
   const metadata = document.createElement("div");
   const artist = document.createElement("a");
@@ -223,7 +247,9 @@ function createDiscoverWork(work, archiveState = null, announceArchiveStatus = (
     details.append(line);
   });
   if (details.childElementCount) metadata.append(details);
-  if (archiveState) metadata.append(createArchiveAction(work, archiveState, announceArchiveStatus));
+  if (archiveState && createArchiveAction) {
+    metadata.append(createArchiveAction(work, archiveState, announceArchiveStatus, "discover-archive-action"));
+  }
 
   imageLink.className = "discover-image-link";
   imageLink.href = work.artworkHref;
@@ -232,37 +258,10 @@ function createDiscoverWork(work, archiveState = null, announceArchiveStatus = (
   image.alt = `${work.title} by ${work.artistName}`;
   image.addEventListener("error", () => replaceBrokenImage(imageLink), { once: true });
   imageLink.append(image);
+  registerContainedImageHitArea(imageLink, image, work.image);
 
   article.append(metadata, imageLink);
   return article;
-}
-
-async function loadDiscoverArchiveState() {
-  try {
-    const [
-      { FRONTEND_MODES },
-      { getArchiveRepository },
-      { readApplicationSession },
-      { createDiscoverArchiveState }
-    ] = await Promise.all([
-      import("./auth/config.mjs"),
-      import("./data/archive-repository.mjs"),
-      import("./auth/session.mjs"),
-      import("./data/discover-archive-state.mjs")
-    ]);
-    const { runtime, repository } = await getArchiveRepository();
-    if (runtime.mode !== FRONTEND_MODES.SUPABASE || !repository) return null;
-
-    const applicationSession = await readApplicationSession(runtime.client);
-    if (applicationSession.kind !== "active") return null;
-
-    return createDiscoverArchiveState(
-      repository,
-      await repository.listArchivedWorkIds()
-    );
-  } catch {
-    return null;
-  }
 }
 
 function createLoadMoreButton(onLoadMore) {
@@ -358,13 +357,15 @@ async function initialiseLocalDiscover() {
     { createDiscoverBatchState },
     { createDiscoverFilterState, createDiscoverRequestGate },
     { createDiscoverChannelState },
-    { FORMAT_DISCIPLINES }
+    { FORMAT_DISCIPLINES },
+    { createArchiveWorkAction, loadArchiveWorkState }
   ] = await Promise.all([
     import("./data/discover-repository.mjs"),
     import("./data/discover-ordering.mjs"),
     import("./data/discover-filter-state.mjs"),
     import("./data/discover-channel-state.mjs"),
-    import("./data/work-format-disciplines.mjs")
+    import("./data/work-format-disciplines.mjs"),
+    import("./data/archive-work-action.mjs")
   ]);
   const { runtime, repository } = await getDiscoverRepository();
 
@@ -372,7 +373,7 @@ async function initialiseLocalDiscover() {
 
   const filterState = createDiscoverFilterState();
   const channelState = createDiscoverChannelState();
-  const archiveStatePromise = loadDiscoverArchiveState();
+  const archiveStatePromise = loadArchiveWorkState();
   let archiveState = null;
   let archiveStatus = null;
   let loadMoreRegion = null;
@@ -422,7 +423,7 @@ async function initialiseLocalDiscover() {
       const appendBatch = () => {
         const batch = batches.next();
         stream.append(...batch.appended.map((work) => (
-          createDiscoverWork(work, archiveState, announceArchiveStatus)
+          createDiscoverWork(work, archiveState, createArchiveWorkAction, announceArchiveStatus)
         )));
         if (!batch.hasMore) removeLoadMore();
       };
@@ -431,6 +432,7 @@ async function initialiseLocalDiscover() {
       loadMoreRegion = createLoadMoreButton(appendBatch);
       stream.after(loadMoreRegion);
       appendBatch();
+      restoreFeedPosition();
     } catch {
       if (!requestGate.isCurrent(version)) return;
       stream.setAttribute("aria-busy", "false");
@@ -439,6 +441,7 @@ async function initialiseLocalDiscover() {
   }
 
   function setChannelControls(channel) {
+    page.dataset.discoverChannel = channel;
     channelButtons.forEach((button) => {
       const active = button.dataset.discoverChannel === channel;
       button.classList.toggle("is-active", active);
@@ -497,7 +500,7 @@ document.addEventListener("click", (event) => {
   if (event.target.closest(".discover-image-link")) rememberScrollPosition();
 });
 
-restoreScrollPosition();
+const restoreFeedPosition = restoreScrollPosition();
 initialiseLocalDiscover().catch(() => {
   stream.setAttribute("aria-live", "polite");
   stream.setAttribute("aria-busy", "false");
