@@ -1,3 +1,5 @@
+import { materialSearchTerms } from "./material-terms.mjs";
+
 export const PUBLIC_PROFILE_COLUMNS = Object.freeze([
   "id",
   "profile_type",
@@ -220,6 +222,10 @@ function mapWork(row, cover, profile, publicUrl) {
   const profileHref = createPublicProfileLink(profile.slug);
   if (!image || !artworkHref || !profileHref) return null;
 
+  const additionalMaterials = Array.isArray(row.additional_materials)
+    ? row.additional_materials.map(cleanText).filter(Boolean)
+    : [];
+
   return Object.freeze({
     id: row.id,
     title: cleanText(row.title),
@@ -228,9 +234,12 @@ function mapWork(row, cover, profile, publicUrl) {
     format: cleanText(row.format_discipline),
     primaryMedium: cleanText(row.primary_medium),
     supportBase: cleanText(row.support_base),
-    additionalMaterials: Array.isArray(row.additional_materials)
-      ? row.additional_materials.map(cleanText).filter(Boolean)
-      : [],
+    additionalMaterials,
+    materialTerms: materialSearchTerms([
+      row.primary_medium,
+      row.support_base,
+      additionalMaterials
+    ]),
     height: row.height == null ? null : Number(row.height),
     width: row.width == null ? null : Number(row.width),
     depth: row.depth == null ? null : Number(row.depth),

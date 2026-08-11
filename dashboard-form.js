@@ -1,10 +1,7 @@
 import { FORMAT_DISCIPLINES } from "./data/work-format-disciplines.mjs";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const {
-    getWorkRepository,
-    getPrototypeWorkCount
-  } = await import("./data/work-repository.mjs");
+  const { getWorkRepository } = await import("./data/work-repository.mjs");
   const { renderDashboardAccountIdentity } =
     await import("./data/dashboard-context.mjs");
   const {
@@ -13,6 +10,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     isValidWorkId
   } = await import("./data/work-mapping.mjs");
   const { validateImageFile } = await import("./data/work-media-service.mjs");
+  const { normalizeHttpUrl } = await import("./data/url-normalization.mjs");
+  const {
+    appendMaterialSuggestion,
+    materialDisplayValues,
+    materialSearchTerms
+  } = await import("./data/material-terms.mjs");
   const materialOptions = {
     primary: [
       "OIL PAINT",
@@ -159,7 +162,6 @@ Object.values(materialOptions).forEach((options) => {
   const imagePreviews = document.querySelector(".work-image-previews");
   const profileField = document.querySelector("#work-owner-field");
   const profileSelect = document.querySelector("#work-owner-profile");
-  const prototypeNotice = document.querySelector("#work-prototype-notice");
   const unpublishButton = document.querySelector("#work-unpublish");
   const deleteWorkButton = document.querySelector("#work-delete");
   const publicWorkLink = document.querySelector("#work-public-link");
@@ -601,24 +603,6 @@ Object.values(materialOptions).forEach((options) => {
   }
 
 
-  function isValidOptionalUrl(value) {
-    if (!value) {
-      return true;
-    }
-
-    try {
-      const url = new URL(value);
-
-      return (
-        (url.protocol === "http:" || url.protocol === "https:") &&
-        Boolean(url.hostname)
-      );
-    } catch (error) {
-      return false;
-    }
-  }
-
-
   function clearValidationState() {
     setValidation(basicValidation);
     setValidation(contextValidation);
@@ -632,25 +616,31 @@ Object.values(materialOptions).forEach((options) => {
 
   function validateLinkedUrls(record) {
     const invalidControls = [];
+    const fields = [
+      ["collaboratorUrl", "collaborator-url", "COLLABORATOR LINK"],
+      ["photoCreditUrl", "photo-credit-url", "PHOTO CREDIT LINK"]
+    ];
 
-    if (!isValidOptionalUrl(record.collaboratorUrl)) {
-      invalidControls.push(form.elements.namedItem("collaborator-url"));
-    }
+    fields.forEach(([property, name, label]) => {
+      try {
+        const normalized = normalizeHttpUrl(record[property]);
+        record[property] = normalized;
+        setFormValue(name, normalized);
+      } catch {
+        invalidControls.push([form.elements.namedItem(name), label]);
+      }
+    });
 
-    if (!isValidOptionalUrl(record.photoCreditUrl)) {
-      invalidControls.push(form.elements.namedItem("photo-credit-url"));
-    }
-
-    invalidControls.forEach((control) => {
+    invalidControls.forEach(([control]) => {
       control?.setAttribute("aria-invalid", "true");
     });
 
     if (invalidControls.length > 0) {
       setValidation(
         contextValidation,
-        "OPTIONAL LINKS MUST USE A COMPLETE HTTP:// OR HTTPS:// URL."
+        `${invalidControls[0][1]} MUST BE A VALID HTTP OR HTTPS URL.`
       );
-      invalidControls[0]?.focus();
+      invalidControls[0][0]?.focus();
       return false;
     }
 
@@ -944,11 +934,6 @@ Object.values(materialOptions).forEach((options) => {
           form.querySelectorAll("input, select, textarea, button").forEach((control) => { control.disabled = true; });
           return;
         }
-        const prototypeCount = await getPrototypeWorkCount().catch(() => 0);
-        if (prototypeCount) {
-          prototypeNotice.textContent = `LOCAL PROTOTYPE WORKS HAVE NOT BEEN IMPORTED. (${prototypeCount})`;
-          prototypeNotice.hidden = false;
-        }
         const profiles = await workStore.listManagedProfiles();
         populateOwnerProfiles(profiles);
         renderDashboardAccountIdentity(profiles);
@@ -1057,6 +1042,8 @@ Object.values(materialOptions).forEach((options) => {
 
     button.type = "button";
     button.dataset.materialOption = "";
+    button.setAttribute("role", "option");
+    button.setAttribute("aria-selected", "false");
     button.textContent = value;
 
     return button;
@@ -1074,9 +1061,26 @@ Object.values(materialOptions).forEach((options) => {
     const options =
       materialOptions[category] || [];
 
-    menu.replaceChildren(
-      ...options.map(createOption)
-    );
+    const close = document.createElement("button");
+    const optionList = document.createElement("div");
+
+    close.type = "button";
+    close.className = "material-combobox-close";
+    close.dataset.materialMenuClose = "";
+    close.textContent = "×";
+    close.setAttribute("aria-label", "Close material suggestions");
+
+    optionList.className = "material-combobox-options";
+    optionList.setAttribute("role", "listbox");
+    optionList.setAttribute("aria-label", "Material suggestions");
+    optionList.replaceChildren(...options.map(createOption));
+
+    menu.removeAttribute("role");
+    menu.replaceChildren(close, optionList);
+
+    window.ChainedScrollIndicators?.attachScrollIndicator(optionList, {
+      host: menu
+    });
   }
 
 
@@ -1146,6 +1150,21 @@ Object.values(materialOptions).forEach((options) => {
       option.hidden =
         !optionText.includes(searchTerm);
     });
+
+    syncMaterialOptionStates(combobox);
+  }
+
+
+  function syncMaterialOptionStates(combobox) {
+    const input = combobox.querySelector("input");
+    const selectedTerms = new Set(materialSearchTerms(input?.value));
+
+    combobox.querySelectorAll("[data-material-option]").forEach((option) => {
+      const selected = selectedTerms.has(
+        option.textContent.trim().toLocaleLowerCase()
+      );
+      option.setAttribute("aria-selected", String(selected));
+    });
   }
 
 
@@ -1190,17 +1209,9 @@ Object.values(materialOptions).forEach((options) => {
       );
 
 
-    const primary =
-      primaryInput?.value.trim().toUpperCase() || "";
-
-    const support =
-      supportInput?.value.trim().toUpperCase() || "";
-
-    const additional =
-      additionalInput?.value
-        .split(",")
-        .map((value) => value.trim().toUpperCase())
-        .filter(Boolean) || [];
+    const primary = primaryInput?.value.trim() || "";
+    const support = supportInput?.value.trim() || "";
+    const additional = materialDisplayValues(additionalInput?.value);
 
 
     const materials = [
@@ -1269,6 +1280,12 @@ Object.values(materialOptions).forEach((options) => {
 
 
     combobox.addEventListener("click", (event) => {
+      if (event.target.closest("[data-material-menu-close]")) {
+        closeCombobox(combobox);
+        input.focus();
+        return;
+      }
+
       const option = event.target.closest(
         "[data-material-option]"
       );
@@ -1277,10 +1294,12 @@ Object.values(materialOptions).forEach((options) => {
         return;
       }
 
-      input.value =
-        option.textContent.trim();
+      input.value = combobox.dataset.materialCategory === "additional"
+        ? appendMaterialSuggestion(input.value, option.textContent)
+        : option.textContent.trim();
 
       closeCombobox(combobox);
+      syncMaterialOptionStates(combobox);
       updateMaterialPreview();
       input.focus();
     });

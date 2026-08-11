@@ -1,4 +1,6 @@
 import { WorkError, WORK_ERROR_CODES } from "./work-errors.mjs";
+import { materialSearchTerms } from "./material-terms.mjs";
+import { normalizeHttpUrl } from "./url-normalization.mjs";
 
 export const WORK_COLUMNS = Object.freeze([
   "id", "owner_profile_id", "title", "year_sort", "year_label", "work_type",
@@ -31,14 +33,11 @@ function nullableText(value) {
 }
 
 function optionalUrl(value, label) {
-  const normalized = text(value);
-  if (!normalized) return null;
-  let url;
-  try { url = new URL(normalized); } catch { url = null; }
-  if (!url || !["http:", "https:"].includes(url.protocol) || !url.hostname || url.username || url.password) {
-    throw new WorkError(WORK_ERROR_CODES.INVALID, `${label} MUST USE A COMPLETE HTTP OR HTTPS URL`);
+  try {
+    return normalizeHttpUrl(value, null);
+  } catch {
+    throw new WorkError(WORK_ERROR_CODES.INVALID, `${label} MUST USE A VALID HTTP OR HTTPS URL`);
   }
-  return url.href;
 }
 
 function dimension(value, label) {
@@ -124,6 +123,11 @@ export function databaseToWork(row, images = []) {
     primaryMedium: row.primary_medium || "",
     supportBase: row.support_base || "",
     additionalMaterials: Array.isArray(row.additional_materials) ? row.additional_materials.join(", ") : "",
+    materialTerms: materialSearchTerms([
+      row.primary_medium,
+      row.support_base,
+      row.additional_materials
+    ]),
     height: row.height == null ? "" : String(row.height),
     width: row.width == null ? "" : String(row.width),
     depth: row.depth == null ? "" : String(row.depth),

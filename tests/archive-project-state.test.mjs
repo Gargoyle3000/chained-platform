@@ -10,7 +10,7 @@ import {
 const works = [
   { id: "work-a", title: "ALPHA", artistName: "ARTIST", yearLabel: "2026", workType: "single-work" },
   { id: "work-b", title: "BETA", artistName: "ARTIST", yearLabel: "2025", workType: "single-work" },
-  { id: "work-c", title: "GAMMA", artistName: "OTHER", yearLabel: "2024", workType: "single-work" }
+  { id: "work-c", title: "GAMMA", artistName: "OTHER", yearLabel: "2024", workType: "single-work", materialTerms: ["rubber", "aluminium"] }
 ];
 
 const items = [
@@ -31,6 +31,17 @@ test("Archive search and tags only narrow the active Project sequence", () => {
   assert.deepEqual(filterArchiveProjectWorks(projectWorks, "", new Set(["tag-a"]), (id) => tags.get(id) || new Set()).map((work) => work.id), ["work-a", "work-b"]);
   assert.deepEqual(filterArchiveProjectWorks(projectWorks, "beta", new Set(["tag-a"]), (id) => tags.get(id) || new Set()).map((work) => work.id), ["work-b"]);
   assert.equal(items[0].position, 1);
+});
+
+test("Archive text search matches normalized Work material terms", () => {
+  assert.deepEqual(
+    filterArchiveProjectWorks(works, "rubber", new Set(), () => new Set()).map((work) => work.id),
+    ["work-c"]
+  );
+  assert.deepEqual(
+    filterArchiveProjectWorks(works, "bronze", new Set(), () => new Set()).map((work) => work.id),
+    []
+  );
 });
 
 test("Archive Project URL state accepts only a current owned Project", () => {

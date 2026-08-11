@@ -589,8 +589,11 @@
   left: 0;
   right: 0;
 
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+
   max-height: 260px;
-  overflow-y: auto;
+  overflow: hidden;
 
   border: 1px solid var(--black);
 
@@ -618,11 +621,32 @@
   cursor: pointer;
 }
 
+.material-combobox-menu .material-combobox-close {
+  justify-self: end;
+
+  width: 24px;
+  padding: 6px 8px 2px;
+
+  color: var(--black);
+  font-size: 16px;
+  line-height: 1;
+  text-align: center;
+}
+
+.material-combobox-options {
+  max-height: 224px;
+  overflow-y: auto;
+}
+
 .material-combobox-menu button:hover,
 .material-combobox-menu button:focus-visible {
   background: var(--white);
   color: var(--accent);
   outline: none;
+}
+
+.material-combobox-menu button[aria-selected="true"] {
+  color: var(--accent);
 }
 
 .material-combobox-menu button[hidden] {

@@ -4,6 +4,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { getPressRepository } =
     await import("./data/press-repository.mjs");
 
+  const { normalizeHttpUrl } =
+    await import("./data/url-normalization.mjs");
+
   const { renderDashboardAccountIdentity } =
     await import("./data/dashboard-context.mjs");
 
@@ -41,18 +44,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function clean(value) {
     return String(value || "").trim();
-  }
-
-  function normalizeUrl(value) {
-    const cleaned = clean(value);
-
-    if (!cleaned) return "";
-
-    if (/^https?:\/\//i.test(cleaned)) {
-      return cleaned;
-    }
-
-    return `https://${cleaned}`;
   }
 
   function yearScore(value) {
@@ -118,7 +109,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       title: clean(data.get("title")),
       author: clean(data.get("author")),
       body: clean(data.get("body")),
-      url: normalizeUrl(data.get("url"))
+      url: normalizeHttpUrl(data.get("url"))
     };
   }
 
@@ -132,18 +123,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!record.title) {
       setError("ERROR: PLEASE FILL IN THE TITLE!");
       form.elements.title.focus();
-      return false;
-    }
-
-    if (
-      record.url &&
-      !/^https?:\/\//i.test(record.url)
-    ) {
-      setError(
-        "ERROR: URL NEEDS HTTP:// OR HTTPS://"
-      );
-
-      form.elements.url.focus();
       return false;
     }
 
@@ -306,7 +285,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         <input
           name="url"
           type="url"
-          placeholder="www.example.com">
+          placeholder="www.example.com"
+          autocomplete="url">
       </label>
     `;
 
@@ -366,8 +346,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         event.preventDefault();
         setError();
 
-        const record =
-          readForm(form);
+        let record;
+        try {
+          record = readForm(form);
+        } catch {
+          setError("URL MUST BE A VALID HTTP OR HTTPS URL");
+          form.elements.url.setAttribute("aria-invalid", "true");
+          form.elements.url.focus();
+          return;
+        }
 
         if (!validate(record, form)) {
           return;
@@ -615,8 +602,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      const record =
-        readForm(addForm);
+      let record;
+      try {
+        record = readForm(addForm);
+      } catch {
+        setError("URL MUST BE A VALID HTTP OR HTTPS URL");
+        addForm.elements.url.setAttribute("aria-invalid", "true");
+        addForm.elements.url.focus();
+        return;
+      }
 
       if (!validate(record, addForm)) {
         return;
@@ -651,6 +645,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   );
+
+  document.addEventListener("input", (event) => {
+    if (event.target.matches?.('input[name="url"]')) {
+      event.target.removeAttribute("aria-invalid");
+    }
+  });
 
   profileSelect.addEventListener(
     "change",

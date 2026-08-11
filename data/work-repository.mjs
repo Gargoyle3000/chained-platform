@@ -13,12 +13,3 @@ export async function getWorkRepository() {
   const runtime = await getFrontendRuntime();
   return Object.freeze({ runtime, repository: selectWorkRepository(runtime) });
 }
-
-export async function getPrototypeWorkCount(store = globalThis.ChainedWorkStore) {
-  if (!store) return 0;
-  if (typeof globalThis.indexedDB?.databases !== "function") return 0;
-  const databases = await globalThis.indexedDB.databases();
-  if (!databases.some((database) => database.name === "chained-works")) return 0;
-  await store.initialiseDatabase();
-  return (await store.getAllWorks()).length;
-}

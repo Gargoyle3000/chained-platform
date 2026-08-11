@@ -1,3 +1,5 @@
+import { materialSearchTerms } from "./material-terms.mjs";
+
 const ARCHIVE_PROJECT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function isArchiveProjectId(value) {
@@ -37,7 +39,20 @@ export function orderedProjectWorks(works, projectItems, projectId) {
 export function filterArchiveProjectWorks(works, searchTerm, activeTagIds, tagIdsForWork) {
   const term = String(searchTerm || "").trim().toLocaleLowerCase();
   return works.filter((work) => {
-    const searchText = [work.title, work.yearLabel, work.artistName, work.workType]
+    const materials = Array.isArray(work.materialTerms)
+      ? work.materialTerms
+      : materialSearchTerms([
+        work.primaryMedium,
+        work.supportBase,
+        work.additionalMaterials
+      ]);
+    const searchText = [
+      work.title,
+      work.yearLabel,
+      work.artistName,
+      work.workType,
+      ...materials
+    ]
       .filter(Boolean).join(" ").toLocaleLowerCase();
     return (!term || searchText.includes(term)) &&
       [...activeTagIds].every((tagId) => tagIdsForWork(work.id).has(tagId));

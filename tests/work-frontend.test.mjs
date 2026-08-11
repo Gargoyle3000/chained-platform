@@ -39,6 +39,17 @@ test("form and database mapping normalize every supported field", () => {
   assert.equal(client.additionalMaterials, "Wood, Steel");
   assert.equal(client.year, "2026");
   assert.equal(client.height, "1.5");
+  assert.deepEqual(client.materialTerms, ["oil", "linen", "wood", "steel"]);
+});
+
+test("Work links add HTTPS when artists omit a protocol", () => {
+  const row = formToDatabase({
+    ...baseForm,
+    collaboratorUrl: "www.example.com/collaborator",
+    photoCreditUrl: "example.com/photo"
+  });
+  assert.equal(row.collaborator_url, "https://www.example.com/collaborator");
+  assert.equal(row.photo_credit_url, "https://example.com/photo");
 });
 
 test("year, dimensions, and URLs reject invalid values", () => {
@@ -141,4 +152,3 @@ test("optimistic update maps an empty conditional update to a conflict", async (
   const repository = createSupabaseWorkRepository(client, {});
   await assert.rejects(() => repository.updateWork({ id: ID, ...baseForm }, "old"), (error) => error.code === WORK_ERROR_CODES.CONFLICT);
 });
-

@@ -1,5 +1,6 @@
 import { FRONTEND_MODES } from "../auth/config.mjs";
 import { getFrontendRuntime } from "../auth/supabase-client.mjs";
+import { normalizeHttpUrl } from "./url-normalization.mjs";
 
 const PROFILE_SELECT = [
   "id",
@@ -39,18 +40,6 @@ function clean(value) {
 function nullable(value) {
   const cleaned = clean(value);
   return cleaned || null;
-}
-
-function normalizeUrl(value) {
-  const cleaned = clean(value);
-
-  if (!cleaned) return null;
-
-  if (/^https?:\/\//i.test(cleaned)) {
-    return cleaned;
-  }
-
-  return `https://${cleaned}`;
 }
 
 function databaseToProfile(row) {
@@ -248,10 +237,10 @@ function createSupabaseRepository(client) {
           nullable(record.biography),
 
         website_url:
-          normalizeUrl(record.websiteUrl),
+          normalizeHttpUrl(record.websiteUrl, null),
 
         social_url:
-          normalizeUrl(record.socialUrl),
+          normalizeHttpUrl(record.socialUrl, null),
 
         pronouns:
           nullable(record.pronouns),

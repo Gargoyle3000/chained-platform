@@ -14,6 +14,9 @@ document.addEventListener(
       "./data/dashboard-context.mjs"
     );
 
+    const { normalizeHttpUrl } =
+      await import("./data/url-normalization.mjs");
+
 
     const form =
       document.querySelector(
@@ -83,35 +86,6 @@ document.addEventListener(
 
     function clean(value) {
       return String(value ?? "").trim();
-    }
-
-
-    function normalizeUrl(value) {
-      const cleaned = clean(value);
-
-      if (!cleaned) return "";
-
-      if (/^https?:\/\//i.test(cleaned)) {
-        return cleaned;
-      }
-
-      return `https://${cleaned}`;
-    }
-
-
-    function validHttpUrl(value) {
-      if (!value) return true;
-
-      try {
-        const url = new URL(value);
-
-        return (
-          url.protocol === "http:" ||
-          url.protocol === "https:"
-        );
-      } catch {
-        return false;
-      }
     }
 
 
@@ -330,6 +304,17 @@ document.addEventListener(
 
 
     function readProfile() {
+      const readUrl = (name, label) => {
+        try {
+          return normalizeHttpUrl(form.elements[name].value);
+        } catch {
+          const field = form.elements[name];
+          field.setAttribute("aria-invalid", "true");
+          field.focus();
+          throw new Error(`${label} MUST BE A VALID HTTP OR HTTPS URL`);
+        }
+      };
+
       return {
         id: selectedProfile.id,
 
@@ -361,18 +346,10 @@ document.addEventListener(
           ),
 
         websiteUrl:
-          normalizeUrl(
-            form.elements[
-              "website-url"
-            ].value
-          ),
+          readUrl("website-url", "WEBSITE URL"),
 
         socialUrl:
-          normalizeUrl(
-            form.elements[
-              "social-url"
-            ].value
-          ),
+          readUrl("social-url", "SOCIAL LINK"),
 
         pronouns:
           clean(
@@ -418,36 +395,6 @@ document.addEventListener(
 
         form.elements[
           "display-name"
-        ].focus();
-
-        return false;
-      }
-
-      if (
-        record.websiteUrl &&
-        !validHttpUrl(record.websiteUrl)
-      ) {
-        setError(
-          "ERROR: THAT WEBSITE URL LOOKS A LITTLE TOO UNCHAINED!"
-        );
-
-        form.elements[
-          "website-url"
-        ].focus();
-
-        return false;
-      }
-
-      if (
-        record.socialUrl &&
-        !validHttpUrl(record.socialUrl)
-      ) {
-        setError(
-          "ERROR: THAT SOCIAL LINK DOES NOT LOOK RIGHT!"
-        );
-
-        form.elements[
-          "social-url"
         ].focus();
 
         return false;
@@ -525,8 +472,13 @@ document.addEventListener(
         setError();
         setStatus();
 
-        const record =
-          readProfile();
+        let record;
+        try {
+          record = readProfile();
+        } catch (error) {
+          setError(error.message);
+          return;
+        }
 
         if (!validate(record)) {
           return;
@@ -582,6 +534,10 @@ document.addEventListener(
         }
       }
     );
+
+    form.addEventListener("input", (event) => {
+      event.target.removeAttribute?.("aria-invalid");
+    });
 
 
     bindControls();

@@ -1,5 +1,6 @@
 import { FRONTEND_MODES } from "../auth/config.mjs";
 import { getFrontendRuntime } from "../auth/supabase-client.mjs";
+import { normalizeHttpUrl } from "./url-normalization.mjs";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -78,7 +79,7 @@ function presentationToDatabase(record) {
     start_date: cleanText(record.startDate),
     end_date: cleanText(record.endDate),
     description: cleanText(record.description),
-    external_url: cleanText(record.externalUrl),
+    external_url: normalizeHttpUrl(record.externalUrl, null),
     show_in_presentations: record.showInPresentations !== false,
     include_in_cv: record.includeInCv === true
   };

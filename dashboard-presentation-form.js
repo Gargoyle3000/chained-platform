@@ -4,6 +4,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { getPresentationRepository } =
     await import("./data/presentation-repository.mjs");
 
+  const { normalizeHttpUrl } =
+    await import("./data/url-normalization.mjs");
+
   const { renderDashboardAccountIdentity } =
     await import("./data/dashboard-context.mjs");
 
@@ -57,24 +60,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function normaliseUrl(value) {
-    const cleaned = String(value || "").trim();
-
-    if (!cleaned) return "";
-
     try {
-      const url = new URL(cleaned);
-
-      if (!["http:", "https:"].includes(url.protocol)) {
-        throw new Error();
-      }
-
-      return url.href;
+      return normalizeHttpUrl(value);
     } catch {
-      throw new Error("EXTERNAL URL MUST START WITH HTTP:// OR HTTPS://");
+      throw new Error("EXTERNAL URL MUST BE A VALID HTTP OR HTTPS URL");
     }
   }
 
   function readRecord() {
+    let externalUrl;
+    try {
+      externalUrl = normaliseUrl(field("external-url").value);
+    } catch (error) {
+      field("external-url").setAttribute("aria-invalid", "true");
+      throw error;
+    }
+
     return {
       id: currentPresentationId,
       title: field("title").value,
@@ -85,7 +86,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       startDate: field("start-date").value,
       endDate: field("end-date").value,
       description: field("description").value,
-      externalUrl: normaliseUrl(field("external-url").value),
+      externalUrl,
       showInPresentations:
         field("show-in-presentations").checked,
       includeInCv:
@@ -411,6 +412,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     } finally {
       saveButton.disabled = false;
     }
+  });
+
+  form.addEventListener("input", (event) => {
+    event.target.removeAttribute?.("aria-invalid");
   });
 
   try {

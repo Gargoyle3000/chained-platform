@@ -1,13 +1,12 @@
 document.addEventListener("DOMContentLoaded", async () => {
   "use strict";
 
-  const { getWorkRepository, getPrototypeWorkCount } = await import("./data/work-repository.mjs");
+  const { getWorkRepository } = await import("./data/work-repository.mjs");
   const { renderDashboardAccountIdentity } = await import("./data/dashboard-context.mjs");
   const workList = document.querySelector("#dashboard-work-list");
   const totalElement = document.querySelector("#dashboard-works-total");
   const breakdownElement = document.querySelector("#dashboard-works-breakdown");
   const errorElement = document.querySelector("#dashboard-works-error");
-  const noticeElement = document.querySelector("#dashboard-prototype-notice");
   const addWorkLink = document.querySelector(".dashboard-add-work");
   let repository;
   const activeUrls = new Set();
@@ -162,8 +161,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     repository = selected.repository;
     await repository.initialise();
     if (repository.mode === "supabase") {
-      const count = await getPrototypeWorkCount().catch(() => 0);
-      if (count) { noticeElement.textContent = `LOCAL PROTOTYPE WORKS HAVE NOT BEEN IMPORTED. (${count})`; noticeElement.hidden = false; }
       const profiles = await repository.listManagedProfiles();
       renderDashboardAccountIdentity(profiles);
 

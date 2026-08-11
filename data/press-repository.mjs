@@ -1,5 +1,6 @@
 import { FRONTEND_MODES } from "../auth/config.mjs";
 import { getFrontendRuntime } from "../auth/supabase-client.mjs";
+import { normalizeHttpUrl } from "./url-normalization.mjs";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -42,18 +43,6 @@ function cleanText(value) {
   return cleaned || null;
 }
 
-function normalizeUrl(value) {
-  const cleaned = String(value ?? "").trim();
-
-  if (!cleaned) return "";
-
-  if (/^https?:\/\//i.test(cleaned)) {
-    return cleaned;
-  }
-
-  return `https://${cleaned}`;
-}
-
 function databaseToProfile(row) {
   return Object.freeze({
     id: row.id,
@@ -84,7 +73,7 @@ function pressItemToDatabase(record) {
     title: String(record.title ?? "").trim(),
     author: cleanText(record.author),
     body: cleanText(record.body),
-    url: cleanText(normalizeUrl(record.url)),
+    url: normalizeHttpUrl(record.url, null),
     is_visible: record.isVisible !== false
   };
 }
@@ -92,8 +81,6 @@ function pressItemToDatabase(record) {
 function validateRecord(record) {
   const year = String(record.yearLabel ?? "").trim();
   const title = String(record.title ?? "").trim();
-  const url = normalizeUrl(record.url);
-
   if (!year) {
     throw new Error("YEAR IS REQUIRED");
   }
@@ -102,14 +89,7 @@ function validateRecord(record) {
     throw new Error("TITLE IS REQUIRED");
   }
 
-  if (
-    url &&
-    !/^https?:\/\//i.test(url)
-  ) {
-    throw new Error(
-      "URL MUST START WITH HTTP:// OR HTTPS://"
-    );
-  }
+  normalizeHttpUrl(record.url);
 }
 
 async function ensureUpdatedRow({

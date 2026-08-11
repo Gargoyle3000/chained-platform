@@ -6,6 +6,7 @@ import {
   orderedProjectWorks,
   resolveArchiveProjectId
 } from "./data/archive-project-state.mjs";
+import { calculateAnchoredPopoverPosition } from "./data/anchored-popover.mjs";
 
 const page = document.querySelector(".archive-page");
 const grid = document.querySelector(".saved-grid");
@@ -38,6 +39,7 @@ let projectIdsByWork = new Map();
 let selectedProjectId = new URL(window.location.href).searchParams.get("project") || null;
 let openProjectMenu = null;
 let openWorkManagementMenu = null;
+let openArchivePopover = null;
 
 function setResultCount(count) {
   resultCount.textContent = `${count} ${count === 1 ? "WORK" : "WORKS"}`;
@@ -78,16 +80,53 @@ function rebuildProjectIndexes() {
 function closeProjectMenu(returnFocus = false) {
   if (!openProjectMenu) return;
   const { menu, toggle } = openProjectMenu;
-  menu.hidden = true;
-  toggle.setAttribute("aria-expanded", "false");
+  closeArchivePopover(menu, toggle);
   openProjectMenu = null;
   if (returnFocus) toggle.focus();
+}
+
+function closeArchivePopover(menu, toggle) {
+  if (openArchivePopover?.menu === menu) {
+    window.removeEventListener("scroll", openArchivePopover.reposition, true);
+    window.removeEventListener("resize", openArchivePopover.reposition);
+    openArchivePopover = null;
+  }
+  menu.hidden = true;
+  menu.classList.remove("is-anchored");
+  menu.style.removeProperty("left");
+  menu.style.removeProperty("top");
+  toggle.setAttribute("aria-expanded", "false");
+}
+
+function openArchivePopoverFor(toggle, menu) {
+  if (openArchivePopover) {
+    closeArchivePopover(openArchivePopover.menu, openArchivePopover.toggle);
+  }
+  menu.classList.add("is-anchored");
+  menu.hidden = false;
+  const reposition = () => {
+    const placement = calculateAnchoredPopoverPosition({
+      trigger: toggle.getBoundingClientRect(),
+      popover: menu.getBoundingClientRect(),
+      viewport: { width: window.innerWidth, height: window.innerHeight }
+    });
+    menu.style.left = `${placement.left}px`;
+    menu.style.top = `${placement.top}px`;
+  };
+  reposition();
+  window.addEventListener("scroll", reposition, true);
+  window.addEventListener("resize", reposition);
+  toggle.setAttribute("aria-expanded", "true");
+  openArchivePopover = { menu, toggle, reposition };
 }
 
 function closeWorkManagementMenu(returnFocus = false) {
   if (!openWorkManagementMenu) return;
   const { menu, toggle } = openWorkManagementMenu;
   if (openProjectMenu && menu.contains(openProjectMenu.menu)) closeProjectMenu();
+  if (openArchivePopover && menu.contains(openArchivePopover.menu)) {
+    closeArchivePopover(openArchivePopover.menu, openArchivePopover.toggle);
+  }
   menu.querySelectorAll(".archive-tag-menu").forEach((tagMenu) => {
     tagMenu.hidden = true;
     const tagToggle = tagMenu.previousElementSibling;
@@ -142,8 +181,7 @@ function createTagMenuClose(menu, toggle) {
   close.textContent = "×";
   close.setAttribute("aria-label", "Close tag menu");
   close.addEventListener("click", () => {
-    menu.hidden = true;
-    toggle.setAttribute("aria-expanded", "false");
+    closeArchivePopover(menu, toggle);
     toggle.focus();
   });
   return close;
@@ -218,8 +256,12 @@ function createAssignedTags(work) {
     window.ChainedScrollIndicators?.attachScrollIndicator(options, { host: menu });
     toggle.addEventListener("click", () => {
       const isOpen = menu.hidden;
-      menu.hidden = !isOpen;
-      toggle.setAttribute("aria-expanded", String(isOpen));
+      if (!isOpen) {
+        closeArchivePopover(menu, toggle);
+        return;
+      }
+      closeProjectMenu();
+      openArchivePopoverFor(toggle, menu);
     });
     control.append(toggle, menu);
     container.append(control);
@@ -264,8 +306,12 @@ function createTagAssignment(work) {
   window.ChainedScrollIndicators?.attachScrollIndicator(options, { host: menu });
   toggle.addEventListener("click", () => {
     const isOpen = menu.hidden;
-    menu.hidden = !isOpen;
-    toggle.setAttribute("aria-expanded", String(isOpen));
+    if (!isOpen) {
+      closeArchivePopover(menu, toggle);
+      return;
+    }
+    closeProjectMenu();
+    openArchivePopoverFor(toggle, menu);
   });
   container.append(toggle, menu);
   return container;
@@ -335,8 +381,7 @@ function createProjectAssignment(work) {
     const isOpen = menu.hidden;
     closeProjectMenu();
     if (!isOpen) return;
-    menu.hidden = false;
-    toggle.setAttribute("aria-expanded", "true");
+    openArchivePopoverFor(toggle, menu);
     openProjectMenu = { container, menu, toggle };
   });
   menu.append(close, options);
@@ -397,6 +442,7 @@ function selectedProjectWorks() {
 }
 
 function renderWorks() {
+  if (openArchivePopover) closeArchivePopover(openArchivePopover.menu, openArchivePopover.toggle);
   closeWorkManagementMenu();
   closeProjectMenu();
   const searchTerm = searchInput.value.trim().toLocaleLowerCase();
@@ -521,6 +567,7 @@ function initialiseView() {
   try { view = localStorage.getItem(viewStorageKey) || view; } catch {}
   const setView = (selected) => {
     if (!viewButtons.some((button) => button.dataset.archiveView === selected)) return;
+    if (openArchivePopover) closeArchivePopover(openArchivePopover.menu, openArchivePopover.toggle);
     closeWorkManagementMenu();
     page.dataset.view = selected;
     viewButtons.forEach((button) => {
@@ -565,10 +612,20 @@ async function initialiseArchive() {
   });
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
+    if (openArchivePopover) {
+      event.preventDefault();
+      const { menu, toggle } = openArchivePopover;
+      closeArchivePopover(menu, toggle);
+      toggle.focus();
+      return;
+    }
     if (openWorkManagementMenu) { event.preventDefault(); closeWorkManagementMenu(true); return; }
     if (openProjectMenu) { event.preventDefault(); closeProjectMenu(true); }
   });
   document.addEventListener("click", (event) => {
+    if (openArchivePopover && !openArchivePopover.menu.contains(event.target) && !openArchivePopover.toggle.contains(event.target)) {
+      closeArchivePopover(openArchivePopover.menu, openArchivePopover.toggle);
+    }
     if (openWorkManagementMenu && !openWorkManagementMenu.menu.contains(event.target) && !openWorkManagementMenu.toggle.contains(event.target)) {
       closeWorkManagementMenu();
     }

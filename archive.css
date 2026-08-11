@@ -570,6 +570,12 @@
   display: none;
 }
 
+.archive-tag-menu.is-anchored,
+.archive-project-menu.is-anchored {
+  position: fixed;
+  z-index: 40;
+}
+
 .archive-project-options {
   display: flex;
   flex-direction: column;
