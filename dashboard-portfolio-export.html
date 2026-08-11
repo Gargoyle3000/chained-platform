@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Visual Portfolio — CHAINED Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="scroll-indicators.js" defer></script>
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="dashboard-portfolio-export.css">
+  <link rel="stylesheet" href="auth/auth.css">
+  <script type="module" src="auth/guard.mjs"></script>
+</head>
+<body class="dashboard-page dashboard-portfolio-export-page" data-auth-protected="true">
+  <header class="site-header">
+    <a class="wordmark" href="discover.html">&lt;CHAINED&gt;</a>
+    <nav class="main-nav main-nav-with-dashboard" aria-label="Primary navigation">
+      <a href="discover.html">DISCOVER</a>
+      <a href="following.html">FOLLOWING</a>
+      <a href="archive.html">ARCHIVE</a>
+      <a href="agenda.html">AGENDA</a>
+      <span class="profile-nav-group">
+        <a data-own-profile-link href="profile.html">PROFILE</a>
+        <a class="dashboard-link is-active" href="dashboard.html" aria-label="Open dashboard">+</a>
+      </span>
+    </nav>
+  </header>
+
+  <main class="dashboard-layout">
+    <aside class="dashboard-sidebar">
+      <div class="dashboard-sidebar-inner">
+        <header class="dashboard-intro">
+          <h1>DASHBOARD</h1>
+          <p class="dashboard-account-identity" data-dashboard-account-identity>
+            <span data-dashboard-profile-name>PROFILE LOADING</span><br>
+            <span data-dashboard-account-type>ARTIST ACCOUNT</span>
+          </p>
+        </header>
+        <nav class="dashboard-navigation" aria-label="Dashboard navigation">
+          <a href="dashboard.html">OVERVIEW</a>
+          <a class="is-active" href="dashboard-works.html">WORKS</a>
+          <a href="dashboard-presentations.html">PRESENTATIONS</a>
+          <a href="dashboard-agenda.html">AGENDA</a>
+          <a href="dashboard-cv.html">CV</a>
+          <a href="dashboard-press.html">PRESS</a>
+          <a href="dashboard-settings.html">SETTINGS</a>
+        </nav>
+        <a class="dashboard-public-link" data-own-profile-link href="profile.html">VIEW PUBLIC PROFILE ↗</a>
+      </div>
+    </aside>
+
+    <section class="dashboard-content portfolio-export-content">
+      <header class="dashboard-content-header">
+        <div>
+          <p>WORKS</p>
+          <h2>VISUAL PORTFOLIO</h2>
+        </div>
+        <a class="text-action" href="dashboard-works.html">[ ← BACK TO WORKS ]</a>
+      </header>
+
+      <p class="dashboard-inline-error" id="portfolio-export-error" role="alert" hidden></p>
+      <p class="portfolio-export-status" id="portfolio-export-status" aria-live="polite"></p>
+
+      <section class="dashboard-section portfolio-export-section">
+        <header class="dashboard-section-header">
+          <div>
+            <p class="dashboard-label">SELECT WORKS</p>
+            <h2>INCLUDE WORKS</h2>
+          </div>
+          <span id="portfolio-selection-count">0 SELECTED</span>
+        </header>
+        <div class="portfolio-work-selection" id="portfolio-work-selection"></div>
+      </section>
+
+      <section class="dashboard-section portfolio-export-section">
+        <header class="dashboard-section-header">
+          <div>
+            <p class="dashboard-label">ORDER SELECTED WORKS</p>
+            <h2>PORTFOLIO ORDER</h2>
+          </div>
+        </header>
+        <div class="portfolio-selected-works" id="portfolio-selected-works"></div>
+      </section>
+
+      <section class="dashboard-section portfolio-export-section">
+        <header class="dashboard-section-header">
+          <div>
+            <p class="dashboard-label">OPTIONAL TITLE PAGE</p>
+            <h2>OPENING PAGE</h2>
+          </div>
+        </header>
+        <label class="portfolio-title-toggle">
+          <input id="portfolio-title-page" type="checkbox">
+          <span>INCLUDE TITLE PAGE</span>
+        </label>
+        <p class="portfolio-artist-name" id="portfolio-artist-name">SELECT WORKS TO SET ARTIST NAME</p>
+        <label class="portfolio-title-label" for="portfolio-document-title" hidden>
+          DOCUMENT TITLE
+          <input id="portfolio-document-title" type="text" maxlength="180" autocomplete="off" disabled>
+        </label>
+      </section>
+
+      <section class="dashboard-section portfolio-export-submit">
+        <button class="text-action" id="portfolio-generate" type="button">[ GENERATE PDF ]</button>
+        <p>MAIL / SUBMISSION FRIENDLY PDF · MAXIMUM 20 MB</p>
+      </section>
+    </section>
+  </main>
+
+  <script src="assets/vendor/pdf-lib.min.js"></script>
+  <script src="assets/vendor/fontkit.umd.min.js"></script>
+  <script src="work-store.js"></script>
+  <script src="dashboard-portfolio-export.js"></script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+.portfolio-export-status {
+  min-height: 1.35em;
+  margin: 0 0 28px;
+  color: var(--accent);
+  font-size: var(--font-meta);
+}
+
+.portfolio-export-section {
+  max-width: 860px;
+}
+
+.portfolio-work-selection,
+.portfolio-selected-works {
+  border-top: 1px solid var(--black);
+}
+
+.portfolio-work-option,
+.portfolio-selected-work {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  align-items: start;
+  gap: 18px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--black);
+  font-size: var(--font-meta);
+}
+
+.portfolio-work-option input {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--green);
+}
+
+.portfolio-work-option label,
+.portfolio-selected-work-title {
+  min-width: 0;
+}
+
+.portfolio-work-option strong,
+.portfolio-selected-work-title strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.portfolio-work-option small,
+.portfolio-selected-work-title small {
+  display: block;
+  margin-top: 5px;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.portfolio-work-option input:checked + label strong {
+  color: var(--green);
+}
+
+.portfolio-work-option [data-no-images] {
+  color: var(--black);
+}
+
+.portfolio-selected-work-number {
+  color: var(--accent);
+}
+
+.portfolio-selected-work-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 18px;
+}
+
+.portfolio-title-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--font-meta);
+}
+
+.portfolio-title-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--green);
+}
+
+.portfolio-artist-name {
+  margin: 24px 0 0;
+  color: var(--accent);
+  font-size: var(--font-meta);
+}
+
+.portfolio-title-label {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 560px);
+  margin-top: 20px;
+  font-size: var(--font-meta);
+}
+
+.portfolio-title-label input {
+  width: 100%;
+  padding: 9px 0;
+  border: 0;
+  border-bottom: 1px solid var(--black);
+  border-radius: 0;
+  background: var(--white);
+  color: var(--black);
+  font: inherit;
+}
+
+.portfolio-title-label input:focus-visible {
+  outline: 1px solid var(--green);
+  outline-offset: 4px;
+}
+
+.portfolio-export-submit {
+  display: grid;
+  justify-items: start;
+  gap: 18px;
+}
+
+.portfolio-export-submit > p {
+  margin: 0;
+  font-size: var(--font-meta);
+}
+
+.portfolio-export-empty {
+  margin: 18px 0;
+  font-size: var(--font-meta);
+}
+
+@media (max-width: 700px) {
+  .portfolio-work-option,
+  .portfolio-selected-work {
+    grid-template-columns: max-content minmax(0, 1fr);
+  }
+
+  .portfolio-work-option > small,
+  .portfolio-selected-work-actions {
+    grid-column: 2;
+  }
+
+  .portfolio-selected-work-actions {
+    justify-content: flex-start;
+  }
+}

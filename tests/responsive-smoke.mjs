@@ -72,7 +72,7 @@ try {
   await command("Page.enable");
 
   for (const width of [1440, 390, 320]) {
-    for (const page of ["dashboard-works.html", "dashboard-work-edit.html", "artwork.html"]) {
+    for (const page of ["dashboard-works.html", "dashboard-portfolio-export.html", "dashboard-work-edit.html", "artwork.html"]) {
       await command("Emulation.setDeviceMetricsOverride", { width, height: width === 1440 ? 900 : 844, deviceScaleFactor: 1, mobile: width < 700 });
       const loaded = once("Page.loadEventFired");
       await command("Page.navigate", { url: `http://127.0.0.1:5500/${page}` });
@@ -86,6 +86,8 @@ try {
           return {
             overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
             protected: document.body.hasAttribute('data-auth-protected'),
+            portfolioLibraries: !document.querySelector('#portfolio-generate') || (Boolean(window.PDFLib) && Boolean(window.fontkit)),
+            portfolioControls: !document.querySelector('#portfolio-generate') || Boolean(document.querySelector('#portfolio-work-selection') && document.querySelector('#portfolio-selected-works')),
             headerBottom: header?.bottom || 0,
             mainTop: Number.isFinite(contentTop) ? contentTop : main?.top || 0,
             hasMain: Boolean(main),
@@ -98,6 +100,8 @@ try {
       assert.equal(value.hasMain, true, `${page} has main content at ${width}px`);
       assert.equal(value.protected, false, `${page} prototype content is revealed at ${width}px`);
       assert.equal(value.overflow, false, `${page} has no horizontal overflow at ${width}px`);
+      assert.equal(value.portfolioLibraries, true, `${page} PDF libraries load at ${width}px`);
+      assert.equal(value.portfolioControls, true, `${page} portfolio controls render at ${width}px`);
       assert.ok(value.mainTop >= value.headerBottom - 1, `${page} starts below the full header at ${width}px`);
       results.push(`${page}:${width}`);
     }
