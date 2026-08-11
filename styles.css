@@ -1407,7 +1407,7 @@ footer {
     align-items: start;
     width: 100%;
     margin-left: 0;
-    gap: 4px 0;
+    gap: 10px 0;
   }
 
   .site-header:has(> .header-actions) .auth-session-indicator {
