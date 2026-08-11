@@ -107,16 +107,13 @@ function ensureSessionIndicator(actions, client) {
     indicator = document.createElement("div");
     indicator.className = "auth-session-indicator";
 
-    const state = document.createElement("span");
-    state.textContent = "SIGNED IN";
-
     const logout = document.createElement("button");
     logout.className = "auth-logout-button";
     logout.type = "button";
     logout.textContent = "[ LOG OUT ]";
     logout.setAttribute("aria-label", "Log out of CHAINED");
 
-    indicator.append(state, logout);
+    indicator.append(logout);
     actions.append(indicator);
   }
 

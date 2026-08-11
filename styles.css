@@ -1349,6 +1349,16 @@ footer {
   text-underline-offset: 3px;
 }
 
+@media (min-width: 721px) {
+  .site-header:has(> .header-actions) > .header-actions > .auth-session-indicator {
+    order: 1;
+  }
+
+  .site-header:has(> .header-actions) > .header-actions > .main-nav-with-dashboard {
+    order: 2;
+  }
+}
+
 @media (max-width: 720px) {
   .main-nav-with-dashboard {
     display: flex;

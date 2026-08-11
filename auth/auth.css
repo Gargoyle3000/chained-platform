@@ -37,7 +37,7 @@ body[data-auth-protected="true"] > main {
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--accent);
+  color: var(--black);
   cursor: pointer;
   font: inherit;
 }
@@ -48,6 +48,7 @@ body[data-auth-protected="true"] > main {
 
 .auth-logout-button:hover,
 .auth-logout-button:focus-visible {
+  color: var(--green);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
