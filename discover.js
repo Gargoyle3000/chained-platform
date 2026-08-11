@@ -1,3 +1,5 @@
+import { rememberWorkFeedOrigin } from "./data/work-feed-return.mjs";
+
 const page = document.body;
 const stream = document.querySelector(".discover-stream");
 const viewButtons = document.querySelectorAll(".view-button");
@@ -84,7 +86,7 @@ function setView(view) {
   }
 }
 
-function rememberScrollPosition() {
+function rememberScrollPosition(workLink) {
   try {
     sessionStorage.setItem(scrollStorageKey, JSON.stringify({
       pathname: window.location.pathname,
@@ -93,6 +95,12 @@ function rememberScrollPosition() {
     const url = new URL(window.location.href);
     url.searchParams.set("restore", "discover");
     history.replaceState(history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    rememberWorkFeedOrigin({
+      origin: "discover",
+      feedLocation: url.href,
+      workHref: workLink.href,
+      storage: sessionStorage
+    });
   } catch {
     // Navigation remains functional when session storage is unavailable.
   }
@@ -497,7 +505,18 @@ viewButtons.forEach((button) => {
 });
 
 document.addEventListener("click", (event) => {
-  if (event.target.closest(".discover-image-link")) rememberScrollPosition();
+  const workLink = event.target.closest(".discover-image-link");
+  if (
+    workLink &&
+    event.button === 0 &&
+    !event.defaultPrevented &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    !event.altKey
+  ) {
+    rememberScrollPosition(workLink);
+  }
 });
 
 const restoreFeedPosition = restoreScrollPosition();

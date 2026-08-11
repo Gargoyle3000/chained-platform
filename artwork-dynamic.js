@@ -101,6 +101,34 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
+  function createFeedBackLink(origin) {
+    if (!origin) return null;
+
+    const backLink = document.createElement("a");
+    backLink.className = "artwork-back artwork-feed-back";
+    backLink.href = origin.feedLocation;
+    backLink.textContent = "← BACK";
+    backLink.setAttribute(
+      "aria-label",
+      `Return to ${origin.origin === "discover" ? "Discover" : "Following"}`
+    );
+    backLink.addEventListener("click", (event) => {
+      if (
+        event.button === 0 &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.shiftKey &&
+        !event.altKey
+      ) {
+        event.preventDefault();
+        window.history.back();
+      }
+    });
+
+    return backLink;
+  }
+
+
   function createTextLine(value, className = "") {
     const line = document.createElement("p");
 
@@ -137,7 +165,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
-  function createInformation(work, archiveState = null, createArchiveAction = null) {
+  function createInformation(work, archiveState = null, createArchiveAction = null, feedOrigin = null) {
     const fragment = document.createDocumentFragment();
     const artist = document.createElement("a");
     const heading = document.createElement("h1");
@@ -221,6 +249,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     fragment.append(createBackLink(work));
+    const feedBackLink = createFeedBackLink(feedOrigin);
+    if (feedBackLink) fragment.append(feedBackLink);
 
     return fragment;
   }
@@ -288,10 +318,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
-  function renderWork(work, archiveState = null, createArchiveAction = null) {
+  function renderWork(work, archiveState = null, createArchiveAction = null, feedOrigin = null) {
     if (primaryProfileLink) primaryProfileLink.href = profileDestination(work);
     document.title = `${work.title} — ${work.ownerProfileName || "PEER VINK"} — CHAINED`;
-    information.replaceChildren(createInformation(work, archiveState, createArchiveAction));
+    information.replaceChildren(createInformation(work, archiveState, createArchiveAction, feedOrigin));
     renderImages(work);
   }
 
@@ -311,7 +341,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
-      const selected = await getWorkRepository();
+      const [selected, { consumeWorkFeedOrigin }] = await Promise.all([
+        getWorkRepository(),
+        import("./data/work-feed-return.mjs")
+      ]);
       workStore = selected.repository;
       await workStore.initialise();
       const work = await workStore.getPublishedWork(workId);
@@ -332,7 +365,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Keep the public Work available if the private Archive control cannot load.
       }
 
-      renderWork(work, archiveState, createArchiveAction);
+      const feedOrigin = consumeWorkFeedOrigin({
+        workId,
+        detailLocation: window.location.href,
+        referrer: document.referrer,
+        storage: window.sessionStorage
+      });
+      renderWork(work, archiveState, createArchiveAction, feedOrigin);
     } catch (error) {
       renderUnavailable();
     }

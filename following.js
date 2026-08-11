@@ -1,3 +1,5 @@
+import { rememberWorkFeedOrigin } from "./data/work-feed-return.mjs";
+
 document.addEventListener("DOMContentLoaded", () => {
   const page = document.body;
   const viewButtons = [...document.querySelectorAll(".view-button")];
@@ -7,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const scrollStorageKey = "chained-following-scroll";
   let localInitialised = false;
 
-  function rememberScrollPosition() {
+  function rememberScrollPosition(workLink) {
     try {
       sessionStorage.setItem(scrollStorageKey, JSON.stringify({
         pathname: window.location.pathname,
@@ -16,6 +18,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const url = new URL(window.location.href);
       url.searchParams.set("restore", "following");
       history.replaceState(history.state, "", `${url.pathname}${url.search}${url.hash}`);
+      rememberWorkFeedOrigin({
+        origin: "following",
+        feedLocation: url.href,
+        workHref: workLink.href,
+        storage: sessionStorage
+      });
     } catch {
       // Work navigation remains functional when session storage is unavailable.
     }
@@ -300,8 +308,17 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.addEventListener("click", (event) => {
-    if (event.target.closest(".discover-image-link, .discover-meta h2 a")) {
-      rememberScrollPosition();
+    const workLink = event.target.closest(".discover-image-link, .discover-meta h2 a");
+    if (
+      workLink &&
+      event.button === 0 &&
+      !event.defaultPrevented &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.shiftKey &&
+      !event.altKey
+    ) {
+      rememberScrollPosition(workLink);
     }
   });
 
