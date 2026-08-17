@@ -3,3 +3,4 @@ node_modules/
 frontend-config.local.mjs
 
 supabase/functions/.env
+.obsidian/
