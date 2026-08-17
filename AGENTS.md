@@ -9,6 +9,13 @@
 - Production runs at `https://chained.work`.
 - Treat the current repository as the technical source of truth.
 
+## Project memory
+
+- At the start of relevant CHAINED tasks, read `docs/CHAINED_STATE.md` for current priorities and state, `docs/DECISIONS.md` for established product and technical decisions, and `docs/BUGS.md` for active bugs and known investigation boundaries.
+- Documentation provides project context but never overrides what the current code does.
+- After a task, update only the relevant memory document when the task actually changes current state or priorities, an established decision, or an active bug or blocker; do not update these documents mechanically or turn them into changelogs.
+- Keep the memory documents concise and current. Never mark a bug resolved without validation, and do not reopen an investigation path recorded in `BUGS.md` as ruled out unless new evidence justifies it.
+
 ## Product principles
 
 - CHAINED is a professional art platform, not a social-media clone.
