@@ -101,6 +101,39 @@ test("upload errors are sanitized", async () => {
   await assert.rejects(() => createWorkMediaService(client).upload(ID, { name: "x.png", type: "image/png", size: 1 }, true), /IMAGE COULD NOT BE ADDED/);
 });
 
+test("private previews use the authenticated storage route with the current session", async () => {
+  const requests = [];
+  const preview = createWorkMediaService(
+    { auth: { getSession: async () => ({ data: { session: { access_token: "test-access-token" } }, error: null }) } },
+    { supabaseUrl: "https://project.supabase.co", supabaseKey: "test-publishable-key" },
+    {
+      fetcher: async (url, options) => {
+        requests.push({ url, options });
+        return new Response(new Blob(["image"], { type: "image/png" }), { status: 200 });
+      }
+    }
+  );
+  const url = await preview.privatePreview({ privatePath: "artist id/work id/image id/original file.png" });
+
+  assert.equal(url.startsWith("blob:"), true);
+  assert.equal(requests[0].url, "https://project.supabase.co/storage/v1/object/authenticated/work-originals/artist%20id/work%20id/image%20id/original%20file.png");
+  assert.equal(requests[0].url.includes("/storage/v1/object/work-originals/"), false);
+  assert.deepEqual(requests[0].options.headers, { apikey: "test-publishable-key", Authorization: "Bearer test-access-token" });
+  preview.urls.revoke(url);
+  assert.equal(preview.urls.size(), 0);
+});
+
+test("private preview rejects non-OK authenticated Storage responses without creating a URL", async () => {
+  const preview = createWorkMediaService(
+    { auth: { getSession: async () => ({ data: { session: { access_token: "test-access-token" } }, error: null }) } },
+    { supabaseUrl: "https://project.supabase.co", supabaseKey: "test-publishable-key" },
+    { fetcher: async () => new Response(null, { status: 403 }) }
+  );
+
+  await assert.rejects(() => preview.privatePreview({ privatePath: "private/object.png" }), (error) => error.code === WORK_ERROR_CODES.UNAUTHORIZED);
+  assert.equal(preview.urls.size(), 0);
+});
+
 test("publication readiness denies missing, unready, and coverless images", () => {
   const work = { title: "A", year: "2026", workType: "video", images: [] };
   assert.deepEqual(publicationReadiness(work).reasons, ["missing_image"]);

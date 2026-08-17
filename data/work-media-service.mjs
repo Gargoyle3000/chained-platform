@@ -18,7 +18,28 @@ async function invoke(client, name, body) {
   return data;
 }
 
-export function createWorkMediaService(client) {
+function authenticatedObjectUrl(supabaseUrl, bucket, path) {
+  const encodedPath = String(path).split("/").map(encodeURIComponent).join("/");
+  return new URL(`/storage/v1/object/authenticated/${encodeURIComponent(bucket)}/${encodedPath}`, supabaseUrl).toString();
+}
+
+async function downloadPrivateOriginal(client, config, path, fetcher) {
+  const { data, error } = await client.auth.getSession();
+  const accessToken = data?.session?.access_token;
+  if (error || !accessToken) throw error || new Error("Session unavailable.");
+
+  const response = await fetcher(authenticatedObjectUrl(config.supabaseUrl, "work-originals", path), {
+    headers: {
+      apikey: config.supabaseKey,
+      Authorization: `Bearer ${accessToken}`
+    },
+    cache: "no-store"
+  });
+  if (!response.ok) throw { status: response.status };
+  return response.blob();
+}
+
+export function createWorkMediaService(client, config = {}, { fetcher = fetch } = {}) {
   const urls = createObjectUrlRegistry();
   return Object.freeze({
     urls,
@@ -40,9 +61,11 @@ export function createWorkMediaService(client) {
     },
     async privatePreview(image) {
       if (!image.privatePath) return null;
-      const { data, error } = await client.storage.from("work-originals").download(image.privatePath);
-      if (error || !data) throw sanitizeWorkError(error, "PRIVATE PREVIEW IS UNAVAILABLE");
-      return urls.create(data);
+      try {
+        return urls.create(await downloadPrivateOriginal(client, config, image.privatePath, fetcher));
+      } catch (error) {
+        throw sanitizeWorkError(error, "PRIVATE PREVIEW IS UNAVAILABLE");
+      }
     },
     publicUrl(path) { return path ? client.storage.from("work-public").getPublicUrl(path).data.publicUrl : ""; },
     finalize: (id) => invoke(client, "finalize-work-image-upload", { work_image_id: id }),
@@ -52,4 +75,3 @@ export function createWorkMediaService(client) {
     mapImage: databaseImageToClient
   });
 }
-

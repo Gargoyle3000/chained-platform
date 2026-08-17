@@ -100,6 +100,7 @@ function localClient(status, accessToken) {
   const client = {
     api: status.api,
     headers(extra = {}) { return { apikey: status.publishable, Authorization: `Bearer ${accessToken}`, ...extra }; },
+    auth: { getSession: async () => ({ data: { session: { access_token: accessToken } }, error: null }) },
     from(table) { return new RestBuilder(client, table); },
     async rpc(name, body = {}) {
       const { response, data } = await jsonRequest(`${status.api}/rest/v1/rpc/${name}`, { method: "POST", headers: client.headers(), body });
@@ -221,8 +222,9 @@ try {
   const unpublication = await ownerRepository.media.unpublish(work.id, randomUUID());
   record("unpublication hides public artwork", unpublication.status === "draft" && (await ownerRepository.getPublishedWork(work.id)) === null);
   const oldPublicResponse = await fetch(`${status.api}/storage/v1/object/public/work-public/${publishedPublicPath.split("/").map(encodeURIComponent).join("/")}`);
-  const privateAfterUnpublish = await ownerClient.storage.from("work-originals").download(privatePath);
-  record("public copy is removed and private original remains", !oldPublicResponse.ok && !privateAfterUnpublish.error);
+  const privatePreviewAfterUnpublish = await ownerRepository.media.privatePreview(work.images[0]);
+  record("public copy is removed and private original preview remains", !oldPublicResponse.ok && privatePreviewAfterUnpublish.startsWith("blob:"));
+  ownerRepository.media.urls.revoke(privatePreviewAfterUnpublish);
   const deletion = await ownerRepository.media.deleteImage(work.images[0].id);
   work = await ownerRepository.getWork(work.id);
   record("image deletion removes the original", deletion.status === "deleted" && work.images.length === 0 && (await ownerClient.storage.from("work-originals").download(privatePath)).error !== null);
@@ -235,4 +237,3 @@ try {
   process.stderr.write(`Local Work integration failed while ${stage}.`);
   process.exitCode = 1;
 }
-
