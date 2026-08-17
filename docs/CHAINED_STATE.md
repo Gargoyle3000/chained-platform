@@ -36,22 +36,6 @@ Current focus: small visual/mobile polish before returning to larger product wor
 
 
 
-\## NEXT
-
-
-
-\### Work metadata form
-
-Current hierarchy feels awkward / cumbersome:
-
-PRIMARY MEDIUM → SUPPORT/BASE → ADDITIONAL MATERIALS
-
-
-
-Materials search/autocomplete works well and should be preserved.
-
-
-
 \## BLOCKED — PRE-TESTER
 
 
@@ -109,6 +93,8 @@ Portfolio Export must work reliably before the first external tester.
 \- Mobile core flows usable.
 
 \- Portfolio PDF renderer implemented.
+
+\- Work metadata uses structured MEDIUM and one comma-separated MATERIALS field; legacy material fields are unified on read and migrated when that Work is saved.
 
 \- Git working tree clean after API-key migration.
 

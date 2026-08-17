@@ -35,18 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
   function formatMaterials(work) {
-    const additionalMaterials = Array.isArray(work.additionalMaterials)
-      ? work.additionalMaterials.join(", ")
-      : work.additionalMaterials;
-
-    return [
-      work.primaryMedium,
-      work.supportBase,
-      additionalMaterials
-    ]
-      .map((value) => value?.trim())
-      .filter(Boolean)
-      .join(", ");
+    return work.materials?.trim() || "";
   }
 
 
@@ -169,7 +158,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const fragment = document.createDocumentFragment();
     const artist = document.createElement("a");
     const heading = document.createElement("h1");
-    const classification = work.format || work.workType;
+    const classification = work.workType;
     const materials = formatMaterials(work);
     const dimensions = formatDimensions(work);
 

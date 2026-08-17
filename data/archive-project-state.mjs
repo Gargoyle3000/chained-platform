@@ -41,11 +41,7 @@ export function filterArchiveProjectWorks(works, searchTerm, activeTagIds, tagId
   return works.filter((work) => {
     const materials = Array.isArray(work.materialTerms)
       ? work.materialTerms
-      : materialSearchTerms([
-        work.primaryMedium,
-        work.supportBase,
-        work.additionalMaterials
-      ]);
+      : materialSearchTerms(work.materials);
     const searchText = [
       work.title,
       work.yearLabel,

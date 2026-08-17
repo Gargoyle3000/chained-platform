@@ -9,6 +9,7 @@ import {
   fitIntoBox,
   generateWithinBudget,
   portfolioFilename,
+  portfolioMaterials,
   portfolioMetadataLines,
   PortfolioExportError,
   renderPortfolioPdf
@@ -25,8 +26,7 @@ function work(id, images = 1, overrides = {}) {
     title: `WORK ${id}`,
     year: "2026",
     format: "painting",
-    primaryMedium: "OIL",
-    supportBase: "CANVAS",
+    materials: "OIL, CANVAS",
     height: "100",
     width: "80",
     dimensionUnit: "cm",
@@ -65,6 +65,13 @@ test("metadata uses only supported Work fields and omits empty fields", () => {
     "PHOTO CREDIT: PHOTOGRAPHER",
     "A restrained description."
   ]);
+});
+
+test("portfolio metadata renders one normalized MATERIALS list", () => {
+  assert.equal(
+    portfolioMaterials({ materials: "Oil, canvas, OIL, Canvas, studs" }),
+    "Oil, canvas, studs"
+  );
 });
 
 test("fitting preserves aspect ratio and never upscales", () => {

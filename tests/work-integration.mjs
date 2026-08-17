@@ -174,11 +174,11 @@ try {
   const profiles = await ownerRepository.listManagedProfiles();
   record("one managed artist profile resolves", profiles.length === 1 && profiles[0].id === artistId);
   record("empty Supabase Work list renders", (await ownerRepository.listWorks([artistId])).length === 0);
-  const form = { title: "INTEGRATION WORK", year: "2026", workType: "single-work", format: "digital", primaryMedium: "DIGITAL IMAGE", supportBase: "VARIABLE SUPPORT", additionalMaterials: "LIGHT, STEEL", height: "10", width: "20", depth: "", dimensionUnit: "cm", duration: "", edition: "1/1", description: "LOCAL INTEGRATION", collaboratorName: "CHAINED TEST", collaboratorUrl: "https://example.com/collaborator", photoCreditName: "LOCAL TEST", photoCreditUrl: "https://example.com/photo" };
+  const form = { title: "INTEGRATION WORK", year: "2026", workType: "single-work", format: "digital", materials: "LIGHT, STEEL", height: "10", width: "20", depth: "", dimensionUnit: "cm", duration: "", edition: "1/1", description: "LOCAL INTEGRATION", collaboratorName: "CHAINED TEST", collaboratorUrl: "https://example.com/collaborator", photoCreditName: "LOCAL TEST", photoCreditUrl: "https://example.com/photo" };
   let work = await ownerRepository.createWork(form, artistId);
   record("draft is created through the repository mapping", work.visibility === "draft" && work.title === "INTEGRATION WORK");
   work = await ownerRepository.getWork(work.id);
-  record("refresh reloads the Supabase Work", work?.additionalMaterials === "LIGHT, STEEL");
+  record("refresh reloads the Supabase Work", work?.materials === "LIGHT, STEEL");
   const staleTimestamp = work.updatedAt;
   work = await ownerRepository.updateWork({ ...work, title: "INTEGRATION WORK EDITED" }, staleTimestamp);
   record("metadata editing persists", work.title === "INTEGRATION WORK EDITED");

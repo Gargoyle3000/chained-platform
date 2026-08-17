@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 import { FRONTEND_MODES } from "../auth/config.mjs";
 import { selectWorkRepository } from "../data/work-repository.mjs";
@@ -10,7 +11,7 @@ import { createIdempotencyState, createObjectUrlRegistry, databaseToWork, formTo
 import { sanitizeWorkError, WORK_ERROR_CODES } from "../data/work-errors.mjs";
 
 const ID = "11111111-1111-4111-8111-111111111111";
-const baseForm = { title: "  Work  ", year: "2026", workType: "single-work", format: "painting", primaryMedium: "Oil", supportBase: "Linen", additionalMaterials: "Wood, Steel", height: "1.5", width: "2", depth: "0", dimensionUnit: "cm", duration: "", edition: "  1/3 ", description: " Text ", collaboratorName: "Name", collaboratorUrl: "https://example.com/a", photoCreditName: "Photo", photoCreditUrl: "https://example.com/p" };
+const baseForm = { title: "  Work  ", year: "2026", workType: "single-work", format: "painting", materials: "Wood, Steel, wood, ", height: "1.5", width: "2", depth: "0", dimensionUnit: "cm", duration: "", edition: "  1/3 ", description: " Text ", collaboratorName: "Name", collaboratorUrl: "https://example.com/a", photoCreditName: "Photo", photoCreditUrl: "https://example.com/p" };
 
 test("adapter selection is explicit in prototype and local modes", () => {
   const store = { initialiseDatabase() {}, getAllWorks() {}, getWork() {}, createWork() {}, updateWork() {}, deleteWork() {} };
@@ -28,6 +29,9 @@ test("form and database mapping normalize every supported field", () => {
   assert.equal(row.title, "Work");
   assert.equal(row.year_label, "2026");
   assert.equal(row.year_sort, 2026);
+  assert.equal(row.format_discipline, "painting");
+  assert.equal(row.primary_medium, null);
+  assert.equal(row.support_base, null);
   assert.deepEqual(row.additional_materials, ["Wood", "Steel"]);
   assert.equal(row.height, 1.5);
   assert.equal(row.depth, 0);
@@ -36,10 +40,46 @@ test("form and database mapping normalize every supported field", () => {
   assert.equal(row.collaborator_url, "https://example.com/a");
   assert.equal(Object.hasOwn(row, "owner_profile_id"), false);
   const client = databaseToWork({ id: ID, owner_profile_id: ID, ...row, visibility: "draft", created_at: "a", updated_at: "b" });
-  assert.equal(client.additionalMaterials, "Wood, Steel");
+  assert.equal(client.materials, "Wood, Steel");
   assert.equal(client.year, "2026");
   assert.equal(client.height, "1.5");
-  assert.deepEqual(client.materialTerms, ["oil", "linen", "wood", "steel"]);
+  assert.deepEqual(client.materialTerms, ["wood", "steel"]);
+});
+
+test("legacy materials load once and migrate only when the unified editor saves", () => {
+  const legacy = databaseToWork({
+    id: ID,
+    owner_profile_id: ID,
+    title: "LEGACY",
+    primary_medium: "Oil",
+    support_base: "Linen",
+    additional_materials: ["wood", "OIL", "Steel"],
+    visibility: "draft",
+    created_at: "a",
+    updated_at: "b"
+  });
+  assert.equal(legacy.materials, "Oil, Linen, wood, Steel");
+  assert.deepEqual(legacy.materialTerms, ["oil", "linen", "wood", "steel"]);
+
+  const saved = formToDatabase({ ...baseForm, materials: legacy.materials });
+  assert.equal(saved.primary_medium, null);
+  assert.equal(saved.support_base, null);
+  assert.deepEqual(saved.additional_materials, ["Oil", "Linen", "wood", "Steel"]);
+
+  const removed = formToDatabase({ ...baseForm, materials: "Oil, wood, Steel" });
+  assert.deepEqual(removed.additional_materials, ["Oil", "wood", "Steel"]);
+  assert.equal(databaseToWork({ id: ID, owner_profile_id: ID, ...removed, visibility: "draft", created_at: "a", updated_at: "b" }).materials, "Oil, wood, Steel");
+});
+
+test("the Work editor uses one plain comma-separated MATERIALS input", async () => {
+  const [html, script] = await Promise.all([
+    readFile(new URL("../dashboard-work-edit.html", import.meta.url), "utf8"),
+    readFile(new URL("../dashboard-form.js", import.meta.url), "utf8")
+  ]);
+
+  assert.match(html, /name="materials"\s+placeholder="Use commas to separate materials"/s);
+  assert.doesNotMatch(html, /primary-medium|support-base|additional-materials|data-material-combobox|role="listbox"/);
+  assert.doesNotMatch(script, /materialOptions|appendMaterialSuggestion|data-material-combobox/);
 });
 
 test("Work links add HTTPS when artists omit a protocol", () => {
@@ -167,12 +207,25 @@ test("idempotency key is reused until reset", () => {
 });
 
 test("public artwork mapping hides nonpublic rows and suppresses private paths", () => {
-  const work = { id: ID, owner_profile_id: ID, title: "A", year_label: "2026", visibility: "published", created_at: "a", updated_at: "b" };
+  const work = {
+    id: ID,
+    owner_profile_id: ID,
+    title: "A",
+    year_label: "2026",
+    primary_medium: "Oil",
+    support_base: "Canvas",
+    additional_materials: ["oil", "STUDS"],
+    visibility: "published",
+    created_at: "a",
+    updated_at: "b"
+  };
   const profile = { display_name: "Artist", slug: "artist", publication_status: "published" };
   assert.equal(mapPublicArtworkRows([{ ...work, visibility: "draft" }], [profile], [], () => ""), null);
   const mapped = mapPublicArtworkRows([work], [profile], [{ id: ID, work_id: ID, private_object_path: "secret", public_object_path: "public", sort_order: 0, is_cover: true }], () => "safe");
   assert.equal(mapped.images[0].privatePath, null);
   assert.equal(JSON.stringify(mapped).includes("secret"), false);
+  assert.equal(mapped.materials, "Oil, Canvas, STUDS");
+  assert.deepEqual(mapped.materialTerms, ["oil", "canvas", "studs"]);
 });
 
 test("object URLs are revoked individually and on teardown", () => {

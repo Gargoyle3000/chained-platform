@@ -185,10 +185,10 @@
 
 
             <label class="work-form-field">
-              <span>FORMAT / DISCIPLINE</span>
+              <span>MEDIUM</span>
 
               <select name="format">
-                <option value="">SELECT FORMAT</option>
+                <option value="">SELECT MEDIUM</option>
               </select>
             </label>
 
@@ -267,129 +267,17 @@
 
           <div class="work-form-fields">
 
-            <!-- MATERIALS / TECHNIQUE -->
-
             <div
               class="work-form-field
                      work-form-field-wide
                      work-material-builder">
 
-              <span>MATERIALS / TECHNIQUE</span>
+              <span>MATERIALS</span>
 
-
-              <div class="work-material-fields">
-
-                <!-- PRIMARY MEDIUM / TECHNIQUE -->
-
-                <label
-                  class="material-combobox"
-                  data-material-combobox
-                  data-material-category="primary">
-
-                  <span>PRIMARY MEDIUM / TECHNIQUE</span>
-
-                  <div class="material-combobox-control">
-
-                    <input
-                      type="text"
-                      name="primary-medium"
-                      placeholder="SELECT OR TYPE"
-                      autocomplete="off"
-                      aria-expanded="false"
-                      aria-controls="primary-material-menu">
-
-                    <button
-                      class="material-combobox-toggle"
-                      type="button"
-                      aria-label="Open primary medium menu">
-                      [ ↓ ]
-                    </button>
-
-                    <div
-                      class="material-combobox-menu"
-                      id="primary-material-menu"
-                      role="listbox"
-                      hidden>
-                    </div>
-
-                  </div>
-                </label>
-
-
-                <!-- SUPPORT / BASE -->
-
-                <label
-                  class="material-combobox"
-                  data-material-combobox
-                  data-material-category="support">
-
-                  <span>SUPPORT / BASE</span>
-
-                  <div class="material-combobox-control">
-
-                    <input
-                      type="text"
-                      name="support-base"
-                      placeholder="SELECT OR TYPE"
-                      autocomplete="off"
-                      aria-expanded="false"
-                      aria-controls="support-material-menu">
-
-                    <button
-                      class="material-combobox-toggle"
-                      type="button"
-                      aria-label="Open support or base menu">
-                      [ ↓ ]
-                    </button>
-
-                    <div
-                      class="material-combobox-menu"
-                      id="support-material-menu"
-                      role="listbox"
-                      hidden>
-                    </div>
-
-                  </div>
-                </label>
-
-
-                <!-- ADDITIONAL MATERIALS -->
-
-                <label
-                  class="material-combobox"
-                  data-material-combobox
-                  data-material-category="additional">
-
-                  <span>ADDITIONAL MATERIALS</span>
-
-                  <div class="material-combobox-control">
-
-                    <input
-                      type="text"
-                      name="additional-materials"
-                      placeholder="SELECT OR TYPE"
-                      autocomplete="off"
-                      aria-expanded="false"
-                      aria-controls="additional-material-menu">
-
-                    <button
-                      class="material-combobox-toggle"
-                      type="button"
-                      aria-label="Open additional materials menu">
-                      [ ↓ ]
-                    </button>
-
-                    <div
-                      class="material-combobox-menu"
-                      id="additional-material-menu"
-                      role="listbox"
-                      hidden>
-                    </div>
-
-                  </div>
-                </label>
-
-              </div>
+              <input
+                type="text"
+                name="materials"
+                placeholder="Use commas to separate materials">
 
 
               <p class="work-material-preview">
@@ -398,8 +286,7 @@
               </p>
 
               <small>
-                CHAINED DISPLAYS PRIMARY MEDIUM, SUPPORT AND
-                ADDITIONAL MATERIALS IN A FIXED ORDER
+                MATERIALS ARE DISPLAYED AS ONE LIST
               </small>
 
             </div>

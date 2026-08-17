@@ -242,11 +242,7 @@ function createDiscoverWork(work, archiveState = null, createArchiveAction = nul
   const details = document.createElement("div");
   details.className = "discover-details";
   const classification = formatType(work.format || work.workType);
-  const materials = [
-    work.primaryMedium,
-    work.supportBase,
-    ...work.additionalMaterials
-  ].filter(Boolean).join(", ");
+  const materials = work.materials || "";
   const dimensions = formatDimensions(work);
 
   [classification || materials, dimensions].filter(Boolean).forEach((value) => {

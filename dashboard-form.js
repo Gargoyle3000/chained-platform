@@ -11,135 +11,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   } = await import("./data/work-mapping.mjs");
   const { validateImageFile } = await import("./data/work-media-service.mjs");
   const { normalizeHttpUrl } = await import("./data/url-normalization.mjs");
-  const {
-    appendMaterialSuggestion,
-    materialDisplayValues,
-    materialSearchTerms
-  } = await import("./data/material-terms.mjs");
-  const materialOptions = {
-    primary: [
-      "OIL PAINT",
-      "ACRYLIC PAINT",
-      "WATERCOLOUR",
-      "GOUACHE",
-      "INK",
-      "GRAPHITE",
-      "CHARCOAL",
-      "PASTEL",
-      "COLOURED PENCIL",
-      "SPRAY PAINT",
-      "ENAMEL PAINT",
-      "PIGMENT",
-      "DYE",
-      "SCREEN PRINT",
-      "LITHOGRAPHY",
-      "ETCHING",
-      "WOODCUT",
-      "ARCHIVAL PIGMENT PRINT",
-      "ANALOG PHOTOGRAPHY",
-      "DIGITAL PHOTOGRAPHY",
-      "COLLAGE",
-      "ASSEMBLAGE",
-      "CERAMIC",
-      "SCULPTURE",
-      "3D PRINT",
-      "VIDEO",
-      "ANIMATION",
-      "SOUND",
-      "PERFORMANCE",
-      "LIGHT"
-    ],
-
-    support: [
-      "CANVAS",
-      "LINEN",
-      "COTTON",
-      "PAPER",
-      "ARCHIVAL PAPER",
-      "PHOTOGRAPHIC PAPER",
-      "WOOD",
-      "WOOD PANEL",
-      "PLYWOOD",
-      "MDF",
-      "ALUMINIUM",
-      "STEEL",
-      "GLASS",
-      "ACRYLIC GLASS",
-      "CERAMIC",
-      "PORCELAIN",
-      "PLASTER",
-      "CONCRETE",
-      "RESIN",
-      "TEXTILE",
-      "LEATHER",
-      "FOUND OBJECT",
-      "WALL",
-      "FLOOR",
-      "VARIABLE SUPPORT"
-    ],
-
-    additional: [
-      "PAPER",
-      "WOOD",
-      "PLYWOOD",
-      "MDF",
-      "EPOXY RESIN",
-      "POLYESTER RESIN",
-      "ACRYLIC GEL",
-      "SILICONE",
-      "PLASTER",
-      "CONCRETE",
-      "CEMENT",
-      "CLAY",
-      "CERAMIC",
-      "PORCELAIN",
-      "GLASS",
-      "ACRYLIC GLASS",
-      "ALUMINIUM",
-      "STEEL",
-      "STAINLESS STEEL",
-      "BRASS",
-      "COPPER",
-      "CHAIN",
-      "WIRE",
-      "TEXTILE",
-      "COTTON",
-      "WOOL",
-      "SILK",
-      "LEATHER",
-      "FAUX FUR",
-      "PLASTIC",
-      "PLA",
-      "ABS",
-      "PETG",
-      "POLYURETHANE FOAM",
-      "STYROFOAM",
-      "RUBBER",
-      "WAX",
-      "PIGMENT",
-      "GLITTER",
-      "FAUX MOSS",
-      "FOUND OBJECTS",
-      "LED LIGHT",
-      "ELECTRONICS",
-      "MOTOR",
-      "SOUND",
-      "VIDEO",
-      "INK",
-      "OIL PAINT",
-      "ACRYLIC PAINT",
-      "SPRAY PAINT"
-    ]
-  };
-Object.values(materialOptions).forEach((options) => {
-  options.sort((a, b) => a.localeCompare(b));
-});
-
-  const comboboxes = [
-    ...document.querySelectorAll(
-      "[data-material-combobox]"
-    )
-  ];
+  const { materialDisplayValues } = await import("./data/material-terms.mjs");
 
   const materialPreview =
     document.querySelector(".work-material-preview");
@@ -148,6 +20,7 @@ Object.values(materialOptions).forEach((options) => {
   let localSupabaseMode = false;
   const form = document.querySelector(".work-form");
   const formatSelect = form?.elements.namedItem("format");
+  const materialsInput = form?.elements.namedItem("materials");
   const editorHeading = document.querySelector("#work-editor-heading");
   const editorContext = document.querySelector("#work-editor-context");
   const formStatus = document.querySelector("#work-form-status");
@@ -187,7 +60,7 @@ Object.values(materialOptions).forEach((options) => {
     const selected = formatSelect.value;
     const placeholder = document.createElement("option");
     placeholder.value = "";
-    placeholder.textContent = "SELECT FORMAT";
+    placeholder.textContent = "SELECT MEDIUM";
     formatSelect.replaceChildren(
       placeholder,
       ...FORMAT_DISCIPLINES.map(({ value, label }) => {
@@ -583,9 +456,7 @@ Object.values(materialOptions).forEach((options) => {
       year: formValue("year"),
       workType: formValue("work-type"),
       format: formValue("format"),
-      primaryMedium: formValue("primary-medium"),
-      supportBase: formValue("support-base"),
-      additionalMaterials: formValue("additional-materials"),
+      materials: formValue("materials"),
       height: formValue("height"),
       width: formValue("width"),
       depth: formValue("depth"),
@@ -771,9 +642,11 @@ Object.values(materialOptions).forEach((options) => {
       title: work.title,
       year: work.year,
       format: work.format,
-      "primary-medium": work.primaryMedium,
-      "support-base": work.supportBase,
-      "additional-materials": work.additionalMaterials,
+      materials: work.materials || materialDisplayValues([
+        work.primaryMedium,
+        work.supportBase,
+        work.additionalMaterials
+      ]).join(", "),
       height: work.height,
       width: work.width,
       depth: work.depth,
@@ -1037,137 +910,6 @@ Object.values(materialOptions).forEach((options) => {
   });
 
 
-  function createOption(value) {
-    const button = document.createElement("button");
-
-    button.type = "button";
-    button.dataset.materialOption = "";
-    button.setAttribute("role", "option");
-    button.setAttribute("aria-selected", "false");
-    button.textContent = value;
-
-    return button;
-  }
-
-
-  function populateCombobox(combobox) {
-    const category =
-      combobox.dataset.materialCategory;
-
-    const menu = combobox.querySelector(
-      ".material-combobox-menu"
-    );
-
-    const options =
-      materialOptions[category] || [];
-
-    const close = document.createElement("button");
-    const optionList = document.createElement("div");
-
-    close.type = "button";
-    close.className = "material-combobox-close";
-    close.dataset.materialMenuClose = "";
-    close.textContent = "×";
-    close.setAttribute("aria-label", "Close material suggestions");
-
-    optionList.className = "material-combobox-options";
-    optionList.setAttribute("role", "listbox");
-    optionList.setAttribute("aria-label", "Material suggestions");
-    optionList.replaceChildren(...options.map(createOption));
-
-    menu.removeAttribute("role");
-    menu.replaceChildren(close, optionList);
-
-    window.ChainedScrollIndicators?.attachScrollIndicator(optionList, {
-      host: menu
-    });
-  }
-
-
-  function closeCombobox(combobox) {
-    const input = combobox.querySelector("input");
-
-    const menu = combobox.querySelector(
-      ".material-combobox-menu"
-    );
-
-    combobox.classList.remove("is-open");
-    menu.hidden = true;
-
-    input.setAttribute(
-      "aria-expanded",
-      "false"
-    );
-  }
-
-
-  function closeAllComboboxes(
-    exceptCombobox = null
-  ) {
-    comboboxes.forEach((combobox) => {
-      if (combobox !== exceptCombobox) {
-        closeCombobox(combobox);
-      }
-    });
-  }
-
-
-  function openCombobox(combobox) {
-    const input = combobox.querySelector("input");
-
-    const menu = combobox.querySelector(
-      ".material-combobox-menu"
-    );
-
-    closeAllComboboxes(combobox);
-
-    combobox.classList.add("is-open");
-    menu.hidden = false;
-
-    input.setAttribute(
-      "aria-expanded",
-      "true"
-    );
-  }
-
-
-  function filterOptions(combobox) {
-    const input = combobox.querySelector("input");
-
-    const searchTerm =
-      input.value.trim().toLowerCase();
-
-    const options = [
-      ...combobox.querySelectorAll(
-        "[data-material-option]"
-      )
-    ];
-
-    options.forEach((option) => {
-      const optionText =
-        option.textContent.trim().toLowerCase();
-
-      option.hidden =
-        !optionText.includes(searchTerm);
-    });
-
-    syncMaterialOptionStates(combobox);
-  }
-
-
-  function syncMaterialOptionStates(combobox) {
-    const input = combobox.querySelector("input");
-    const selectedTerms = new Set(materialSearchTerms(input?.value));
-
-    combobox.querySelectorAll("[data-material-option]").forEach((option) => {
-      const selected = selectedTerms.has(
-        option.textContent.trim().toLocaleLowerCase()
-      );
-      option.setAttribute("aria-selected", String(selected));
-    });
-  }
-
-
   function formatMaterialList(values) {
     if (values.length === 0) {
       return "MATERIALS WILL APPEAR HERE";
@@ -1193,32 +935,7 @@ Object.values(materialOptions).forEach((options) => {
       return;
     }
 
-    const primaryInput =
-      document.querySelector(
-        'input[name="primary-medium"]'
-      );
-
-    const supportInput =
-      document.querySelector(
-        'input[name="support-base"]'
-      );
-
-    const additionalInput =
-      document.querySelector(
-        'input[name="additional-materials"]'
-      );
-
-
-    const primary = primaryInput?.value.trim() || "";
-    const support = supportInput?.value.trim() || "";
-    const additional = materialDisplayValues(additionalInput?.value);
-
-
-    const materials = [
-      primary,
-      support,
-      ...additional
-    ].filter(Boolean);
+    const materials = materialDisplayValues(materialsInput?.value);
 
 
     const previewLabel = document.createElement("span");
@@ -1234,88 +951,8 @@ Object.values(materialOptions).forEach((options) => {
   }
 
 
-  comboboxes.forEach((combobox) => {
-    populateCombobox(combobox);
-
-    const input = combobox.querySelector("input");
-
-    const toggle = combobox.querySelector(
-      ".material-combobox-toggle"
-    );
-
-
-    toggle.addEventListener("click", () => {
-      const isOpen =
-        combobox.classList.contains("is-open");
-
-      if (isOpen) {
-        closeCombobox(combobox);
-      } else {
-        openCombobox(combobox);
-        filterOptions(combobox);
-        input.focus();
-      }
-    });
-
-
-    input.addEventListener("focus", () => {
-      openCombobox(combobox);
-      filterOptions(combobox);
-    });
-
-
-    input.addEventListener("input", () => {
-      openCombobox(combobox);
-      filterOptions(combobox);
-      updateMaterialPreview();
-    });
-
-
-    input.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
-        closeCombobox(combobox);
-        input.blur();
-      }
-    });
-
-
-    combobox.addEventListener("click", (event) => {
-      if (event.target.closest("[data-material-menu-close]")) {
-        closeCombobox(combobox);
-        input.focus();
-        return;
-      }
-
-      const option = event.target.closest(
-        "[data-material-option]"
-      );
-
-      if (!option) {
-        return;
-      }
-
-      input.value = combobox.dataset.materialCategory === "additional"
-        ? appendMaterialSuggestion(input.value, option.textContent)
-        : option.textContent.trim();
-
-      closeCombobox(combobox);
-      syncMaterialOptionStates(combobox);
-      updateMaterialPreview();
-      input.focus();
-    });
-  });
-
-
-  document.addEventListener("click", (event) => {
-    comboboxes.forEach((combobox) => {
-      if (!combobox.contains(event.target)) {
-        closeCombobox(combobox);
-      }
-    });
-  });
-
-
   populateFormatDisciplines();
+  materialsInput?.addEventListener("input", updateMaterialPreview);
   updateMaterialPreview();
   initialiseEditor();
 });

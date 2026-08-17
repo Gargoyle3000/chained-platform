@@ -8,23 +8,19 @@ function valuesFrom(value) {
 }
 
 export function materialSearchTerms(values) {
-  const terms = [];
-  const seen = new Set();
-
-  (Array.isArray(values) ? values : [values])
-    .flatMap(valuesFrom)
-    .forEach((value) => {
-      const normalized = value.toLocaleLowerCase();
-      if (seen.has(normalized)) return;
-      seen.add(normalized);
-      terms.push(normalized);
-    });
-
-  return Object.freeze(terms);
+  return Object.freeze(
+    materialDisplayValues(values).map((value) => value.toLocaleLowerCase())
+  );
 }
 
 export function materialDisplayValues(value) {
-  return Object.freeze(valuesFrom(value));
+  const seen = new Set();
+  return Object.freeze(valuesFrom(value).filter((entry) => {
+    const normalized = entry.toLocaleLowerCase();
+    if (seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  }));
 }
 
 export function appendMaterialSuggestion(value, suggestion) {

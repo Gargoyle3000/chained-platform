@@ -1,5 +1,5 @@
 import { WorkError, WORK_ERROR_CODES } from "./work-errors.mjs";
-import { materialSearchTerms } from "./material-terms.mjs";
+import { materialDisplayValues, materialSearchTerms } from "./material-terms.mjs";
 import { normalizeHttpUrl } from "./url-normalization.mjs";
 
 export const WORK_COLUMNS = Object.freeze([
@@ -50,10 +50,13 @@ function dimension(value, label) {
   return number;
 }
 
-function additionalMaterials(value) {
-  if (Array.isArray(value)) return value.map(text).filter(Boolean);
-  const normalized = text(value);
-  return normalized ? normalized.split(",").map(text).filter(Boolean) : [];
+function materialsForSave(record) {
+  if (Object.hasOwn(record, "materials")) return materialDisplayValues(record.materials);
+  return materialDisplayValues([
+    record.primaryMedium,
+    record.supportBase,
+    record.additionalMaterials
+  ]);
 }
 
 export function formToDatabase(record) {
@@ -77,9 +80,9 @@ export function formToDatabase(record) {
     year_label: yearLabel || null,
     work_type: nullableText(record.workType),
     format_discipline: nullableText(record.format),
-    primary_medium: nullableText(record.primaryMedium),
-    support_base: nullableText(record.supportBase),
-    additional_materials: additionalMaterials(record.additionalMaterials),
+    primary_medium: null,
+    support_base: null,
+    additional_materials: materialsForSave(record),
     height: dimension(record.height, "HEIGHT"),
     width: dimension(record.width, "WIDTH"),
     depth: dimension(record.depth, "DEPTH"),
@@ -112,6 +115,11 @@ export function databaseImageToClient(row) {
 }
 
 export function databaseToWork(row, images = []) {
+  const materialValues = materialDisplayValues([
+    row.primary_medium,
+    row.support_base,
+    row.additional_materials
+  ]);
   return Object.freeze({
     id: row.id,
     ownerProfileId: row.owner_profile_id,
@@ -120,14 +128,8 @@ export function databaseToWork(row, images = []) {
     yearSort: row.year_sort ?? null,
     workType: row.work_type || "",
     format: row.format_discipline || "",
-    primaryMedium: row.primary_medium || "",
-    supportBase: row.support_base || "",
-    additionalMaterials: Array.isArray(row.additional_materials) ? row.additional_materials.join(", ") : "",
-    materialTerms: materialSearchTerms([
-      row.primary_medium,
-      row.support_base,
-      row.additional_materials
-    ]),
+    materials: materialValues.join(", "),
+    materialTerms: materialSearchTerms(materialValues),
     height: row.height == null ? "" : String(row.height),
     width: row.width == null ? "" : String(row.width),
     depth: row.depth == null ? "" : String(row.depth),

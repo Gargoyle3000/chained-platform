@@ -356,10 +356,10 @@ Example field definitions:
 | `year_sort` | nullable integer used only for sorting/filtering | Current integer `year` converted to integer; unknown/ongoing values remain null |
 | `year_label` | required-to-publish display text with a sensible maximum such as 32 characters | Current integer `year` converted to the matching string; later supports `2024–2026`, `ONGOING`, `C. 1990`, `UNDATED` without parsing |
 | `work_type` | constrained text | `workType` |
-| `format_discipline` | constrained text or later lookup | `format` |
-| `primary_medium` | text | `primaryMedium` |
-| `support_base` | text | `supportBase` |
-| `additional_materials` | ordered `text[]`, default empty | comma-separated `additionalMaterials` parsed once |
+| `format_discipline` | constrained text or later lookup | structured `MEDIUM` / `format` |
+| `primary_medium` | legacy text, cleared when a Work is next saved | read into unified Materials |
+| `support_base` | legacy text, cleared when a Work is next saved | read into unified Materials |
+| `additional_materials` | ordered `text[]`, default empty | unified comma-separated `MATERIALS` parsed once |
 | `height`, `width`, `depth` | non-negative numeric; depth nullable | matching string fields, preserving decimals |
 | `dimension_unit` | constrained `mm`, `cm`, `m`, `in` | `dimensionUnit` |
 | `duration_text` | text | `duration`; no false precision is invented |

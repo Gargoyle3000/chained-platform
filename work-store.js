@@ -26,9 +26,7 @@
         year: "2026",
         workType: "single-work",
         format: "installation",
-        primaryMedium: "",
-        supportBase: "",
-        additionalMaterials: "PAPER, WOOD, EPOXY, ACRYLIC GEL",
+        materials: "PAPER, WOOD, EPOXY, ACRYLIC GEL",
         height: "28.4",
         width: "19.8",
         depth: "3",
@@ -62,10 +60,7 @@
         year: "2026",
         workType: "installation",
         format: "installation",
-        primaryMedium: "",
-        supportBase: "",
-        additionalMaterials:
-          "STYROFOAM, WOOD, ALUMINIUM, OIL PAINT, PLASTER, STEEL",
+        materials: "STYROFOAM, WOOD, ALUMINIUM, OIL PAINT, PLASTER, STEEL",
         height: "",
         width: "",
         depth: "",
@@ -99,9 +94,7 @@
         year: "2026",
         workType: "single-work",
         format: "",
-        primaryMedium: "",
-        supportBase: "",
-        additionalMaterials: "WOOD, PAPER, EPOXY, ALUMINIUM, STUDS",
+        materials: "WOOD, PAPER, EPOXY, ALUMINIUM, STUDS",
         height: "14.8",
         width: "21",
         depth: "3",
@@ -167,8 +160,54 @@
   }
 
 
+  function materialValues(value) {
+    const seen = new Set();
+    const values = [];
+
+    const append = (source) => {
+      if (Array.isArray(source)) {
+        source.forEach(append);
+        return;
+      }
+      String(source || "").split(",").forEach((entry) => {
+        const term = entry.trim();
+        const normalized = term.toLocaleLowerCase();
+        if (!term || seen.has(normalized)) return;
+        seen.add(normalized);
+        values.push(term);
+      });
+    };
+
+    append(value);
+    return values;
+  }
+
+
+  function unifiedMaterials(work) {
+    const source = Object.hasOwn(work || {}, "materials")
+      ? work.materials
+      : [work?.primaryMedium, work?.supportBase, work?.additionalMaterials];
+    return materialValues(source).join(", ");
+  }
+
+
+  function withUnifiedMaterials(work) {
+    if (!work) return null;
+    const values = materialValues(Object.hasOwn(work, "materials")
+      ? work.materials
+      : [work.primaryMedium, work.supportBase, work.additionalMaterials]);
+    return {
+      ...work,
+      materials: values.join(", "),
+      materialTerms: values.map((value) => value.toLocaleLowerCase())
+    };
+  }
+
+
   function normaliseWork(work, existingWork = null) {
     const now = new Date().toISOString();
+    const materials = unifiedMaterials(work);
+    const materialTerms = materialValues(materials).map((value) => value.toLocaleLowerCase());
 
     return {
       id: work.id || existingWork?.id || createId(),
@@ -176,9 +215,8 @@
       year: work.year || "",
       workType: work.workType || "",
       format: work.format || "",
-      primaryMedium: work.primaryMedium || "",
-      supportBase: work.supportBase || "",
-      additionalMaterials: work.additionalMaterials || "",
+      materials,
+      materialTerms,
       height: work.height || "",
       width: work.width || "",
       depth: work.depth || "",
@@ -291,7 +329,7 @@
 
     await completion;
 
-    return works.sort(
+    return works.map(withUnifiedMaterials).sort(
       (first, second) =>
         new Date(second.updatedAt).getTime() -
         new Date(first.updatedAt).getTime()
@@ -308,7 +346,7 @@
 
     await completion;
 
-    return work || null;
+    return withUnifiedMaterials(work);
   }
 
 

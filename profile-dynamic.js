@@ -191,11 +191,7 @@ function createWorkArticle(work) {
     metadata.append(type);
   }
 
-  const materials = [
-    work.primaryMedium,
-    work.supportBase,
-    ...work.additionalMaterials
-  ].filter(Boolean).join(", ");
+  const materials = work.materials || "";
   if (materials) {
     const line = document.createElement("p");
     line.textContent = materials;

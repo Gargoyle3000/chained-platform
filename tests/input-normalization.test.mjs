@@ -25,7 +25,7 @@ test("material terms normalize comma-separated input while display values retain
     ["rubber", "aluminium", "epoxy resin"]
   );
   assert.deepEqual(
-    materialDisplayValues("Rubber, aluminium, epoxy resin"),
+    materialDisplayValues("Rubber, aluminium, epoxy resin, RUBBER, , "),
     ["Rubber", "aluminium", "epoxy resin"]
   );
 });

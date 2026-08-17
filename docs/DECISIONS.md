@@ -108,9 +108,11 @@ Last updated: 2026-08-17
 
 
 
-\- Materials search/autocomplete is useful and should be preserved.
+\- MEDIUM is the existing structured format/discipline value used for NOSY filtering and navigation; it is not shown on an individual public Work page.
 
-\- The current PRIMARY MEDIUM → SUPPORT/BASE → ADDITIONAL MATERIALS hierarchy may be redesigned later.
+\- MATERIALS is one free comma-separated field in v1, without autocomplete or a dropdown.
+
+\- Material terms are trimmed and de-duplicated case-insensitively for display and future normalized search; legacy material fields are unified on read and migrated when that Work is saved.
 
 
 

@@ -109,6 +109,7 @@ test("one discipline constrains the Works candidate query before its limit", asy
   assert.equal(calls.length, 3);
   assert.equal(calls[0].table, "works");
   assert.equal(calls[0].query.get("format_discipline"), "in.(painting)");
+  assert.equal(calls[0].query.has("additional_materials"), false);
   assert.equal(calls[0].query.get("limit"), String(DISCOVER_CANDIDATE_LIMIT));
   assert.deepEqual(result.map((entry) => entry.id), [IDS.workA1, IDS.workA2]);
 });

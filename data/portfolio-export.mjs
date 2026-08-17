@@ -1,3 +1,5 @@
+import { materialDisplayValues } from "./material-terms.mjs";
+
 export const A4_PAGE = Object.freeze({ width: 595.28, height: 841.89 });
 export const PORTFOLIO_SAFE_TARGET_BYTES = 19 * 1024 * 1024;
 export const PORTFOLIO_MAX_BYTES = 20 * 1024 * 1024;
@@ -60,9 +62,14 @@ export function createPortfolioPlan(works = []) {
 }
 
 export function portfolioMaterials(work = {}) {
-  return [text(work.primaryMedium), text(work.supportBase), text(work.additionalMaterials)]
-    .filter(Boolean)
-    .join(", ");
+  const values = Object.hasOwn(work, "materials")
+    ? materialDisplayValues(work.materials)
+    : materialDisplayValues([
+      work.primaryMedium,
+      work.supportBase,
+      work.additionalMaterials
+    ]);
+  return values.join(", ");
 }
 
 export function portfolioDimensions(work = {}) {
