@@ -16,15 +16,15 @@ Current focus: small visual/mobile polish before returning to larger product wor
 
 \### Mobile visual polish
 
-\- Archive mobile: only SINGLE and GRID.
+\- Archive mobile: only SINGLE and GRID; the former SUPERGRID presentation is now the mobile GRID (validated).
 
-\- Current mobile SUPERGRID layout should become the new GRID layout.
+\- Former mobile SUPERGRID layout is now the validated mobile GRID presentation.
 
 \- Mobile-only change; desktop/tablet Archive views must remain unchanged.
 
-\- Mobile mixed-ratio GRID images should behave like the balanced desktop GRID, not align awkwardly top-left.
+\- Archive, Discover NOSY and Following mobile mixed-ratio GRID images are centered and balanced without crop/stretch (validated).
 
-\- PROFILE: reduce excessive whitespace between artist name and navigation.
+\- PROFILE mobile name-to-navigation spacing is compact (validated).
 
 \- Add slightly more whitespace between `<CHAINED>` and the mobile navigation across pages.
 

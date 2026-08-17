@@ -1271,6 +1271,28 @@ footer {
     gap: 34px 12px;
   }
 
+  .following-page[data-view="grid"] .discover-image-link,
+  .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .discover-image-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 4 / 3;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .following-page[data-view="grid"] .discover-image-link img,
+  .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .discover-image-link img {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 100%;
+    min-width: 0;
+    min-height: 0;
+    object-fit: contain;
+    object-position: center center;
+  }
+
   .following-page[data-view="grid"] .discover-meta,
   .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .discover-meta {
     padding-top: 8px;
