@@ -754,36 +754,36 @@
 
 /* SUPERGRID */
 
-.archive-page[data-view="supergrid"] .saved-grid {
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .saved-grid {
   columns: 5;
   column-gap: 14px;
 }
 
-.archive-page[data-view="supergrid"] .saved-work {
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .saved-work {
   margin-bottom: 26px;
 }
 
-.archive-page[data-view="supergrid"] .saved-work-meta {
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .saved-work-meta {
   padding-top: 7px;
   font-size: 9px;
 }
 
-.archive-page[data-view="supergrid"] .saved-work-meta h2 {
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .saved-work-meta h2 {
   margin: 4px 0;
   font-size: 10px;
 }
 
-.archive-page[data-view="supergrid"] .saved-work-actions {
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .saved-work-actions {
   display: block;
   position: relative;
   margin-top: 7px;
 }
 
-.archive-page[data-view="supergrid"] .archive-supergrid-management-trigger {
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-management-trigger {
   display: inline-block;
 }
 
-.archive-page[data-view="supergrid"] .archive-supergrid-menu {
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu {
   position: absolute;
   top: 19px;
   left: 0;
@@ -800,11 +800,11 @@
   background: var(--white);
 }
 
-.archive-page[data-view="supergrid"] .archive-supergrid-menu[data-open="true"] {
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu[data-open="true"] {
   display: flex;
 }
 
-.archive-page[data-view="supergrid"] .archive-supergrid-menu-close {
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu-close {
   position: absolute;
   top: 7px;
   right: 8px;
@@ -821,22 +821,22 @@
   cursor: pointer;
 }
 
-.archive-page[data-view="supergrid"] .archive-supergrid-menu-close:hover,
-.archive-page[data-view="supergrid"] .archive-supergrid-menu-close:focus-visible {
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu-close:hover,
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu-close:focus-visible {
   color: var(--accent);
 }
 
-.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-tag-assignment,
-.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-project-assignment,
-.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-remove {
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu > .archive-tag-assignment,
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu > .archive-project-assignment,
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu > .archive-remove {
   display: block;
   width: 100%;
   margin: 0;
 }
 
-.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-tag-assignment > button,
-.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-project-assignment > button,
-.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-remove {
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu > .archive-tag-assignment > button,
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu > .archive-project-assignment > button,
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu > .archive-remove {
   display: block;
   box-sizing: border-box;
   width: 100%;
@@ -852,17 +852,17 @@
   text-align: left;
 }
 
-.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-tag-assignment > button:hover,
-.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-tag-assignment > button:focus-visible,
-.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-project-assignment > button:hover,
-.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-project-assignment > button:focus-visible,
-.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-remove:hover,
-.archive-page[data-view="supergrid"] .archive-supergrid-menu > .archive-remove:focus-visible {
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu > .archive-tag-assignment > button:hover,
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu > .archive-tag-assignment > button:focus-visible,
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu > .archive-project-assignment > button:hover,
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu > .archive-project-assignment > button:focus-visible,
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu > .archive-remove:hover,
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu > .archive-remove:focus-visible {
   color: var(--accent);
 }
 
-.archive-page[data-view="supergrid"] .archive-supergrid-menu .archive-tag-menu,
-.archive-page[data-view="supergrid"] .archive-supergrid-menu .archive-project-menu {
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu .archive-tag-menu,
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu .archive-project-menu {
   max-width: calc(100vw - (var(--page-gutter) * 2));
 }
 
@@ -874,13 +874,13 @@
     columns: 2;
   }
 
-  .archive-page[data-view="supergrid"] .saved-grid {
+  .archive-page:is([data-view="supergrid"], .archive-mobile-grid) .saved-grid {
     columns: 4;
   }
 }
 
 @media (max-width: 850px) {
-  .archive-page[data-view="supergrid"] .saved-grid {
+  .archive-page:is([data-view="supergrid"], .archive-mobile-grid) .saved-grid {
     columns: 3;
   }
 }
@@ -891,6 +891,11 @@
     align-items: flex-start;
   }
 
+  .archive-view-button[data-archive-view="supergrid"],
+  .archive-supergrid-separator {
+    display: none;
+  }
+
   .archive-view-switch {
     flex-wrap: wrap;
   }
@@ -899,8 +904,24 @@
     columns: 2;
   }
 
-  .archive-page[data-view="supergrid"] .saved-grid {
+  .archive-page:is([data-view="supergrid"], .archive-mobile-grid) .saved-grid {
     columns: 3;
+  }
+
+  .archive-page.archive-mobile-grid .saved-work > a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 4 / 3;
+  }
+
+  .archive-page.archive-mobile-grid .saved-work > a img {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: center center;
   }
 }
 
@@ -910,7 +931,7 @@
     columns: 1;
   }
 
-  .archive-page[data-view="supergrid"] .saved-grid {
+  .archive-page:is([data-view="supergrid"], .archive-mobile-grid) .saved-grid {
     columns: 2;
   }
 }

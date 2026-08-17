@@ -565,11 +565,14 @@ function selectProject(projectId, { history = "push" } = {}) {
 function initialiseView() {
   let view = "grid";
   try { view = localStorage.getItem(viewStorageKey) || view; } catch {}
+  const mobileViewQuery = window.matchMedia("(max-width: 700px)");
+  const isMobile = () => mobileViewQuery.matches;
   const setView = (selected) => {
     if (!viewButtons.some((button) => button.dataset.archiveView === selected)) return;
     if (openArchivePopover) closeArchivePopover(openArchivePopover.menu, openArchivePopover.toggle);
     closeWorkManagementMenu();
     page.dataset.view = selected;
+    page.classList.toggle("archive-mobile-grid", isMobile() && selected === "grid");
     viewButtons.forEach((button) => {
       const active = button.dataset.archiveView === selected;
       button.classList.toggle("is-active", active);
@@ -577,8 +580,13 @@ function initialiseView() {
     });
     try { localStorage.setItem(viewStorageKey, selected); } catch {}
   };
+  if (isMobile() && view === "supergrid") view = "grid";
   setView(view);
   viewButtons.forEach((button) => button.addEventListener("click", () => setView(button.dataset.archiveView)));
+  mobileViewQuery.addEventListener("change", () => {
+    if (isMobile() && page.dataset.view === "supergrid") setView("grid");
+    else page.classList.toggle("archive-mobile-grid", isMobile() && page.dataset.view === "grid");
+  });
 }
 
 function initialiseTags() {
