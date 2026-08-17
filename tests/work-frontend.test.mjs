@@ -103,12 +103,10 @@ test("upload errors are sanitized", async () => {
 
 test("private previews use the authenticated storage route with the current session", async () => {
   const requests = [];
-  const diagnostics = [];
   const preview = createWorkMediaService(
     { auth: { getSession: async () => ({ data: { session: { access_token: "test-access-token" } }, error: null }) } },
     { supabaseUrl: "https://project.supabase.co", supabaseKey: "test-publishable-key" },
     {
-      logger: { error: (...entry) => diagnostics.push(entry) },
       fetcher: async (url, options) => {
         requests.push({ url, options });
         return new Response(new Blob(["image"], { type: "image/png" }), { status: 200 });
@@ -122,73 +120,33 @@ test("private previews use the authenticated storage route with the current sess
   assert.equal(requests[0].url, "https://project.supabase.co/storage/v1/object/authenticated/work-originals/artist%20id/work%20id/image%20id/original%20file.png");
   assert.equal(requests[0].url.includes("/storage/v1/object/work-originals/"), false);
   assert.deepEqual(requests[0].options.headers, { apikey: "test-publishable-key", Authorization: "Bearer test-access-token" });
-  assert.deepEqual(diagnostics, []);
   preview.urls.revoke(url);
   assert.equal(preview.urls.size(), 0);
 });
 
-test("failed private Storage retrieval emits a sanitized same-token diagnostic", async () => {
-  const accessToken = `header.${Buffer.from(JSON.stringify({ sub: ID, role: "authenticated", aud: "authenticated", iss: "https://project.supabase.co/auth/v1", exp: Math.floor(Date.now() / 1000) + 60 })).toString("base64url")}.signature`;
-  const requests = [];
-  const diagnostics = [];
-  const image = { id: ID, workId: "22222222-2222-4222-8222-222222222222", privatePath: "private/work/image/original.webp" };
+test("private preview sanitizes non-OK Storage responses without logging credentials", async () => {
+  const accessToken = "test-access-token";
+  const publishableKey = "test-publishable-key";
+  const consoleErrors = [];
+  const originalConsoleError = console.error;
   const preview = createWorkMediaService(
-    { auth: { getSession: async () => ({ data: { session: { access_token: accessToken, user: { id: ID } } }, error: null }) } },
-    { supabaseUrl: "https://project.supabase.co", supabaseKey: "diagnostic-publishable-key" },
-    {
-      logger: { error: (...entry) => diagnostics.push(entry) },
-      fetcher: async (url, options) => {
-        requests.push({ url, options });
-        if (url.includes("/storage/v1/object/authenticated/")) return new Response(JSON.stringify({ error: "NoSuchKey" }), { status: 400, headers: { "x-request-id": "storage-request-id" } });
-        if (url.endsWith("/auth/v1/user")) return new Response(JSON.stringify({ id: ID }), { status: 200, headers: { "Content-Type": "application/json" } });
-        if (url.endsWith("/rest/v1/rpc/list_managed_work_images")) return new Response(JSON.stringify([{ id: image.id, work_id: image.workId, private_object_path: image.privatePath }]), { status: 200, headers: { "Content-Type": "application/json" } });
-        throw new Error("Unexpected diagnostic request");
-      }
-    }
+    { auth: { getSession: async () => ({ data: { session: { access_token: accessToken } }, error: null }) } },
+    { supabaseUrl: "https://project.supabase.co", supabaseKey: publishableKey },
+    { fetcher: async () => new Response(null, { status: 403 }) }
   );
 
-  await assert.rejects(() => preview.privatePreview(image));
-  assert.equal(preview.urls.size(), 0);
-  assert.equal(diagnostics.length, 1);
-  assert.equal(diagnostics[0][0], "[PRIVATE MEDIA DIAGNOSTIC]");
-  assert.deepEqual(diagnostics[0][1], {
-    authValidation: "PASS",
-    authStatus: 200,
-    expectedUserIdentityMatches: "YES",
-    role: "authenticated",
-    audienceValid: "YES",
-    issuerValid: "YES",
-    tokenExpired: "NO",
-    postgrestAuthorization: "PASS",
-    postgrestStatus: 200,
-    exactImageContextMatches: "YES",
-    storageRetrieval: "FAIL",
-    storageStatus: 400,
-    storageErrorCode: "NoSuchKey",
-    storageRequestId: "storage-request-id",
-    sameCapturedAccessToken: "YES"
-  });
-  const serializedDiagnostic = JSON.stringify(diagnostics[0]);
-  assert.equal(serializedDiagnostic.includes(accessToken), false);
-  assert.equal(serializedDiagnostic.includes("diagnostic-publishable-key"), false);
-  assert.equal(serializedDiagnostic.includes(image.privatePath), false);
-  assert.equal(serializedDiagnostic.includes("Bearer "), false);
-  assert.equal(requests.length, 3);
-  assert.equal(new Set(requests.map(({ options }) => options.headers.Authorization)).size, 1);
-  assert.equal(requests.every(({ options }) => options.headers.Authorization === `Bearer ${accessToken}`), true);
-  assert.equal(requests.filter(({ url }) => url.includes("/storage/v1/object/authenticated/")).length, 1);
-});
-
-test("private preview rejects non-OK authenticated Storage responses without creating a URL", async () => {
-  const diagnostics = [];
-  const preview = createWorkMediaService(
-    { auth: { getSession: async () => ({ data: { session: { access_token: "test-access-token" } }, error: null }) } },
-    { supabaseUrl: "https://project.supabase.co", supabaseKey: "test-publishable-key" },
-    { fetcher: async () => new Response(null, { status: 403 }), logger: { error: (...entry) => diagnostics.push(entry) } }
-  );
-
-  await assert.rejects(() => preview.privatePreview({ privatePath: "private/object.png" }), (error) => error.code === WORK_ERROR_CODES.UNAUTHORIZED);
-  assert.equal(diagnostics.length, 1);
+  console.error = (...entry) => consoleErrors.push(entry);
+  try {
+    await assert.rejects(() => preview.privatePreview({ privatePath: "private/object.png" }), (error) => {
+      assert.equal(error.code, WORK_ERROR_CODES.UNAUTHORIZED);
+      assert.equal(error.message.includes(accessToken), false);
+      assert.equal(error.message.includes(publishableKey), false);
+      return true;
+    });
+  } finally {
+    console.error = originalConsoleError;
+  }
+  assert.deepEqual(consoleErrors, []);
   assert.equal(preview.urls.size(), 0);
 });
 
