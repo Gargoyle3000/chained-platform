@@ -5,9 +5,14 @@ import {
   InvitationConflictFailure,
   type AllowedRole,
 } from "./logic.ts";
+import {
+  elevatedServiceHeaders,
+  resolveSupabaseApiKeys,
+  userScopedHeaders,
+} from "../_shared/supabase-api-keys.ts";
 
 const supabaseUrl = requiredEnvironment("SUPABASE_URL");
-const publishableKey = requiredEnvironment("SUPABASE_ANON_KEY");
+const apiKeys = resolveSupabaseApiKeys((name) => Deno.env.get(name));
 const configuredRedirect = Deno.env.get("INVITE_REDIRECT_URL")?.trim() || null;
 const allowedOrigins = new Set(
   (Deno.env.get("ALLOWED_INVITE_ORIGINS") ?? "")
@@ -22,13 +27,6 @@ function requiredEnvironment(name: string): string {
   return value;
 }
 
-function serviceCredential(): string {
-  const value = Deno.env.get("SUPABASE_SECRET_KEY")?.trim()
-    || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
-  if (!value) throw new Error("Missing server-side Supabase credential");
-  return value;
-}
-
 function restUrl(path: string, parameters: Record<string, string>): URL {
   const url = new URL(`/rest/v1/${path}`, supabaseUrl);
   for (const [key, value] of Object.entries(parameters)) {
@@ -38,10 +36,7 @@ function restUrl(path: string, parameters: Record<string, string>): URL {
 }
 
 function serviceHeaders(extra: HeadersInit = {}): Headers {
-  const credential = serviceCredential();
-  const headers = new Headers(extra);
-  headers.set("apikey", credential);
-  headers.set("authorization", `Bearer ${credential}`);
+  const headers = elevatedServiceHeaders(apiKeys.secret, extra);
   headers.set("content-type", "application/json");
   return headers;
 }
@@ -93,10 +88,7 @@ const handler = createInviteHandler({
 
   async verifyCaller(token) {
     const response = await fetch(new URL("/auth/v1/user", supabaseUrl), {
-      headers: {
-        apikey: publishableKey,
-        authorization: `Bearer ${token}`,
-      },
+      headers: userScopedHeaders(apiKeys.publishable, `Bearer ${token}`),
     });
     if (!response.ok) throw new Error("Invalid caller token");
     const user: unknown = await response.json();
@@ -107,10 +99,10 @@ const handler = createInviteHandler({
   },
 
   async readCallerAuthorization(callerId, token) {
-    const callerHeaders = {
-      apikey: publishableKey,
-      authorization: `Bearer ${token}`,
-    };
+    const callerHeaders = userScopedHeaders(
+      apiKeys.publishable,
+      `Bearer ${token}`,
+    );
 
     const [accountResponse, roleResponse] = await Promise.all([
       fetch(
@@ -203,17 +195,14 @@ const handler = createInviteHandler({
   readInvitation: readInvitationById,
 
   async inviteAuthUser(email) {
-    const credential = serviceCredential();
     const url = new URL("/auth/v1/invite", supabaseUrl);
     if (configuredRedirect) url.searchParams.set("redirect_to", configuredRedirect);
 
     const response = await fetch(url, {
       method: "POST",
-      headers: {
-        apikey: credential,
-        authorization: `Bearer ${credential}`,
+      headers: serviceHeaders({
         "content-type": "application/json",
-      },
+      }),
       body: JSON.stringify({ email }),
     });
 

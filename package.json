@@ -1,7 +1,7 @@
 {
     "scripts": {
         "test:frontend": "node --test auth/tests/*.test.mjs tests/*.test.mjs",
-        "test:edge": "node --experimental-transform-types --import ./tests/deno-node-shim.mjs --test supabase/functions/_shared/work-media-cors_test.ts supabase/functions/invite-account/logic_test.ts supabase/functions/finalize-work-image-upload/logic_test.ts supabase/functions/publish-work/logic_test.ts supabase/functions/unpublish-work/logic_test.ts supabase/functions/delete-work-image/logic_test.ts",
+        "test:edge": "node --experimental-transform-types --import ./tests/deno-node-shim.mjs --test supabase/functions/_shared/supabase-api-keys_test.ts supabase/functions/_shared/work-media-cors_test.ts supabase/functions/invite-account/logic_test.ts supabase/functions/finalize-work-image-upload/logic_test.ts supabase/functions/publish-work/logic_test.ts supabase/functions/unpublish-work/logic_test.ts supabase/functions/delete-work-image/logic_test.ts",
         "test:work-integration": "node tests/work-integration.mjs",
         "test:public-integration": "node tests/public-integration.mjs",
         "test:following-integration": "node tests/following-integration.mjs",

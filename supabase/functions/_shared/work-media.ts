@@ -1,3 +1,9 @@
+import {
+  elevatedServiceHeaders,
+  resolveSupabaseApiKeys,
+  userScopedHeaders,
+} from "./supabase-api-keys.ts";
+
 export const MAX_REQUEST_BYTES = 4096;
 export const ORIGINAL_BUCKET = "work-originals";
 export const PUBLIC_BUCKET = "work-public";
@@ -169,21 +175,15 @@ function encodeObjectPath(path: string): string {
 
 export function createMediaDependencies(): MediaDependencies {
   const apiUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "");
-  const publishableKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY");
+  const apiKeys = resolveSupabaseApiKeys((name) => Deno.env.get(name));
 
-  if (!apiUrl || !publishableKey) {
+  if (!apiUrl) {
     throw new Error("Local Supabase function environment is incomplete.");
   }
 
-  const getServiceKey = (): string => {
-    const key = Deno.env.get("SUPABASE_SECRET_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!key) throw new Error("Server credential is unavailable.");
-    return key;
-  };
-
   const fetchRows = async (path: string, jwt: string): Promise<Record<string, unknown>[]> => {
     const response = await fetch(`${apiUrl}${path}`, {
-      headers: { apikey: publishableKey, authorization: jwt },
+      headers: userScopedHeaders(apiKeys.publishable, jwt),
     });
     if (!response.ok) throw new MediaError(403, "not_authorized");
     const value = await response.json();
@@ -198,7 +198,7 @@ export function createMediaDependencies(): MediaDependencies {
       }
 
       const userResponse = await fetch(`${apiUrl}/auth/v1/user`, {
-        headers: { apikey: publishableKey, authorization },
+        headers: userScopedHeaders(apiKeys.publishable, authorization),
       });
       if (!userResponse.ok) throw new MediaError(401, "invalid_session");
       const user = await userResponse.json() as { id?: unknown };
@@ -220,14 +220,11 @@ export function createMediaDependencies(): MediaDependencies {
     },
 
     async rpc(name, body) {
-      const serviceKey = getServiceKey();
       const response = await fetch(`${apiUrl}/rest/v1/rpc/${encodeURIComponent(name)}`, {
         method: "POST",
-        headers: {
-          apikey: serviceKey,
-          authorization: `Bearer ${serviceKey}`,
+        headers: elevatedServiceHeaders(apiKeys.secret, {
           "content-type": "application/json",
-        },
+        }),
         body: JSON.stringify(body),
       });
       if (!response.ok) {
@@ -240,10 +237,9 @@ export function createMediaDependencies(): MediaDependencies {
     },
 
     async download(bucket, path) {
-      const serviceKey = getServiceKey();
       const response = await fetch(
         `${apiUrl}/storage/v1/object/authenticated/${encodeURIComponent(bucket)}/${encodeObjectPath(path)}`,
-        { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } },
+        { headers: elevatedServiceHeaders(apiKeys.secret) },
       );
       if (!response.ok) throw new MediaError(404, "object_missing");
       const bytes = new Uint8Array(await response.arrayBuffer());
@@ -252,18 +248,15 @@ export function createMediaDependencies(): MediaDependencies {
     },
 
     async upload(bucket, path, object) {
-      const serviceKey = getServiceKey();
       const response = await fetch(
         `${apiUrl}/storage/v1/object/${encodeURIComponent(bucket)}/${encodeObjectPath(path)}`,
         {
           method: "POST",
-          headers: {
-            apikey: serviceKey,
-            authorization: `Bearer ${serviceKey}`,
+          headers: elevatedServiceHeaders(apiKeys.secret, {
             "content-type": object.mimeType,
             "cache-control": "31536000",
             "x-upsert": "false",
-          },
+          }),
           body: object.bytes,
         },
       );
@@ -272,18 +265,14 @@ export function createMediaDependencies(): MediaDependencies {
 
     async remove(bucket, paths) {
       if (paths.length === 0) return true;
-      const serviceKey = getServiceKey();
       const response = await fetch(`${apiUrl}/storage/v1/object/${encodeURIComponent(bucket)}`, {
         method: "DELETE",
-        headers: {
-          apikey: serviceKey,
-          authorization: `Bearer ${serviceKey}`,
+        headers: elevatedServiceHeaders(apiKeys.secret, {
           "content-type": "application/json",
-        },
+        }),
         body: JSON.stringify({ prefixes: [...new Set(paths)] }),
       });
       return response.ok;
     },
   };
 }
-
