@@ -1265,14 +1265,12 @@ footer {
     grid-template-columns: 1fr;
   }
 
-  .following-page[data-view="grid"] .discover-stream,
-  .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .discover-stream {
+  .discover-page:is(.following-page, :not(.following-page)[data-discover-channel="nosy"])[data-view="grid"] .discover-stream {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 34px 12px;
   }
 
-  .following-page[data-view="grid"] .discover-image-link,
-  .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .discover-image-link {
+  .discover-page:is(.following-page, :not(.following-page)[data-discover-channel="nosy"])[data-view="grid"] .discover-image-link {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1281,8 +1279,7 @@ footer {
     min-height: 0;
   }
 
-  .following-page[data-view="grid"] .discover-image-link img,
-  .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .discover-image-link img {
+  .discover-page:is(.following-page, :not(.following-page)[data-discover-channel="nosy"])[data-view="grid"] .discover-image-link img {
     width: auto;
     max-width: 100%;
     height: auto;
@@ -1293,23 +1290,18 @@ footer {
     object-position: center center;
   }
 
-  .following-page[data-view="grid"] .discover-meta,
-  .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .discover-meta {
+  .discover-page:is(.following-page, :not(.following-page)[data-discover-channel="nosy"])[data-view="grid"] .discover-meta {
     padding-top: 8px;
   }
 
-  .following-page[data-view="grid"] .discover-meta h2,
-  .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .discover-meta h2 {
+  .discover-page:is(.following-page, :not(.following-page)[data-discover-channel="nosy"])[data-view="grid"] .discover-meta h2 {
     margin: 6px 0;
     font-size: 12px;
   }
 
-  .following-page[data-view="grid"] .artist-link,
-  .following-page[data-view="grid"] .year-link,
-  .following-page[data-view="grid"] .discover-archive-action,
-  .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .artist-link,
-  .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .year-link,
-  .discover-page:not(.following-page)[data-discover-channel="nosy"][data-view="grid"] .discover-archive-action {
+  .discover-page:is(.following-page, :not(.following-page)[data-discover-channel="nosy"])[data-view="grid"] .artist-link,
+  .discover-page:is(.following-page, :not(.following-page)[data-discover-channel="nosy"])[data-view="grid"] .year-link,
+  .discover-page:is(.following-page, :not(.following-page)[data-discover-channel="nosy"])[data-view="grid"] .discover-archive-action {
     font-size: 10px;
   }
 }
