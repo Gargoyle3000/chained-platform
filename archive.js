@@ -14,6 +14,8 @@ const searchInput = document.querySelector(".archive-search input");
 const resultCount = document.querySelector(".archive-result-count");
 const emptyMessage = document.querySelector(".archive-empty");
 const viewButtons = [...document.querySelectorAll("[data-archive-view]")];
+const supergridButton = viewButtons.find((button) => button.dataset.archiveView === "supergrid");
+const supergridSeparator = supergridButton?.previousElementSibling;
 const tagForm = document.querySelector(".archive-tag-create");
 const tagInput = document.querySelector(".archive-tag-create input");
 const tagCreateButton = document.querySelector(".archive-tag-create button");
@@ -567,11 +569,22 @@ function initialiseView() {
   try { view = localStorage.getItem(viewStorageKey) || view; } catch {}
   const mobileViewQuery = window.matchMedia("(max-width: 700px)");
   const isMobile = () => mobileViewQuery.matches;
+  const updateMobileControls = () => {
+    const hidden = isMobile();
+    [supergridButton, supergridSeparator].forEach((element) => {
+      if (!element) return;
+      element.hidden = hidden;
+      element.setAttribute("aria-hidden", String(hidden));
+    });
+    if (supergridButton) supergridButton.tabIndex = hidden ? -1 : 0;
+  };
   const setView = (selected) => {
+    if (isMobile() && selected === "supergrid") selected = "grid";
     if (!viewButtons.some((button) => button.dataset.archiveView === selected)) return;
     if (openArchivePopover) closeArchivePopover(openArchivePopover.menu, openArchivePopover.toggle);
     closeWorkManagementMenu();
     page.dataset.view = selected;
+    updateMobileControls();
     page.classList.toggle("archive-mobile-grid", isMobile() && selected === "grid");
     viewButtons.forEach((button) => {
       const active = button.dataset.archiveView === selected;
@@ -585,7 +598,10 @@ function initialiseView() {
   viewButtons.forEach((button) => button.addEventListener("click", () => setView(button.dataset.archiveView)));
   mobileViewQuery.addEventListener("change", () => {
     if (isMobile() && page.dataset.view === "supergrid") setView("grid");
-    else page.classList.toggle("archive-mobile-grid", isMobile() && page.dataset.view === "grid");
+    else {
+      updateMobileControls();
+      page.classList.toggle("archive-mobile-grid", isMobile() && page.dataset.view === "grid");
+    }
   });
 }
 

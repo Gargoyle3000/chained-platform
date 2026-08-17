@@ -267,11 +267,20 @@
 
   .artist-intro h1 {
     font-size: 34px;
-    margin-bottom: 16px;
+    margin-bottom: 4px;
+  }
+
+  .artist-intro p {
+    margin-bottom: 8px;
   }
 
   .profile-follow {
-    margin-bottom: 32px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+
+  .profile-follow-status {
+    margin-top: 4px;
   }
 
   .artist-navigation {
