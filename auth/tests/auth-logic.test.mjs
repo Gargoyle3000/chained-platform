@@ -6,8 +6,10 @@ import {
   GENERIC_LOGIN_CONFIRMATION,
   accountAccessDecision,
   mapLoginResult,
+  readAuthLinkInput,
   resolveNextPage,
-  sanitizeCallbackError
+  sanitizeCallbackError,
+  validateNewPassword
 } from "../auth-logic.mjs";
 
 test("known dashboard next page is accepted", () => {
@@ -80,4 +82,32 @@ test("callback errors are sanitized and never reflected", () => {
   const message = sanitizeCallbackError(unsafe);
   assert.equal(message.includes("private-value"), false);
   assert.equal(message.includes("database detail"), false);
+});
+
+test("new password validation requires matching values", () => {
+  assert.equal(validateNewPassword("long-enough", "different").valid, false);
+  assert.equal(validateNewPassword("short", "short").valid, false);
+  assert.equal(validateNewPassword("long-enough", "long-enough").valid, true);
+});
+
+test("Auth link input retains only the exchange code and sanitized facts", () => {
+  const input = readAuthLinkInput(
+    "?code=one-time-code",
+    "#access_token=private-access&refresh_token=private-refresh&type=recovery"
+  );
+
+  assert.equal(input.code, "one-time-code");
+  assert.equal(input.hasAuthParameters, true);
+  assert.equal(JSON.stringify(input).includes("private-access"), false);
+  assert.equal(JSON.stringify(input).includes("private-refresh"), false);
+});
+
+test("Auth link errors are sanitized without retaining callback details", () => {
+  const input = readAuthLinkInput(
+    "?error_description=expired%20token%3Dprivate-value",
+    ""
+  );
+
+  assert.match(input.errorMessage, /EXPIRED/);
+  assert.equal(JSON.stringify(input).includes("private-value"), false);
 });

@@ -15,6 +15,12 @@ const PROTECTED_PAGE_SET = new Set(PROTECTED_DASHBOARD_PAGES);
 export const GENERIC_LOGIN_CONFIRMATION =
   "IF THIS EMAIL IS ADMITTED, A SIGN-IN LINK HAS BEEN SENT.";
 
+export const GENERIC_AUTH_FAILURE =
+  "EMAIL OR PASSWORD NOT RECOGNIZED.";
+
+export const GENERIC_RECOVERY_CONFIRMATION =
+  "IF THIS EMAIL HAS A CHAINED ACCOUNT, A PASSWORD RESET LINK HAS BEEN SENT.";
+
 export const NEXT_PAGE_STORAGE_KEY = "chained-auth-next-page";
 
 export function normalizeEmail(value) {
@@ -91,6 +97,49 @@ export function mapLoginResult() {
   return Object.freeze({
     kind: "generic-success",
     message: GENERIC_LOGIN_CONFIRMATION
+  });
+}
+
+export function validateNewPassword(password, confirmation) {
+  if (typeof password !== "string" || password.length < 8) {
+    return Object.freeze({
+      valid: false,
+      message: "USE A PASSWORD OF AT LEAST 8 CHARACTERS."
+    });
+  }
+
+  if (password !== confirmation) {
+    return Object.freeze({
+      valid: false,
+      message: "PASSWORDS DO NOT MATCH."
+    });
+  }
+
+  return Object.freeze({ valid: true, message: "" });
+}
+
+export function readAuthLinkInput(search, hash) {
+  const query = new URLSearchParams(
+    typeof search === "string" ? search.replace(/^\?/, "") : ""
+  );
+  const fragment = new URLSearchParams(
+    typeof hash === "string" ? hash.replace(/^#/, "") : ""
+  );
+  const callbackError = query.get("error_description") ||
+    query.get("error") ||
+    fragment.get("error_description") ||
+    fragment.get("error");
+  const code = query.get("code");
+
+  return Object.freeze({
+    code: code || null,
+    errorMessage: callbackError ? sanitizeCallbackError(callbackError) : null,
+    hasAuthParameters: Boolean(
+      code ||
+      callbackError ||
+      fragment.has("access_token") ||
+      fragment.has("refresh_token")
+    )
   });
 }
 

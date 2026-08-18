@@ -27,28 +27,50 @@
     <section class="auth-intro">
       <h1>PRIVATE ACCESS</h1>
       <p>
-        CHAINED ACCOUNTS ARE INVITATION ONLY. ADMITTED MEMBERS CAN REQUEST
-        A PASSWORDLESS SIGN-IN LINK.
+        CHAINED ACCOUNTS ARE INVITATION ONLY. ADMITTED MEMBERS CAN SIGN IN
+        WITH A PASSWORD OR REQUEST A SIGN-IN LINK.
       </p>
     </section>
 
     <section class="auth-panel" aria-labelledby="auth-login-heading">
       <h2 id="auth-login-heading">SIGN IN TO CHAINED</h2>
 
-      <form class="auth-form" data-auth-login-form novalidate>
+      <form class="auth-form" data-auth-login-form hidden novalidate>
         <label class="auth-field" for="auth-email">
           <span>EMAIL</span>
           <input
             id="auth-email"
-            name="email"
             type="email"
             inputmode="email"
             autocomplete="email"
             required>
         </label>
 
-        <button class="auth-submit" type="submit" data-auth-submit>
-          [ SEND SIGN-IN LINK ]
+        <label class="auth-field" for="auth-password">
+          <span>PASSWORD</span>
+          <input
+            id="auth-password"
+            type="password"
+            autocomplete="current-password"
+            required>
+        </label>
+
+        <button class="auth-submit" type="submit" data-auth-password-submit>
+          [ LOG IN ]
+        </button>
+
+        <button
+          class="auth-text-action"
+          type="button"
+          data-auth-recovery>
+          Forgot password?
+        </button>
+
+        <button
+          class="auth-submit auth-secondary-submit"
+          type="button"
+          data-auth-magic-link>
+          [ EMAIL ME A SIGN-IN LINK ]
         </button>
       </form>
 

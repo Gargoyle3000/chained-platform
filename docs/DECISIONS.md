@@ -2,7 +2,7 @@
 
 
 
-Last updated: 2026-08-17
+Last updated: 2026-08-18
 
 
 
@@ -131,4 +131,14 @@ Last updated: 2026-08-17
 \- Elevated Supabase credentials must never be present client-side.
 
 \- Legacy Supabase anon/service\_role API keys are disabled.
+
+
+
+\## Authentication
+
+\- CHAINED admission remains invitation-only with no public signup.
+
+\- Email + password is the primary login method; email magic link remains a secondary fallback.
+
+\- Passwords are handled only by Supabase Auth, and adding a password preserves the existing Auth user/account UUID.
 

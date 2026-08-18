@@ -5,7 +5,9 @@ import {
   FRONTEND_MODES,
   FRONTEND_TARGETS,
   LOCAL_CALLBACK_URL,
+  LOCAL_PASSWORD_UPDATE_URL,
   PRODUCTION_CALLBACK_URL,
+  PRODUCTION_PASSWORD_UPDATE_URL,
   PRODUCTION_SUPABASE_URL,
   isBrowserSafeSupabaseKey,
   loadFrontendConfig,
@@ -97,6 +99,7 @@ test("valid local Supabase configuration is accepted", () => {
   assert.equal(config.mode, FRONTEND_MODES.SUPABASE);
   assert.equal(config.target, FRONTEND_TARGETS.LOCAL);
   assert.equal(config.supabaseUrl, "http://127.0.0.1:54321");
+  assert.equal(config.passwordUpdateUrl, LOCAL_PASSWORD_UPDATE_URL);
 });
 
 test("valid production Supabase configuration is accepted", () => {
@@ -112,6 +115,7 @@ test("valid production Supabase configuration is accepted", () => {
   assert.equal(config.target, FRONTEND_TARGETS.PRODUCTION);
   assert.equal(config.supabaseUrl, PRODUCTION_SUPABASE_URL);
   assert.equal(config.callbackUrl, PRODUCTION_CALLBACK_URL);
+  assert.equal(config.passwordUpdateUrl, PRODUCTION_PASSWORD_UPDATE_URL);
 });
 
 test("production host selects production configuration", async () => {

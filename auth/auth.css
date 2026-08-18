@@ -55,7 +55,8 @@ body[data-auth-protected="true"] > main {
 
 .auth-logout-button:focus-visible,
 .auth-form input:focus-visible,
-.auth-submit:focus-visible {
+.auth-submit:focus-visible,
+.auth-text-action:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
@@ -129,8 +130,33 @@ body[data-auth-protected="true"] > main {
   font: inherit;
 }
 
+.auth-secondary-submit {
+  margin-top: 8px;
+  color: var(--black);
+}
+
+.auth-text-action {
+  justify-self: start;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--black);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-meta);
+}
+
+.auth-text-action:hover,
+.auth-text-action:focus-visible {
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .auth-submit:disabled,
-.auth-logout-button:disabled {
+.auth-logout-button:disabled,
+.auth-text-action:disabled {
   color: var(--black);
   cursor: wait;
 }
@@ -165,8 +191,33 @@ body[data-auth-protected="true"] > main {
   letter-spacing: -0.055em;
 }
 
+.auth-password-main {
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 520px);
+  align-items: center;
+  gap: clamp(50px, 8vw, 150px);
+  padding-top: calc(var(--header-height) + 64px);
+  padding-bottom: 64px;
+}
+
+.auth-password-intro h1 {
+  max-width: 820px;
+  margin: 0;
+  font-size: clamp(42px, 7vw, 112px);
+  line-height: 0.88;
+  font-weight: 400;
+  letter-spacing: -0.065em;
+}
+
+.auth-password-panel[hidden],
+.auth-form[hidden] {
+  display: none;
+}
+
 @media (max-width: 900px) {
-  .auth-main {
+  .auth-main,
+  .auth-password-main {
     grid-template-columns: 1fr;
     align-content: end;
   }
@@ -178,12 +229,17 @@ body[data-auth-protected="true"] > main {
   }
 
   .auth-main,
-  .auth-callback-main {
+  .auth-callback-main,
+  .auth-password-main {
     min-height: calc(100svh - var(--header-height));
     padding-top: 64px;
   }
 
   .auth-intro h1 {
+    font-size: clamp(38px, 15vw, 70px);
+  }
+
+  .auth-password-intro h1 {
     font-size: clamp(38px, 15vw, 70px);
   }
 }

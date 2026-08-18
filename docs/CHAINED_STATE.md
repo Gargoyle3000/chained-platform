@@ -2,7 +2,7 @@
 
 
 
-Last updated: 2026-08-17
+Last updated: 2026-08-18
 
 
 
@@ -11,6 +11,16 @@ Last updated: 2026-08-17
 
 
 Current focus: small visual/mobile polish before returning to larger product work.
+
+
+
+\### Auth UX rollout
+
+\- Frontend auth is password-first: email + password login, Forgot password, and one invite/recovery password-update route.
+
+\- Magic-link login remains an invitation-only fallback; no public signup exists.
+
+\- Hosted redirect allowlist, invite redirect and recovery template/configuration still require a reviewed production change before deployment.
 
 
 

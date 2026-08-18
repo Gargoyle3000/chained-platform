@@ -14,11 +14,17 @@ export const FRONTEND_TARGETS = Object.freeze({
 export const LOCAL_CALLBACK_URL =
   "http://127.0.0.1:5500/auth-callback.html";
 
+export const LOCAL_PASSWORD_UPDATE_URL =
+  "http://127.0.0.1:5500/password-update.html";
+
 export const PRODUCTION_SITE_ORIGIN =
   "https://chained.work";
 
 export const PRODUCTION_CALLBACK_URL =
   "https://chained.work/auth-callback.html";
+
+export const PRODUCTION_PASSWORD_UPDATE_URL =
+  "https://chained.work/password-update.html";
 
 export const PRODUCTION_SUPABASE_URL =
   "https://jjtobvxjmbnybbxlvnxs.supabase.co";
@@ -153,6 +159,7 @@ export function validateFrontendConfig(candidate) {
 
   let supabaseUrl;
   let callbackUrl;
+  let passwordUpdateUrl;
 
   if (target === FRONTEND_TARGETS.LOCAL) {
     supabaseUrl = normalizeLocalSupabaseUrl(candidate.supabaseUrl);
@@ -162,6 +169,7 @@ export function validateFrontendConfig(candidate) {
     }
 
     callbackUrl = LOCAL_CALLBACK_URL;
+    passwordUpdateUrl = LOCAL_PASSWORD_UPDATE_URL;
   } else if (target === FRONTEND_TARGETS.PRODUCTION) {
     supabaseUrl = normalizeProductionSupabaseUrl(candidate.supabaseUrl);
 
@@ -170,6 +178,7 @@ export function validateFrontendConfig(candidate) {
     }
 
     callbackUrl = PRODUCTION_CALLBACK_URL;
+    passwordUpdateUrl = PRODUCTION_PASSWORD_UPDATE_URL;
   } else {
     throw new Error("Frontend target is invalid.");
   }
@@ -187,7 +196,8 @@ export function validateFrontendConfig(candidate) {
     target,
     supabaseUrl,
     supabaseKey,
-    callbackUrl
+    callbackUrl,
+    passwordUpdateUrl
   });
 }
 
