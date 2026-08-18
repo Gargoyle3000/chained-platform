@@ -12,8 +12,11 @@
 ## Project memory
 
 - At the start of relevant CHAINED tasks, read `docs/CHAINED_STATE.md` for current priorities and state, `docs/DECISIONS.md` for established product and technical decisions, and `docs/BUGS.md` for active bugs and known investigation boundaries.
+- At the start of planning, prioritization, or roadmap-related CHAINED tasks, also read `docs/ROADMAP.md` for planned upcoming work and sequencing.
+- Keep the memory roles distinct: `CHAINED_STATE.md` is current state and active focus, `DECISIONS.md` records established decisions, `BUGS.md` records active bugs and blockers, and `ROADMAP.md` records planned upcoming work and sequencing.
 - Documentation provides project context but never overrides what the current code does.
 - After a task, update only the relevant memory document when the task actually changes current state or priorities, an established decision, or an active bug or blocker; do not update these documents mechanically or turn them into changelogs.
+- Update `ROADMAP.md` only when a planned task is added, priority or order materially changes, or a roadmap item is completed or removed; do not turn it into a changelog.
 - Keep the memory documents concise and current. Never mark a bug resolved without validation, and do not reopen an investigation path recorded in `BUGS.md` as ruled out unless new evidence justifies it.
 
 ## Product principles
