@@ -116,6 +116,7 @@ Deno.test("private-media gateway uses the exact PDF TTL and does not accept a ca
     { ttl: 999999 },
     { expiresIn: 999999 },
     { workId: IMAGE_ID },
+    { origin: "https://attacker.example" },
   ]) {
     const rejected = await handleAuthorizedPrivateMedia(
       post({ imageIds: [IMAGE_ID], purpose: "preview", ...injected }),
@@ -219,6 +220,60 @@ Deno.test("bulk signer uses a current secret only in apikey and sends the server
   assert(requestBody.expiresIn === PRIVATE_MEDIA_TTLS.preview);
   assert(JSON.stringify(requestBody.paths) === JSON.stringify([image(IMAGE_ID).object_path]));
   assert(signed.length === 1 && signed[0].url.includes("/storage/v1/object/sign/work-originals/"));
+});
+
+Deno.test("bulk signer returns a configured client-facing origin while preserving the signed path and query", async () => {
+  const currentSecret: SupabaseApiKey = { value: CURRENT_SECRET, kind: "current" };
+  let requestUrl = "";
+  const signed = await signPrivateOriginalUrls(
+    "http://kong:8000",
+    currentSecret,
+    [image(IMAGE_ID).object_path],
+    PRIVATE_MEDIA_TTLS.preview,
+    async (input) => {
+      requestUrl = String(input);
+      return new Response(JSON.stringify([{
+        path: image(IMAGE_ID).object_path,
+        signedURL: `/object/sign/work-originals/${image(IMAGE_ID).object_path}?token=signed&expires=300`,
+        error: null,
+      }]), { status: 200, headers: { "content-type": "application/json" } });
+    },
+    "http://127.0.0.1:54321",
+  );
+
+  assert(requestUrl === "http://kong:8000/storage/v1/object/sign/work-originals");
+  assert(
+    signed[0].url ===
+      `http://127.0.0.1:54321/storage/v1/object/sign/work-originals/${image(IMAGE_ID).object_path}?token=signed&expires=300`,
+  );
+});
+
+Deno.test("bulk signer falls back to the internal public origin and fails closed for malformed configuration", async () => {
+  const currentSecret: SupabaseApiKey = { value: CURRENT_SECRET, kind: "current" };
+  const signerResponse = async () => new Response(JSON.stringify([{
+    path: image(IMAGE_ID).object_path,
+    signedURL: `/object/sign/work-originals/${image(IMAGE_ID).object_path}?token=signed`,
+    error: null,
+  }]), { status: 200, headers: { "content-type": "application/json" } });
+  const fallback = await signPrivateOriginalUrls(
+    "https://project.supabase.co",
+    currentSecret,
+    [image(IMAGE_ID).object_path],
+    PRIVATE_MEDIA_TTLS.preview,
+    signerResponse,
+  );
+  assert(fallback[0].url === `https://project.supabase.co/storage/v1/object/sign/work-originals/${image(IMAGE_ID).object_path}?token=signed`);
+  await assertRejects(
+    () => signPrivateOriginalUrls(
+      "http://kong:8000",
+      currentSecret,
+      [image(IMAGE_ID).object_path],
+      PRIVATE_MEDIA_TTLS.preview,
+      signerResponse,
+      "not an origin",
+    ),
+    "signing_unavailable",
+  );
 });
 
 Deno.test("bulk signer fails closed for legacy keys, partial responses, and foreign URLs", async () => {

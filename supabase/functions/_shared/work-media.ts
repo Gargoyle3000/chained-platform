@@ -182,8 +182,29 @@ function encodeObjectPath(path: string): string {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
-function absoluteSignedStorageUrl(apiUrl: string, signedUrl: string): string {
-  const projectUrl = new URL(apiUrl);
+function clientFacingSupabaseOrigin(internalApiUrl: string, publicApiUrl: string | null | undefined): string {
+  if (!publicApiUrl?.trim()) return new URL(internalApiUrl).origin;
+  let configured: URL;
+  try {
+    configured = new URL(publicApiUrl.trim());
+  } catch {
+    throw new MediaError(502, "signing_unavailable");
+  }
+  if (
+    !["http:", "https:"].includes(configured.protocol) ||
+    configured.username ||
+    configured.password ||
+    configured.pathname !== "/" ||
+    configured.search ||
+    configured.hash
+  ) {
+    throw new MediaError(502, "signing_unavailable");
+  }
+  return configured.origin;
+}
+
+function clientFacingSignedStorageUrl(internalApiUrl: string, clientOrigin: string, signedUrl: string): string {
+  const projectUrl = new URL(internalApiUrl);
   const storageUrl = `${projectUrl.origin}/storage/v1`;
   const candidate = signedUrl.startsWith("http://") || signedUrl.startsWith("https://")
     ? new URL(signedUrl)
@@ -195,7 +216,7 @@ function absoluteSignedStorageUrl(apiUrl: string, signedUrl: string): string {
   if (candidate.origin !== projectUrl.origin || !candidate.pathname.startsWith(expectedPrefix)) {
     throw new MediaError(502, "signing_unavailable");
   }
-  return candidate.toString();
+  return new URL(`${candidate.pathname}${candidate.search}${candidate.hash}`, clientOrigin).toString();
 }
 
 export async function signPrivateOriginalUrls(
@@ -204,6 +225,7 @@ export async function signPrivateOriginalUrls(
   paths: string[],
   expiresIn: number,
   fetcher: typeof fetch = fetch,
+  publicApiUrl?: string | null,
 ): Promise<SignedStoredObject[]> {
   if (secretKey.kind !== "current") {
     throw new MediaError(502, "signing_unavailable");
@@ -234,6 +256,7 @@ export async function signPrivateOriginalUrls(
   }
 
   const expectedPaths = new Set(paths);
+  const clientOrigin = clientFacingSupabaseOrigin(apiUrl, publicApiUrl);
   const signedByPath = new Map<string, SignedStoredObject>();
   for (const value of payload) {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -248,7 +271,7 @@ export async function signPrivateOriginalUrls(
     try {
       signedByPath.set(path, {
         path,
-        url: absoluteSignedStorageUrl(apiUrl, rawSignedUrl),
+        url: clientFacingSignedStorageUrl(apiUrl, clientOrigin, rawSignedUrl),
       });
     } catch {
       throw new MediaError(502, "signing_unavailable");
@@ -264,6 +287,7 @@ export async function signPrivateOriginalUrls(
 
 export function createMediaDependencies(): MediaDependencies {
   const apiUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "");
+  const publicApiUrl = Deno.env.get("SUPABASE_PUBLIC_URL") ?? Deno.env.get("CLIENT_FACING_SUPABASE_URL");
   const apiKeys = resolveSupabaseApiKeys((name) => Deno.env.get(name));
 
   if (!apiUrl) {
@@ -372,7 +396,7 @@ export function createMediaDependencies(): MediaDependencies {
     },
 
     async signPrivateOriginals(paths, expiresIn) {
-      return await signPrivateOriginalUrls(apiUrl, apiKeys.secret, paths, expiresIn);
+      return await signPrivateOriginalUrls(apiUrl, apiKeys.secret, paths, expiresIn, fetch, publicApiUrl);
     },
   };
 }
