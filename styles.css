@@ -1013,37 +1013,40 @@ footer {
 }
 
 
-/* FULL VIEWPORT-CENTRED IMAGE */
+/* DESKTOP SINGLE IMAGE SYSTEM */
 
-.discover-page:not(.following-page)[data-view="single"] .discover-image-link {
-  position: relative;
-  z-index: 1;
+@media (min-width: 701px) {
+  .discover-page[data-view="single"] .discover-image-link {
+    position: relative;
+    z-index: 1;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-  min-width: 0;
+    min-width: 0;
 
-  width: calc(
-    100vw
-    - var(--page-gutter)
-    - var(--page-gutter)
-  );
+    width: 100%;
 
-  height: calc(
-    100svh
-    - var(--header-height)
-    - 40px
-  );
+    height: calc(
+      100svh
+      - var(--header-height)
+      - 40px
+    );
 
-  transform: translateX(
-    calc(
-      0px
-      - var(--discover-meta-width)
-      - var(--discover-gap)
-    )
-  );
+    transform: none;
+  }
+
+  .discover-page[data-view="single"] .discover-image-link img {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    object-fit: contain;
+    object-position: center center;
+  }
+
 }
 
 .discover-page:not(.following-page)[data-view="single"] .discover-image-link[data-contained-hit-area] {
@@ -1055,59 +1058,6 @@ footer {
   );
 }
 
-.discover-page:not(.following-page)[data-view="single"] .discover-image-link img {
-  display: block;
-
-  width: 100%;
-  height: 100%;
-
-  object-fit: contain;
-  object-position: center center;
-}
-
-.following-page[data-view="single"] .discover-image-link {
-  position: relative;
-  z-index: 1;
-
-  display: block;
-  justify-self: center;
-  align-self: center;
-
-  width: fit-content;
-  max-width: calc(
-    100vw
-    - var(--page-gutter)
-    - var(--page-gutter)
-  );
-  max-height: calc(
-    100svh
-    - var(--header-height)
-    - 40px
-  );
-
-  transform: translateX(
-    calc(
-      0px
-      - var(--discover-meta-width)
-      - var(--discover-gap)
-    )
-  );
-}
-
-.following-page[data-view="single"] .discover-image-link img {
-  display: block;
-
-  width: auto;
-  max-width: 100%;
-  height: auto;
-  max-height: calc(
-    100svh
-    - var(--header-height)
-    - 40px
-  );
-
-  object-fit: initial;
-}
 /* GRID VIEW */
 
 .discover-page[data-view="grid"] .discover-stream {
