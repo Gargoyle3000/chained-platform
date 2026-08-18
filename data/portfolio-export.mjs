@@ -3,6 +3,8 @@ import { materialDisplayValues } from "./material-terms.mjs";
 export const A4_PAGE = Object.freeze({ width: 595.28, height: 841.89 });
 export const PORTFOLIO_SAFE_TARGET_BYTES = 19 * 1024 * 1024;
 export const PORTFOLIO_MAX_BYTES = 20 * 1024 * 1024;
+export const PORTFOLIO_SOURCE_MEMORY_BYTES = 256 * 1024 * 1024;
+export const PORTFOLIO_MAX_SOURCE_BYTES = 50 * 1024 * 1024;
 export const PORTFOLIO_IMAGE_TIERS = Object.freeze([
   Object.freeze({ id: "standard", maxDimension: 2600, jpegQuality: 0.9 }),
   Object.freeze({ id: "compact", maxDimension: 2200, jpegQuality: 0.84 }),
@@ -134,6 +136,246 @@ export async function generateWithinBudget({ renderTier, tiers = PORTFOLIO_IMAGE
       ? "THIS PORTFOLIO CANNOT MEET THE 20 MB EXPORT LIMIT. REMOVE SOME IMAGES OR WORKS."
       : "THIS PORTFOLIO CANNOT MEET THE MAIL-FRIENDLY EXPORT LIMIT. REMOVE SOME IMAGES OR WORKS."
   );
+}
+
+const PORTFOLIO_SOURCE_STORE_DATABASE = "chained-portfolio-export-sources";
+const PORTFOLIO_SOURCE_STORE_NAME = "sources";
+const PORTFOLIO_SOURCE_STORE_STALE_MS = 60 * 60 * 1000;
+
+function portfolioSourceError() {
+  return new PortfolioExportError("ONE OR MORE IMAGES COULD NOT BE PREPARED FOR EXPORT");
+}
+
+function idbResult(request) {
+  return new Promise((resolve, reject) => {
+    request.addEventListener("success", () => resolve(request.result), { once: true });
+    request.addEventListener("error", () => reject(request.error || new Error("IndexedDB request failed.")), { once: true });
+  });
+}
+
+function idbComplete(transaction) {
+  return new Promise((resolve, reject) => {
+    transaction.addEventListener("complete", resolve, { once: true });
+    transaction.addEventListener("abort", () => reject(transaction.error || new Error("IndexedDB transaction aborted.")), { once: true });
+    transaction.addEventListener("error", () => reject(transaction.error || new Error("IndexedDB transaction failed.")), { once: true });
+  });
+}
+
+function portfolioSourceSessionId() {
+  if (typeof globalThis.crypto?.randomUUID === "function") return globalThis.crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function createPortfolioSourceStore({
+  indexedDb = globalThis.indexedDB,
+  now = () => Date.now(),
+  sessionId = portfolioSourceSessionId(),
+  staleAfterMs = PORTFOLIO_SOURCE_STORE_STALE_MS
+} = {}) {
+  if (!indexedDb?.open) throw portfolioSourceError();
+  let databasePromise = null;
+  let prepared = false;
+
+  const database = () => {
+    if (!databasePromise) {
+      databasePromise = new Promise((resolve, reject) => {
+        const request = indexedDb.open(PORTFOLIO_SOURCE_STORE_DATABASE, 1);
+        request.addEventListener("upgradeneeded", () => {
+          const store = request.result.createObjectStore(PORTFOLIO_SOURCE_STORE_NAME, { keyPath: ["sessionId", "imageId"] });
+          store.createIndex("createdAt", "createdAt", { unique: false });
+        }, { once: true });
+        request.addEventListener("success", () => resolve(request.result), { once: true });
+        request.addEventListener("error", () => reject(request.error || new Error("IndexedDB is unavailable.")), { once: true });
+      });
+    }
+    return databasePromise;
+  };
+
+  const removeStaleSources = async (db) => {
+    const cutoff = now() - staleAfterMs;
+    const transaction = db.transaction(PORTFOLIO_SOURCE_STORE_NAME, "readwrite");
+    const completed = idbComplete(transaction);
+    const index = transaction.objectStore(PORTFOLIO_SOURCE_STORE_NAME).index("createdAt");
+    const request = index.openCursor();
+    let cursor = await idbResult(request);
+    while (cursor) {
+      if (Number(cursor.value?.createdAt) < cutoff) cursor.delete();
+      cursor.continue();
+      cursor = await idbResult(request);
+    }
+    await completed;
+  };
+
+  const prepare = async () => {
+    const db = await database();
+    if (!prepared) {
+      await removeStaleSources(db);
+      prepared = true;
+    }
+    return db;
+  };
+
+  const removeCurrentSession = async (db) => {
+    const transaction = db.transaction(PORTFOLIO_SOURCE_STORE_NAME, "readwrite");
+    const completed = idbComplete(transaction);
+    const store = transaction.objectStore(PORTFOLIO_SOURCE_STORE_NAME);
+    const request = store.openCursor();
+    let cursor = await idbResult(request);
+    while (cursor) {
+      if (cursor.value?.sessionId === sessionId) cursor.delete();
+      cursor.continue();
+      cursor = await idbResult(request);
+    }
+    await completed;
+  };
+
+  return Object.freeze({
+    async prepare() {
+      await prepare();
+    },
+    async put(imageId, blob) {
+      const db = await prepare();
+      const transaction = db.transaction(PORTFOLIO_SOURCE_STORE_NAME, "readwrite");
+      const completed = idbComplete(transaction);
+      transaction.objectStore(PORTFOLIO_SOURCE_STORE_NAME).put({ sessionId, imageId, createdAt: now(), blob });
+      await completed;
+    },
+    async get(imageId) {
+      const db = await prepare();
+      const transaction = db.transaction(PORTFOLIO_SOURCE_STORE_NAME, "readonly");
+      const completed = idbComplete(transaction);
+      const record = await idbResult(transaction.objectStore(PORTFOLIO_SOURCE_STORE_NAME).get([sessionId, imageId]));
+      await completed;
+      return record?.blob || null;
+    },
+    async close() {
+      if (!databasePromise) return;
+      try { (await databasePromise).close(); }
+      catch { /* Best-effort housekeeping cleanup. */ }
+    },
+    async clear() {
+      if (!databasePromise) return;
+      const db = await databasePromise;
+      try { await removeCurrentSession(db); }
+      finally { db.close(); }
+    }
+  });
+}
+
+export function createPortfolioSourceCache(loadSources, {
+  maxBytes = PORTFOLIO_SOURCE_MEMORY_BYTES,
+  maxSourceBytes = PORTFOLIO_MAX_SOURCE_BYTES,
+  sourceStoreFactory = () => createPortfolioSourceStore()
+} = {}) {
+  if (typeof loadSources !== "function") throw new PortfolioExportError("PDF GENERATION IS UNAVAILABLE");
+  if (!Number.isFinite(maxBytes) || !Number.isFinite(maxSourceBytes) || maxBytes < maxSourceBytes || maxSourceBytes <= 0) {
+    throw new PortfolioExportError("PDF GENERATION IS UNAVAILABLE");
+  }
+  const sources = new Map();
+  const storedSourceIds = new Set();
+  const acquisitions = new Map();
+  const memoryLimit = maxBytes - maxSourceBytes;
+  let storedBytes = 0;
+  let sourceStore = null;
+  let released = false;
+
+  const uniqueImages = (images) => {
+    const values = Array.isArray(images) ? images : [images];
+    const seen = new Set();
+    return values.filter((image) => {
+      const id = typeof image?.id === "string" ? image.id : "";
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  };
+
+  const requireImageId = (image) => {
+    const imageId = typeof image?.id === "string" ? image.id : "";
+    if (!imageId) throw portfolioSourceError();
+    return imageId;
+  };
+
+  const ensureStore = () => {
+    if (!sourceStore) {
+      try { sourceStore = sourceStoreFactory(); }
+      catch { throw portfolioSourceError(); }
+    }
+    if (!sourceStore || typeof sourceStore.put !== "function" || typeof sourceStore.get !== "function" || typeof sourceStore.clear !== "function") {
+      throw portfolioSourceError();
+    }
+    return sourceStore;
+  };
+
+  const acquire = async (image) => {
+    if (released) throw new PortfolioExportError("PDF GENERATION IS UNAVAILABLE");
+    const imageId = requireImageId(image);
+    if (sources.has(imageId) || storedSourceIds.has(imageId)) return;
+    if (acquisitions.has(imageId)) return acquisitions.get(imageId);
+
+    const acquisition = (async () => {
+      const loaded = await loadSources([image]);
+      if (!Array.isArray(loaded) || loaded.length !== 1) throw portfolioSourceError();
+      const source = loaded[0];
+      if (source?.imageId !== imageId || !source?.blob || typeof source.blob.arrayBuffer !== "function") throw portfolioSourceError();
+      const size = Number(source.blob.size);
+      if (!Number.isFinite(size) || size <= 0 || size > maxSourceBytes) throw portfolioSourceError();
+
+      if (storedBytes + size <= memoryLimit) {
+        sources.set(imageId, source.blob);
+        storedBytes += size;
+        return;
+      }
+
+      try {
+        await ensureStore().put(imageId, source.blob);
+      } catch {
+        throw portfolioSourceError();
+      }
+      storedSourceIds.add(imageId);
+    })();
+    acquisitions.set(imageId, acquisition);
+    try { await acquisition; }
+    finally { acquisitions.delete(imageId); }
+  };
+
+  return Object.freeze({
+    async prepare() {
+      try {
+        const store = ensureStore();
+        if (typeof store.prepare === "function") await store.prepare();
+      } catch {
+        const failedStore = sourceStore;
+        sourceStore = null;
+        try { await failedStore?.close?.(); }
+        catch { /* Housekeeping remains best-effort. */ }
+      }
+    },
+    async preload(images) {
+      for (const image of uniqueImages(images)) await acquire(image);
+    },
+    async get(image) {
+      const imageId = requireImageId(image);
+      await acquire(image);
+      if (sources.has(imageId)) return sources.get(imageId);
+      if (!storedSourceIds.has(imageId)) throw portfolioSourceError();
+      let blob;
+      try { blob = await ensureStore().get(imageId); }
+      catch { throw portfolioSourceError(); }
+      if (!blob || typeof blob.arrayBuffer !== "function") throw portfolioSourceError();
+      return blob;
+    },
+    async clear() {
+      sources.clear();
+      storedSourceIds.clear();
+      storedBytes = 0;
+      released = true;
+      if (sourceStore) {
+        try { await sourceStore.clear(); }
+        catch { throw portfolioSourceError(); }
+      }
+    }
+  });
 }
 
 function wrapText(value, font, size, width) {

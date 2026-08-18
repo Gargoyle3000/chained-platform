@@ -202,7 +202,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return images.find((image) => image.isCover) || images[0] || null;
   }
 
-  async function createWorkImage(work) {
+  async function createWorkImage(work, privatePreviews = new Map()) {
     const coverImage = getCoverImage(work);
 
     if (!coverImage) {
@@ -226,7 +226,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         image.src =
           coverImage.publicPath && work.visibility === "published"
             ? repository.media.publicUrl(coverImage.publicPath)
-            : await repository.media.privatePreview(coverImage);
+            : privatePreviews.get(String(coverImage.id).toLowerCase()) || "";
+        if (!image.src) throw new Error("private preview unavailable");
       } else if (coverImage.blob) {
         image.src = URL.createObjectURL(coverImage.blob);
         activeObjectUrls.add(image.src);
@@ -245,7 +246,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return image;
   }
 
-  async function createRecentWorkRow(work) {
+  async function createRecentWorkRow(work, privatePreviews) {
     const row = document.createElement("article");
     const information = document.createElement("div");
     const title = document.createElement("h3");
@@ -273,7 +274,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     title.append(editLink);
     information.append(title, year);
     row.append(
-      await createWorkImage(work),
+      await createWorkImage(work, privatePreviews),
       information,
       status
     );
@@ -580,9 +581,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    const recentWorks = works.slice(0, 10);
+    const privateCovers = recentWorks.map((work) => {
+      const cover = getCoverImage(work);
+      return cover && !(cover.publicPath && work.visibility === "published") ? cover : null;
+    }).filter(Boolean);
+    let privatePreviews = new Map();
+    if (repository.mode === "supabase") {
+      try { privatePreviews = await repository.media.privatePreviewBatch(privateCovers); }
+      catch { privatePreviews = new Map(); }
+    }
     recentList.replaceChildren(
       ...await Promise.all(
-        works.slice(0, 10).map(createRecentWorkRow)
+        recentWorks.map((work) => createRecentWorkRow(work, privatePreviews))
       )
     );
   }

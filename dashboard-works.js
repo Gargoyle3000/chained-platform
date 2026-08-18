@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return button;
   }
 
-  async function createWorkImage(work) {
+  async function createWorkImage(work, privatePreviews = new Map()) {
     const cover = [...(work.images || [])].sort((a, b) => a.order - b.order).find((image) => image.isCover) || work.images?.[0];
     if (!cover) {
       const placeholder = document.createElement("div");
@@ -52,7 +52,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     image.alt = `${work.title || "Untitled"} cover image`;
     try {
       if (repository.mode === "supabase") {
-        image.src = cover.publicPath && work.visibility === "published" ? repository.media.publicUrl(cover.publicPath) : await repository.media.privatePreview(cover);
+        image.src = cover.publicPath && work.visibility === "published"
+          ? repository.media.publicUrl(cover.publicPath)
+          : privatePreviews.get(String(cover.id).toLowerCase()) || "";
+        if (!image.src) throw new Error("private preview unavailable");
       } else if (cover.blob) {
         image.src = URL.createObjectURL(cover.blob);
         activeUrls.add(image.src);
@@ -88,7 +91,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return container;
   }
 
-  async function createWorkRow(work, reload) {
+  async function createWorkRow(work, reload, privatePreviews) {
     const row = document.createElement("article");
     const information = document.createElement("div");
     const title = document.createElement("h3");
@@ -120,7 +123,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     information.append(title, metadata, imageState);
     actions.append(edit, remove);
     statusArea.append(status, actions, confirmation);
-    row.append(await createWorkImage(work), information, statusArea);
+    row.append(await createWorkImage(work, privatePreviews), information, statusArea);
     return row;
   }
 
@@ -153,7 +156,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     setError();
     updateCounts(works);
     if (!works.length) { workList.replaceChildren(emptyState()); return; }
-    workList.replaceChildren(...await Promise.all(works.map((work) => createWorkRow(work, () => renderWorks(profileIds)))));
+    const privateCovers = works.map((work) => {
+      const cover = [...(work.images || [])].sort((a, b) => a.order - b.order).find((image) => image.isCover) || work.images?.[0];
+      return cover && !(cover.publicPath && work.visibility === "published") ? cover : null;
+    }).filter(Boolean);
+    let privatePreviews = new Map();
+    if (repository.mode === "supabase") {
+      try { privatePreviews = await repository.media.privatePreviewBatch(privateCovers); }
+      catch { privatePreviews = new Map(); }
+    }
+    workList.replaceChildren(...await Promise.all(works.map((work) => createWorkRow(work, () => renderWorks(profileIds), privatePreviews))));
   }
 
   try {

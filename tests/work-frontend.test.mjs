@@ -11,6 +11,8 @@ import { createIdempotencyState, createObjectUrlRegistry, databaseToWork, formTo
 import { sanitizeWorkError, WORK_ERROR_CODES } from "../data/work-errors.mjs";
 
 const ID = "11111111-1111-4111-8111-111111111111";
+const IMAGE_TWO = "22222222-2222-4222-8222-222222222222";
+const IMAGE_THREE = "33333333-3333-4333-8333-333333333333";
 const baseForm = { title: "  Work  ", year: "2026", workType: "single-work", format: "painting", materials: "Wood, Steel, wood, ", height: "1.5", width: "2", depth: "0", dimensionUnit: "cm", duration: "", edition: "  1/3 ", description: " Text ", collaboratorName: "Name", collaboratorUrl: "https://example.com/a", photoCreditName: "Photo", photoCreditUrl: "https://example.com/p" };
 
 test("adapter selection is explicit in prototype and local modes", () => {
@@ -141,46 +143,147 @@ test("upload errors are sanitized", async () => {
   await assert.rejects(() => createWorkMediaService(client).upload(ID, { name: "x.png", type: "image/png", size: 1 }, true), /IMAGE COULD NOT BE ADDED/);
 });
 
-test("private previews use the authenticated storage route with the current session", async () => {
-  const requests = [];
-  const preview = createWorkMediaService(
-    { auth: { getSession: async () => ({ data: { session: { access_token: "test-access-token" } }, error: null }) } },
-    { supabaseUrl: "https://project.supabase.co", supabaseKey: "test-publishable-key" },
-    {
-      fetcher: async (url, options) => {
-        requests.push({ url, options });
-        return new Response(new Blob(["image"], { type: "image/png" }), { status: 200 });
+test("private media requests use deduplicated image IDs, purpose, and gateway response order", async () => {
+  const calls = [];
+  const preview = createWorkMediaService({
+    functions: {
+      invoke: async (name, { body }) => {
+        calls.push({ name, body });
+        return {
+          data: {
+            ok: true,
+            purpose: body.purpose,
+            media: body.imageIds.map((imageId) => ({ imageId, url: `https://signed.example/${imageId}`, mimeType: "image/png", fileSize: 1 }))
+          },
+          error: null
+        };
       }
-    }
-  );
-  const url = await preview.privatePreview({ privatePath: "artist id/work id/image id/original file.png" });
+    },
+    storage: { from: () => ({ getPublicUrl: () => ({ data: { publicUrl: "https://public.example/image" } }) }) }
+  });
 
-  assert.equal(url.startsWith("blob:"), true);
-  assert.equal(requests.length, 1);
-  assert.equal(requests[0].url, "https://project.supabase.co/storage/v1/object/authenticated/work-originals/artist%20id/work%20id/image%20id/original%20file.png");
-  assert.equal(requests[0].url.includes("/storage/v1/object/work-originals/"), false);
-  assert.deepEqual(requests[0].options.headers, { apikey: "test-publishable-key", Authorization: "Bearer test-access-token" });
-  preview.urls.revoke(url);
+  const media = await preview.authorizedPrivateMedia([{ id: IMAGE_TWO }, { id: ID, privatePath: "not-sent" }, { id: IMAGE_TWO }], { purpose: "pdf_export" });
+  assert.deepEqual(calls, [{ name: "authorized-private-media", body: { imageIds: [IMAGE_TWO, ID], purpose: "pdf_export" } }]);
+  assert.deepEqual(media.map((item) => item.imageId), [IMAGE_TWO, ID]);
+  assert.equal(JSON.stringify(calls).includes("not-sent"), false);
+  assert.equal(preview.publicUrl("public/path"), "https://public.example/image");
+});
+
+test("private previews batch gateway authorization, create revocable blobs, and never use direct Storage", async () => {
+  const calls = [];
+  const downloads = [];
+  const preview = createWorkMediaService(
+    {
+      functions: {
+        invoke: async (name, { body }) => {
+          calls.push({ name, body });
+          return { data: { ok: true, purpose: "preview", media: body.imageIds.map((imageId) => ({ imageId, url: `https://signed.example/${imageId}`, mimeType: "image/png", fileSize: 1 })) }, error: null };
+        }
+      }
+    },
+    {},
+    { fetcher: async (url) => { downloads.push(url); return new Response(new Blob(["image"], { type: "image/png" }), { status: 200 }); } }
+  );
+  const previews = await preview.privatePreviewBatch([{ id: ID, privatePath: "private/path" }, { id: IMAGE_TWO }]);
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].body, { imageIds: [ID, IMAGE_TWO], purpose: "preview" });
+  assert.deepEqual(downloads, [`https://signed.example/${ID}`, `https://signed.example/${IMAGE_TWO}`]);
+  assert.equal(downloads.some((url) => url.includes("/storage/v1/object/authenticated/work-originals/")), false);
+  assert.equal(previews.get(ID).startsWith("blob:"), true);
+  assert.equal(preview.urls.size(), 2);
+  preview.urls.revoke(previews.get(ID));
+  preview.urls.revokeAll();
   assert.equal(preview.urls.size(), 0);
 });
 
-test("private preview sanitizes non-OK Storage responses without logging credentials", async () => {
-  const accessToken = "test-access-token";
-  const publishableKey = "test-publishable-key";
+test("private media rejects malformed or partial gateway responses without a Storage fallback", async () => {
+  let downloads = 0;
+  const preview = createWorkMediaService(
+    { functions: { invoke: async () => ({ data: { ok: true, purpose: "preview", media: [{ imageId: ID, url: "https://signed.example/one", mimeType: "image/png", fileSize: 1 }] }, error: null }) } },
+    {},
+    { fetcher: async () => { downloads += 1; return new Response(); } }
+  );
+  await assert.rejects(() => preview.privatePreviewBatch([{ id: ID }, { id: IMAGE_TWO }]));
+  assert.equal(downloads, 0);
+});
+
+test("private signed downloads re-sign only expired items once with bounded concurrency", async () => {
+  const calls = [];
+  const attempts = new Map();
+  let active = 0;
+  let peak = 0;
+  const preview = createWorkMediaService(
+    {
+      functions: {
+        invoke: async (_name, { body }) => {
+          calls.push(body.imageIds);
+          return { data: { ok: true, purpose: "pdf_export", media: body.imageIds.map((imageId) => ({ imageId, url: `https://signed.example/${imageId}/${calls.length}`, mimeType: "image/png", fileSize: 1 })) }, error: null };
+        }
+      }
+    },
+    {},
+    {
+      fetcher: async (url) => {
+        const imageId = url.split("/").at(-2);
+        attempts.set(imageId, (attempts.get(imageId) || 0) + 1);
+        active += 1;
+        peak = Math.max(peak, active);
+        await new Promise((resolve) => setTimeout(resolve, 2));
+        active -= 1;
+        return imageId === IMAGE_TWO && attempts.get(imageId) === 1
+          ? new Response(null, { status: 403 })
+          : new Response(new Blob([imageId]), { status: 200 });
+      }
+    }
+  );
+  const media = await preview.downloadAuthorizedPrivateMedia([{ id: ID }, { id: IMAGE_TWO }, { id: IMAGE_THREE }], { purpose: "pdf_export", concurrency: 2 });
+  assert.deepEqual(calls, [[ID, IMAGE_TWO, IMAGE_THREE], [IMAGE_TWO]]);
+  assert.deepEqual(media.map((item) => item.imageId), [ID, IMAGE_TWO, IMAGE_THREE]);
+  assert.equal(attempts.get(ID), 1);
+  assert.equal(attempts.get(IMAGE_TWO), 2);
+  assert.ok(peak <= 2);
+});
+
+test("private media chunks more than 100 image IDs and retries temporary gateway failures twice", async () => {
+  const ids = Array.from({ length: 101 }, (_, index) => `${String(index + 1).padStart(8, "0")}-0000-4000-8000-000000000000`);
+  const calls = [];
+  let attempts = 0;
+  const waits = [];
+  const preview = createWorkMediaService(
+    {
+      functions: {
+        invoke: async (_name, { body }) => {
+          attempts += 1;
+          calls.push(body.imageIds);
+          if (attempts <= 2) return { data: null, error: { status: 503 } };
+          return { data: { ok: true, purpose: "preview", media: body.imageIds.map((imageId) => ({ imageId, url: `https://signed.example/${imageId}`, mimeType: "image/png", fileSize: 1 })) }, error: null };
+        }
+      }
+    },
+    {},
+    { wait: async (milliseconds) => waits.push(milliseconds), random: () => 0 }
+  );
+  const media = await preview.authorizedPrivateMedia(ids, { purpose: "preview" });
+  assert.equal(media.length, 101);
+  assert.deepEqual(calls.map((batch) => batch.length), [100, 100, 100, 1]);
+  assert.equal(waits.length, 2);
+});
+
+test("private preview sanitizes failed signed downloads without logging credentials", async () => {
+  const privatePath = "private/object.png";
   const consoleErrors = [];
   const originalConsoleError = console.error;
   const preview = createWorkMediaService(
-    { auth: { getSession: async () => ({ data: { session: { access_token: accessToken } }, error: null }) } },
-    { supabaseUrl: "https://project.supabase.co", supabaseKey: publishableKey },
-    { fetcher: async () => new Response(null, { status: 403 }) }
+    { functions: { invoke: async (_name, { body }) => ({ data: { ok: true, purpose: body.purpose, media: [{ imageId: ID, url: "https://signed.example/private", mimeType: "image/png", fileSize: 1 }] }, error: null }) } },
+    {},
+    { fetcher: async () => new Response(null, { status: 404 }) }
   );
 
   console.error = (...entry) => consoleErrors.push(entry);
   try {
-    await assert.rejects(() => preview.privatePreview({ privatePath: "private/object.png" }), (error) => {
-      assert.equal(error.code, WORK_ERROR_CODES.UNAUTHORIZED);
-      assert.equal(error.message.includes(accessToken), false);
-      assert.equal(error.message.includes(publishableKey), false);
+    await assert.rejects(() => preview.privatePreview({ id: ID, privatePath }), (error) => {
+      assert.equal(error.code, WORK_ERROR_CODES.NOT_FOUND);
+      assert.equal(error.message.includes(privatePath), false);
       return true;
     });
   } finally {
@@ -188,6 +291,23 @@ test("private preview sanitizes non-OK Storage responses without logging credent
   }
   assert.deepEqual(consoleErrors, []);
   assert.equal(preview.urls.size(), 0);
+});
+
+test("private preview consumers use shared batches while public published media stays public", async () => {
+  const [editor, works, overview, portfolio, service] = await Promise.all([
+    readFile(new URL("../dashboard-form.js", import.meta.url), "utf8"),
+    readFile(new URL("../dashboard-works.js", import.meta.url), "utf8"),
+    readFile(new URL("../dashboard-overview.js", import.meta.url), "utf8"),
+    readFile(new URL("../dashboard-portfolio-export.js", import.meta.url), "utf8"),
+    readFile(new URL("../data/work-media-service.mjs", import.meta.url), "utf8")
+  ]);
+  assert.match(editor, /privatePreviewBatch\(privateImages\)/);
+  assert.match(works, /privatePreviewBatch\(privateCovers\)/);
+  assert.match(overview, /privatePreviewBatch\(privateCovers\)/);
+  assert.match(portfolio, /downloadAuthorizedPrivateMedia\(images, \{ purpose: "pdf_export", concurrency: 4 \}\)/);
+  assert.doesNotMatch(portfolio, /privatePreview\(/);
+  assert.match(works, /repository\.media\.publicUrl\(cover\.publicPath\)/);
+  assert.doesNotMatch(service, /storage\/v1\/object\/authenticated\/work-originals/);
 });
 
 test("publication readiness denies missing, unready, and coverless images", () => {

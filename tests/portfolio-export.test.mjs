@@ -6,6 +6,7 @@ import { PDFDocument, rgb } from "pdf-lib";
 
 import {
   createPortfolioPlan,
+  createPortfolioSourceCache,
   fitIntoBox,
   generateWithinBudget,
   portfolioFilename,
@@ -104,6 +105,146 @@ test("size budgeting retries a bounded set of compression tiers", async () => {
     }),
     (error) => error instanceof PortfolioExportError && error.message.includes("MAIL-FRIENDLY")
   );
+});
+
+test("export-scoped sources are fetched once across compression retries and released afterward", async () => {
+  const images = [{ id: "one" }, { id: "two" }];
+  const acquired = [];
+  const cache = createPortfolioSourceCache(async (requested) => {
+    acquired.push(...requested.map((image) => image.id));
+    return requested.map((image) => ({ imageId: image.id, blob: new Blob([image.id], { type: "image/png" }) }));
+  });
+  await cache.preload([...images, images[0]]);
+  await cache.get(images[0]);
+  await cache.get(images[1]);
+  await cache.get(images[0]);
+  assert.deepEqual(acquired, ["one", "two"]);
+  await cache.clear();
+  await assert.rejects(() => cache.get(images[0]), PortfolioExportError);
+});
+
+test("every export sweeps expired foreign spill records before a memory-only preload", async () => {
+  const now = 10_000;
+  const stale = { sessionId: "old", imageId: "stale", createdAt: now - (60 * 60 * 1000) - 1, blob: new Blob(["stale"]) };
+  const fresh = { sessionId: "other", imageId: "fresh", createdAt: now - 1, blob: new Blob(["fresh"]) };
+  const records = new Map([["old/stale", stale], ["other/fresh", fresh]]);
+  let prepareCalls = 0;
+  let putCalls = 0;
+  const sourceStore = {
+    async prepare() {
+      prepareCalls += 1;
+      for (const [key, record] of records) {
+        if (record.createdAt < now - (60 * 60 * 1000)) records.delete(key);
+      }
+    },
+    async put() { putCalls += 1; },
+    async get() { return null; },
+    async clear() { records.delete("current/image"); }
+  };
+  const cache = createPortfolioSourceCache(
+    async ([image]) => [{ imageId: image.id, blob: new Blob(["memory"]) }],
+    { maxBytes: 256, maxSourceBytes: 50, sourceStoreFactory: () => sourceStore }
+  );
+
+  await cache.prepare();
+  await cache.preload([{ id: "memory" }]);
+  assert.equal(prepareCalls, 1);
+  assert.equal(records.has("old/stale"), false);
+  assert.equal(records.has("other/fresh"), true);
+  assert.equal(putCalls, 0);
+  assert.equal((await cache.get({ id: "memory" })).size, 6);
+  await cache.clear();
+});
+
+test("housekeeping failure is non-fatal for memory-only export but required spill failure remains fatal", async () => {
+  const sourceStore = {
+    async prepare() { throw new Error("housekeeping unavailable"); },
+    async put() { throw new Error("spill unavailable"); },
+    async get() { return null; },
+    async clear() {}
+  };
+  const memoryCache = createPortfolioSourceCache(
+    async ([image]) => [{ imageId: image.id, blob: new Blob(["memory"]) }],
+    { maxBytes: 256, maxSourceBytes: 50, sourceStoreFactory: () => sourceStore }
+  );
+  await memoryCache.prepare();
+  assert.equal((await memoryCache.get({ id: "memory" })).size, 6);
+  await memoryCache.clear();
+
+  const spillCache = createPortfolioSourceCache(
+    async ([image]) => [{ imageId: image.id, blob: new Blob(["spill"]) }],
+    { maxBytes: 50, maxSourceBytes: 50, sourceStoreFactory: () => sourceStore }
+  );
+  await spillCache.prepare();
+  await assert.rejects(() => spillCache.preload([{ id: "spill" }]), PortfolioExportError);
+  await spillCache.clear();
+});
+
+test("overflow sources are acquired once, spill outside RAM, and survive every adaptive tier locally", async () => {
+  const images = [{ id: "one" }, { id: "two" }, { id: "three" }];
+  const acquired = [];
+  const stored = new Map();
+  const storeCalls = { put: [], get: [], clear: 0 };
+  const sourceStore = {
+    async put(imageId, blob) { storeCalls.put.push(imageId); stored.set(imageId, blob); },
+    async get(imageId) { storeCalls.get.push(imageId); return stored.get(imageId) || null; },
+    async clear() { storeCalls.clear += 1; stored.clear(); }
+  };
+  const cache = createPortfolioSourceCache(
+    async (requested) => {
+      acquired.push(...requested.map((image) => image.id));
+      return requested.map((image) => ({ imageId: image.id, blob: new Blob([new Uint8Array(4)]) }));
+    },
+    { maxBytes: 12, maxSourceBytes: 4, sourceStoreFactory: () => sourceStore }
+  );
+
+  await cache.preload(images);
+  for (const tier of ["standard", "compact", "compressed", "minimum"]) {
+    for (const image of images) {
+      const blob = await cache.get(image);
+      assert.equal(blob.size, 4, tier);
+    }
+  }
+
+  assert.deepEqual(acquired, ["one", "two", "three"]);
+  assert.deepEqual(storeCalls.put, ["three"]);
+  assert.deepEqual(storeCalls.get, ["three", "three", "three", "three"]);
+  await cache.clear();
+  assert.equal(storeCalls.clear, 1);
+  assert.equal(stored.size, 0);
+});
+
+test("export source cleanup releases spilled bytes after acquisition failure", async () => {
+  const stored = new Map();
+  let clearCalls = 0;
+  const cache = createPortfolioSourceCache(
+    async ([image]) => {
+      if (image.id === "three") throw new Error("download failed");
+      return [{ imageId: image.id, blob: new Blob([new Uint8Array(4)]) }];
+    },
+    {
+      maxBytes: 8,
+      maxSourceBytes: 4,
+      sourceStoreFactory: () => ({
+        async put(imageId, blob) { stored.set(imageId, blob); },
+        async get(imageId) { return stored.get(imageId) || null; },
+        async clear() { clearCalls += 1; stored.clear(); }
+      })
+    }
+  );
+  try {
+    await assert.rejects(() => cache.preload([{ id: "one" }, { id: "two" }, { id: "three" }]), /download failed/);
+  } finally {
+    await cache.clear();
+  }
+  assert.equal(clearCalls, 1);
+  assert.equal(stored.size, 0);
+});
+
+test("export source cache rejects partial acquisition rather than omitting an image", async () => {
+  const cache = createPortfolioSourceCache(async () => [{ imageId: "one", blob: new Blob(["one"]) }]);
+  await assert.rejects(() => cache.preload([{ id: "one" }, { id: "two" }]), PortfolioExportError);
+  await cache.clear();
 });
 
 test("a real A4 portfolio PDF has title, image, and final index pages", async () => {

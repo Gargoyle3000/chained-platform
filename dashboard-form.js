@@ -615,13 +615,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         isCover: image.isCover === true
       }));
     if (localSupabaseMode) {
-      for (const image of mapped) {
-        try {
-          image.previewUrl = image.publicPath && currentVisibility() === "published"
-            ? workStore.media.publicUrl(image.publicPath)
-            : await workStore.media.privatePreview(image);
-        } catch { image.previewUrl = ""; }
-      }
+      const privateImages = mapped.filter((image) => !(image.publicPath && currentVisibility() === "published"));
+      let privatePreviews = new Map();
+      try { privatePreviews = await workStore.media.privatePreviewBatch(privateImages); }
+      catch { privatePreviews = new Map(); }
+      mapped.forEach((image) => {
+        image.previewUrl = image.publicPath && currentVisibility() === "published"
+          ? workStore.media.publicUrl(image.publicPath)
+          : privatePreviews.get(String(image.id).toLowerCase()) || "";
+      });
     }
     selectedImages.splice(
       0,

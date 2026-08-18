@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const {
     createPortfolioPlan,
+    createPortfolioSourceCache,
     generateWithinBudget,
     portfolioFilename,
     renderPortfolioPdf,
@@ -219,15 +220,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  async function prepareImage(image, tier) {
-    let privateUrl = "";
+  async function prepareImage(image, tier, sourceCache) {
     let canvas = null;
     try {
-      privateUrl = await repository.media.privatePreview(image);
-      if (!privateUrl) throw new Error("private preview unavailable");
-      const response = await fetch(privateUrl);
-      if (!response.ok) throw new Error("image download failed");
-      const source = await response.blob();
+      const source = await sourceCache.get(image);
       const decoded = await imageFromBlob(source);
       const scale = Math.min(1, tier.maxDimension / Math.max(decoded.naturalWidth, decoded.naturalHeight));
       canvas = document.createElement("canvas");
@@ -244,7 +240,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch {
       throw new PortfolioExportError("ONE OR MORE IMAGES COULD NOT BE PREPARED FOR EXPORT");
     } finally {
-      if (privateUrl) repository.media.urls.revoke(privateUrl);
       if (canvas) {
         canvas.width = 1;
         canvas.height = 1;
@@ -272,10 +267,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!plan.works.length) return setError("SELECTED WORKS NEED AT LEAST ONE READY IMAGE");
     if (!window.PDFLib || !window.fontkit) return setError("PDF GENERATION IS CURRENTLY UNAVAILABLE");
 
+    let sourceCache = null;
     setBusy(true);
     try {
       setStatus("PREPARING PORTFOLIO");
       const embeddedFont = await fontBytes();
+      sourceCache = createPortfolioSourceCache(
+        (images) => repository.media.downloadAuthorizedPrivateMedia(images, { purpose: "pdf_export", concurrency: 4 })
+      );
+      await sourceCache.prepare();
+      await sourceCache.preload(plan.imagePages.map((entry) => entry.image));
       const result = await generateWithinBudget({
         renderTier: async (tier) => {
           setStatus(`GENERATING PORTFOLIO · ${tier.id.toUpperCase()}`);
@@ -288,7 +289,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             documentTitle: text(titleInput.value),
             includeTitlePage: titlePage.checked,
             tier,
-            loadPreparedImage: prepareImage
+            loadPreparedImage: (image, tier) => prepareImage(image, tier, sourceCache)
           });
         }
       });
@@ -299,7 +300,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       setError(error instanceof PortfolioExportError ? error.message : "PDF GENERATION FAILED");
     } finally {
       setBusy(false);
-      repository?.media?.urls.revokeAll();
+      try { await sourceCache?.clear(); }
+      finally { repository?.media?.urls.revokeAll(); }
     }
   }
 
