@@ -1034,17 +1034,33 @@ footer {
       - 40px
     );
 
-    transform: none;
+    transform: translateX(
+      calc(
+        0px
+        - (var(--discover-meta-width) / 2)
+        - (var(--discover-gap) / 2)
+      )
+    );
   }
 
   .discover-page[data-view="single"] .discover-image-link img {
     display: block;
 
     width: 100%;
+    max-width: calc(
+      100%
+      - var(--discover-meta-width)
+      + var(--discover-gap)
+      - 2px
+    );
     height: 100%;
 
     object-fit: contain;
     object-position: center center;
+  }
+
+  .discover-page[data-view="single"] .discover-work[data-orientation="landscape"] .discover-image-link img {
+    width: 85%;
   }
 
 }
