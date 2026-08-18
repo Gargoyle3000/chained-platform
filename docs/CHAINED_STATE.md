@@ -20,7 +20,7 @@ Current focus: small visual/mobile polish before returning to larger product wor
 
 \- Magic-link login remains an invitation-only fallback; no public signup exists.
 
-\- Hosted redirect allowlist, invite redirect and recovery template/configuration still require a reviewed production change before deployment.
+\- Hosted redirect allowlist, invite redirect and recovery configuration are deployed and validated in production.
 
 
 
