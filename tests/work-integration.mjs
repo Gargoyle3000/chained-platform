@@ -1,5 +1,6 @@
 import { execSync, spawnSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { createSupabaseWorkRepository } from "../data/supabase-work-repository.mjs";
 
@@ -21,7 +22,14 @@ function localStatus() {
   const match = output.match(/\{[\s\S]*\}/);
   if (!match) throw new Error("status_unavailable");
   const status = JSON.parse(match[0]);
-  const url = new URL(status.API_URL);
+  const configuredApiUrl = process.env.SUPABASE_URL || process.env.SUPABASE_API_URL;
+  const config = readFileSync(new URL("../supabase/config.toml", import.meta.url), "utf8");
+  const apiSection = config.match(/\[api\]([\s\S]*?)(?=\n\[|$)/)?.[1] || "";
+  const apiPort = apiSection.match(/^\s*port\s*=\s*(\d+)\s*$/m)?.[1];
+  const dbUrl = status.DB_URL ? new URL(status.DB_URL) : null;
+  const endpoint = status.API_URL || configuredApiUrl || (dbUrl && apiPort ? `http://${dbUrl.hostname}:${apiPort}` : null);
+  if (!endpoint) throw new Error("status_unavailable");
+  const url = new URL(endpoint);
   if (url.protocol !== "http:" || !["127.0.0.1", "localhost"].includes(url.hostname)) throw new Error("non_local_endpoint");
   return {
     api: url.origin,

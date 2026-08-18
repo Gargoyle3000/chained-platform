@@ -3,6 +3,7 @@ import {
   resolveSupabaseApiKeys,
   userScopedHeaders,
 } from "./supabase-api-keys.ts";
+import type { SupabaseApiKey } from "./supabase-api-keys.ts";
 
 export const MAX_REQUEST_BYTES = 4096;
 export const ORIGINAL_BUCKET = "work-originals";
@@ -20,12 +21,19 @@ export type StoredObject = {
   size: number;
 };
 
+export type SignedStoredObject = {
+  path: string;
+  url: string;
+};
+
 export type MediaDependencies = {
+  authenticate(request: Request): Promise<Caller>;
   authorize(request: Request, targetKind: TargetKind, targetId: string): Promise<Caller>;
   rpc(name: string, body: Record<string, unknown>): Promise<unknown>;
   download(bucket: string, path: string): Promise<StoredObject>;
   upload(bucket: string, path: string, object: StoredObject): Promise<void>;
   remove(bucket: string, paths: string[]): Promise<boolean>;
+  signPrivateOriginals(paths: string[], expiresIn: number): Promise<SignedStoredObject[]>;
 };
 
 export class MediaError extends Error {
@@ -56,14 +64,15 @@ export function errorResponse(error: unknown): Response {
 export async function parseStrictJson(
   request: Request,
   allowedKeys: string[],
+  maximumBytes = MAX_REQUEST_BYTES,
 ): Promise<Record<string, unknown>> {
   const contentLength = Number(request.headers.get("content-length") ?? "0");
-  if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BYTES) {
+  if (Number.isFinite(contentLength) && contentLength > maximumBytes) {
     throw new MediaError(413, "request_too_large");
   }
 
   const text = await request.text();
-  if (new TextEncoder().encode(text).byteLength > MAX_REQUEST_BYTES) {
+  if (new TextEncoder().encode(text).byteLength > maximumBytes) {
     throw new MediaError(413, "request_too_large");
   }
 
@@ -173,6 +182,86 @@ function encodeObjectPath(path: string): string {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
+function absoluteSignedStorageUrl(apiUrl: string, signedUrl: string): string {
+  const projectUrl = new URL(apiUrl);
+  const storageUrl = `${projectUrl.origin}/storage/v1`;
+  const candidate = signedUrl.startsWith("http://") || signedUrl.startsWith("https://")
+    ? new URL(signedUrl)
+    : signedUrl.startsWith("/storage/v1/")
+    ? new URL(`${projectUrl.origin}${signedUrl}`)
+    : new URL(`${storageUrl}${signedUrl.startsWith("/") ? "" : "/"}${signedUrl}`);
+  const expectedPrefix = `/storage/v1/object/sign/${ORIGINAL_BUCKET}/`;
+
+  if (candidate.origin !== projectUrl.origin || !candidate.pathname.startsWith(expectedPrefix)) {
+    throw new MediaError(502, "signing_unavailable");
+  }
+  return candidate.toString();
+}
+
+export async function signPrivateOriginalUrls(
+  apiUrl: string,
+  secretKey: SupabaseApiKey,
+  paths: string[],
+  expiresIn: number,
+  fetcher: typeof fetch = fetch,
+): Promise<SignedStoredObject[]> {
+  if (secretKey.kind !== "current") {
+    throw new MediaError(502, "signing_unavailable");
+  }
+
+  let response: Response;
+  try {
+    response = await fetcher(`${apiUrl}/storage/v1/object/sign/${ORIGINAL_BUCKET}`, {
+      method: "POST",
+      headers: elevatedServiceHeaders(secretKey, {
+        "content-type": "application/json",
+      }),
+      body: JSON.stringify({ expiresIn, paths }),
+    });
+  } catch {
+    throw new MediaError(502, "signing_unavailable");
+  }
+  if (!response.ok) throw new MediaError(502, "signing_unavailable");
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new MediaError(502, "signing_unavailable");
+  }
+  if (!Array.isArray(payload) || payload.length !== paths.length) {
+    throw new MediaError(502, "signing_unavailable");
+  }
+
+  const expectedPaths = new Set(paths);
+  const signedByPath = new Map<string, SignedStoredObject>();
+  for (const value of payload) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new MediaError(502, "signing_unavailable");
+    }
+    const item = value as Record<string, unknown>;
+    const path = typeof item.path === "string" ? item.path : "";
+    const rawSignedUrl = typeof item.signedURL === "string" ? item.signedURL : "";
+    if (!expectedPaths.has(path) || signedByPath.has(path) || item.error || !rawSignedUrl) {
+      throw new MediaError(502, "signing_unavailable");
+    }
+    try {
+      signedByPath.set(path, {
+        path,
+        url: absoluteSignedStorageUrl(apiUrl, rawSignedUrl),
+      });
+    } catch {
+      throw new MediaError(502, "signing_unavailable");
+    }
+  }
+
+  return paths.map((path) => {
+    const signed = signedByPath.get(path);
+    if (!signed) throw new MediaError(502, "signing_unavailable");
+    return signed;
+  });
+}
+
 export function createMediaDependencies(): MediaDependencies {
   const apiUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/$/, "");
   const apiKeys = resolveSupabaseApiKeys((name) => Deno.env.get(name));
@@ -190,25 +279,32 @@ export function createMediaDependencies(): MediaDependencies {
     return Array.isArray(value) ? value : [];
   };
 
+  const authenticate = async (request: Request): Promise<Caller> => {
+    const authorization = request.headers.get("authorization");
+    if (!authorization?.match(/^Bearer\s+\S+$/i)) {
+      throw new MediaError(401, "authentication_required");
+    }
+
+    const userResponse = await fetch(`${apiUrl}/auth/v1/user`, {
+      headers: userScopedHeaders(apiKeys.publishable, authorization),
+    });
+    if (!userResponse.ok) throw new MediaError(401, "invalid_session");
+    const user = await userResponse.json() as { id?: unknown };
+    const accountId = requireUuid(user.id, "session");
+
+    const accounts = await fetchRows(
+      `/rest/v1/accounts?id=eq.${encodeURIComponent(accountId)}&status=eq.active&select=id&limit=1`,
+      authorization,
+    );
+    if (accounts.length !== 1) throw new MediaError(403, "inactive_account");
+    return { accountId };
+  };
+
   return {
+    authenticate,
     async authorize(request, targetKind, targetId) {
-      const authorization = request.headers.get("authorization");
-      if (!authorization?.match(/^Bearer\s+\S+$/i)) {
-        throw new MediaError(401, "authentication_required");
-      }
-
-      const userResponse = await fetch(`${apiUrl}/auth/v1/user`, {
-        headers: userScopedHeaders(apiKeys.publishable, authorization),
-      });
-      if (!userResponse.ok) throw new MediaError(401, "invalid_session");
-      const user = await userResponse.json() as { id?: unknown };
-      const accountId = requireUuid(user.id, "session");
-
-      const accounts = await fetchRows(
-        `/rest/v1/accounts?id=eq.${encodeURIComponent(accountId)}&status=eq.active&select=id&limit=1`,
-        authorization,
-      );
-      if (accounts.length !== 1) throw new MediaError(403, "inactive_account");
+      const caller = await authenticate(request);
+      const authorization = request.headers.get("authorization") as string;
 
       const targetPath = targetKind === "work"
         ? `/rest/v1/works?id=eq.${encodeURIComponent(targetId)}&select=id&limit=1`
@@ -216,7 +312,7 @@ export function createMediaDependencies(): MediaDependencies {
       const targets = await fetchRows(targetPath, authorization);
       if (targets.length !== 1) throw new MediaError(403, "not_authorized");
 
-      return { accountId };
+      return caller;
     },
 
     async rpc(name, body) {
@@ -257,7 +353,7 @@ export function createMediaDependencies(): MediaDependencies {
             "cache-control": "31536000",
             "x-upsert": "false",
           }),
-          body: object.bytes,
+          body: object.bytes as unknown as BodyInit,
         },
       );
       if (!response.ok) throw new MediaError(502, "copy_failed");
@@ -273,6 +369,10 @@ export function createMediaDependencies(): MediaDependencies {
         body: JSON.stringify({ prefixes: [...new Set(paths)] }),
       });
       return response.ok;
+    },
+
+    async signPrivateOriginals(paths, expiresIn) {
+      return await signPrivateOriginalUrls(apiUrl, apiKeys.secret, paths, expiresIn);
     },
   };
 }

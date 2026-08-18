@@ -328,6 +328,11 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/delete-work-image/index.ts"
 
+[functions.authorized-private-media]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/authorized-private-media/index.ts"
+
 # Multi-factor-authentication is available to Supabase Pro plan.
 [auth.mfa]
 # Control how many MFA factors can be enrolled at once per user.
