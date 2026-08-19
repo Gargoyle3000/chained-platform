@@ -30,6 +30,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   let profilesById = new Map();
   let repository = null;
   let fontBytesPromise = null;
+  const idleExportLabel = "[ EXPORT PORTFOLIO ]";
+  let progress = 0;
 
   function setError(message = "") {
     errorElement.textContent = message;
@@ -43,6 +45,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   function setBusy(isBusy) {
     generateButton.disabled = isBusy;
     generateButton.setAttribute("aria-busy", String(isBusy));
+    if (!isBusy) generateButton.textContent = idleExportLabel;
+  }
+
+  function setProgress(value) {
+    progress = Math.max(progress, Math.min(99, Math.round(value)));
+    generateButton.textContent = `[ EXPORTING… ${progress}% ]`;
+  }
+
+  function beginExportProgress() {
+    progress = 0;
+    setProgress(0);
   }
 
   function text(value) {
@@ -254,24 +267,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     const artist = selectedArtist();
     if (!selected.length) return setError("SELECT AT LEAST ONE WORK");
     if (!artist) return setError("SELECT WORKS FROM ONE ARTIST PROFILE");
-    if (titlePage.checked && !text(titleInput.value)) return setError("ENTER A DOCUMENT TITLE OR TURN OFF TITLE PAGE");
     const plan = createPortfolioPlan(selected);
     if (!plan.works.length) return setError("SELECTED WORKS NEED AT LEAST ONE READY IMAGE");
     if (!window.PDFLib || !window.fontkit) return setError("PDF GENERATION IS CURRENTLY UNAVAILABLE");
 
     let sourceCache = null;
     setBusy(true);
+    beginExportProgress();
     try {
-      setStatus("PREPARING PORTFOLIO");
+      setStatus();
       const embeddedFont = await fontBytes();
+      setProgress(8);
+      const totalImages = plan.imagePages.length;
+      let preparedImages = 0;
       sourceCache = createPortfolioSourceCache(
-        (images) => repository.media.downloadAuthorizedPrivateMedia(images, { purpose: "pdf_export", concurrency: 4 })
+        async (images) => {
+          const media = await repository.media.downloadAuthorizedPrivateMedia(images, { purpose: "pdf_export", concurrency: 4 });
+          preparedImages += media.length;
+          setProgress(10 + (preparedImages / totalImages) * 50);
+          return media;
+        }
       );
       await sourceCache.prepare();
+      setProgress(10);
       await sourceCache.preload(plan.imagePages.map((entry) => entry.image));
       const result = await generateWithinBudget({
         renderTier: async (tier) => {
-          setStatus(`GENERATING PORTFOLIO · ${tier.id.toUpperCase()}`);
+          setProgress(65);
           return renderPortfolioPdf({
             PDFLib: window.PDFLib,
             fontkit: window.fontkit,
@@ -286,6 +308,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       });
       downloadBlob(result.bytes, { filename: portfolioFilename(artist.name, titleInput.value) });
+      progress = 100;
+      generateButton.textContent = "[ EXPORTING… 100% ]";
       setStatus(`PORTFOLIO READY · ${(result.size / (1024 * 1024)).toFixed(1)} MB · ${result.tier.id.toUpperCase()}`);
     } catch (error) {
       setStatus();

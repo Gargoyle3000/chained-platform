@@ -258,7 +258,7 @@
   .artist-profile {
     display: block;
 
-    padding-top: calc(var(--header-height) + 42px);
+    padding-top: calc(var(--header-height) + 22px);
   }
 
   .artist-sidebar-inner {
