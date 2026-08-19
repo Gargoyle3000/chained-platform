@@ -39,13 +39,13 @@
   width: var(--dashboard-sidebar-width);
 }
 
-.dashboard-intro h1 {
+.dashboard-page-marker {
   margin: 0 0 28px;
 
-  font-size: clamp(26px, 2.8vw, 48px);
-  line-height: 0.95;
+  font-size: clamp(52px, 5vw, 82px);
+  line-height: 0.72;
   font-weight: 400;
-  letter-spacing: -0.055em;
+  letter-spacing: -0.08em;
 }
 
 .dashboard-intro p {
@@ -500,8 +500,8 @@
     width: 100%;
   }
 
-  .dashboard-intro h1 {
-    font-size: 34px;
+  .dashboard-page-marker {
+    font-size: 58px;
   }
 
   .dashboard-intro p {
