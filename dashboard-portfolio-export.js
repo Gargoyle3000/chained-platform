@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderPortfolioPdf,
     PortfolioExportError
   } = await import("./data/portfolio-export.mjs");
+  const { downloadBlob } = await import("./data/browser-download.mjs");
   const { createPortfolioSelectionState } = await import("./data/portfolio-selection-state.mjs");
   const { getWorkRepository } = await import("./data/work-repository.mjs");
   const { renderDashboardAccountIdentity } = await import("./data/dashboard-context.mjs");
@@ -247,15 +248,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  function download(bytes, filename) {
-    const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 0);
-  }
-
   async function generatePortfolio() {
     setError();
     const selected = selectedWorks();
@@ -293,7 +285,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
         }
       });
-      download(result.bytes, portfolioFilename(artist.name, titleInput.value));
+      downloadBlob(result.bytes, { filename: portfolioFilename(artist.name, titleInput.value) });
       setStatus(`PORTFOLIO READY · ${(result.size / (1024 * 1024)).toFixed(1)} MB · ${result.tier.id.toUpperCase()}`);
     } catch (error) {
       setStatus();
