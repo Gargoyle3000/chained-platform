@@ -173,13 +173,11 @@ code {
   pointer-events: auto;
 }
 
-.site-header[data-public-header] .public-login-link {
+.site-header[data-public-header] .public-action-slot {
   margin-left: auto;
-  padding-top: 1px;
-
   font-size: var(--font-nav);
   line-height: 1;
-  white-space: nowrap;
+  pointer-events: auto;
 }
 
 .wordmark {
@@ -658,7 +656,7 @@ footer {
     gap: 12px;
   }
 
-  .site-header[data-public-header] .public-login-link {
+  .site-header[data-public-header] .public-action-slot {
     margin-left: auto;
   }
 

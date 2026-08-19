@@ -14,7 +14,7 @@ test("Dashboard starts without a stale Work count", async () => {
 test("Discover begins with the current header container", async () => {
   const page = await read("discover.html");
   assert.match(page, /<header class="site-header" data-public-header>/);
-  assert.match(page, /data-anonymous-login[^>]+href="login\.html"[^>]*>\[ LOG IN \]/);
+  assert.match(page, /class="auth-session-indicator public-action-slot"[\s\S]*data-anonymous-login[^>]+href="login\.html"[^>]*>\[ LOG IN \]/);
   assert.match(page, /<template data-authenticated-navigation>/);
   const header = page.slice(page.indexOf("<header"), page.indexOf("<template"));
   assert.doesNotMatch(header, />DISCOVER<|>FOLLOWING<|>ARCHIVE<|>AGENDA</);
