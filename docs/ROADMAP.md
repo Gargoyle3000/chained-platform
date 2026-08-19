@@ -4,14 +4,7 @@ Last updated: 2026-08-19
 
 ## PRE-TESTER
 
-1. Mobile Portfolio PDF download bug: investigate Android Chrome download triggering separately; desktop export and the PDF renderer are working.
-2. Logged-out Discover header: align anonymous Discover with the established logged-in header without redesigning the working header.
-3. Portfolio Export copy/status polish:
-   - use `EXPORT PORTFOLIO` instead of `GENERATE PORTFOLIO`;
-   - provide local progress feedback and prevent repeated clicks;
-   - remove the obsolete document-title error, keeping any guidance local to title-page controls.
-4. Dashboard / `+` management-page exploration: reconsider visible naming and presentation without deciding on a label yet; preserve the conceptual link to the `+` navigation.
-5. Mobile management/profile spacing: reduce the name-area to upper-navigation/`+` gap without changing the already-adjusted name → pronounce or pronounce → follow spacing.
+1. Dashboard / `+` management-page exploration: reconsider visible naming and presentation without deciding on a label yet; preserve the conceptual link to the `+` navigation.
 
 ## POLISH
 

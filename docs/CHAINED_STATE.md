@@ -11,6 +11,7 @@ Current focus: small visual/mobile polish before returning to larger product wor
 - Frontend auth is password-first: email + password login, Forgot password, and one invite/recovery password-update route.
 - Magic-link login remains an invitation-only fallback; no public signup exists.
 - Hosted redirect allowlist, invite redirect and recovery configuration are deployed and validated in production.
+- Public entry is Discover-first: anonymous visitors browse Discover with `<CHAINED>` and `[ LOG IN ]`; Private Access returns with `[ DISCOVER ]`.
 
 ### Mobile visual polish
 
@@ -19,10 +20,10 @@ Current focus: small visual/mobile polish before returning to larger product wor
 - Mobile-only change; desktop/tablet Archive views must remain unchanged.
 - Archive, Discover NOSY and Following mobile mixed-ratio GRID images are centered and balanced without crop/stretch (validated).
 - PROFILE mobile name-to-navigation spacing is compact (validated).
-- Add slightly more whitespace between `<CHAINED>` and the mobile navigation across pages.
 - Discover SINGLE mobile is good and must not be changed.
 - Dashboard/Works mobile spacing is currently good.
 - Public Profile mobile spacing is currently good.
+- Mobile Portfolio PDF download works in Android Chrome production; the cross-browser download helper is live.
 
 ## DONE — IMPORTANT INFRASTRUCTURE
 
@@ -34,6 +35,7 @@ Current focus: small visual/mobile polish before returning to larger product wor
 - Authorized private-media gateway is live; private previews and Portfolio Export are production-validated.
 - Strict private Storage policy remains unchanged.
 - Portfolio Export v1 is functional.
+- Portfolio Export uses `EXPORT PORTFOLIO`, local monotonic progress, disabled `EXPORTING…` feedback, and a final size/tier status.
 - Archive + Projects + CURATED implemented.
 - Discover + Following implemented.
 - Mobile core flows usable.

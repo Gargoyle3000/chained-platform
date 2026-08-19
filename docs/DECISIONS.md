@@ -142,3 +142,9 @@ Last updated: 2026-08-18
 
 \- Passwords are handled only by Supabase Auth, and adding a password preserves the existing Auth user/account UUID.
 
+\## Public entry
+
+\- Anonymous visitors enter on Discover with a minimal `<CHAINED>` / `[ LOG IN ]` header.
+
+\- Private Access uses `[ DISCOVER ]` as its public return action; authenticated navigation remains separate.
+
