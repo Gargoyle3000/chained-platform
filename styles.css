@@ -173,6 +173,15 @@ code {
   pointer-events: auto;
 }
 
+.site-header[data-public-header] .public-login-link {
+  margin-left: auto;
+  padding-top: 1px;
+
+  font-size: var(--font-nav);
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .wordmark {
   color: var(--accent);
   font-size: clamp(30px, 3vw, 54px);
@@ -641,6 +650,16 @@ footer {
     min-height: 0;
     gap: 16px;
     padding-bottom: 4px;
+  }
+
+  .site-header[data-public-header] {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .site-header[data-public-header] .public-login-link {
+    margin-left: auto;
   }
 
   .main-nav {

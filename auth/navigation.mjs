@@ -140,9 +140,23 @@ function ensureSessionIndicator(actions, client) {
 
 export async function applyAuthenticatedNavigation(client) {
   const header = document.querySelector(".site-header");
-  const navigation = header?.querySelector(".main-nav");
+  let navigation = header?.querySelector(".main-nav");
 
-  if (!header || !navigation) {
+  if (!header) {
+    return Object.freeze({ kind: "missing-header", href: DASHBOARD_HREF });
+  }
+
+  if (!navigation) {
+    const template = header.querySelector("template[data-authenticated-navigation]");
+    navigation = template?.content.firstElementChild?.cloneNode(true) || null;
+    if (navigation) {
+      header.querySelector("[data-anonymous-login]")?.remove();
+      template.remove();
+      header.append(navigation);
+    }
+  }
+
+  if (!navigation) {
     return Object.freeze({ kind: "missing-header", href: DASHBOARD_HREF });
   }
 

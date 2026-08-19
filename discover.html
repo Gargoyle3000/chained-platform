@@ -13,21 +13,21 @@
 </head>
 
 <body class="discover-page" data-view="single">
-  <header class="site-header">
+  <header class="site-header" data-public-header>
     <a class="wordmark" href="discover.html">&lt;CHAINED&gt;</a>
-
-    <div class="header-actions">
-    <nav class="main-nav main-nav-with-dashboard" aria-label="Primary navigation">
-      <a class="is-active" href="discover.html">DISCOVER</a>
-      <a href="following.html">FOLLOWING</a>
-      <a href="archive.html">ARCHIVE</a>
-      <a href="agenda.html">AGENDA</a>
-      <span class="profile-nav-group">
-        <a data-own-profile-link href="profile.html">PROFILE</a>
-        <a class="dashboard-link" href="dashboard.html" aria-label="Open dashboard">+</a>
-      </span>
-    </nav>
-    </div>
+    <a class="public-login-link" data-anonymous-login href="login.html">[ LOG IN ]</a>
+    <template data-authenticated-navigation>
+      <nav class="main-nav main-nav-with-dashboard" aria-label="Primary navigation">
+        <a class="is-active" href="discover.html">DISCOVER</a>
+        <a href="following.html">FOLLOWING</a>
+        <a href="archive.html">ARCHIVE</a>
+        <a href="agenda.html">AGENDA</a>
+        <span class="profile-nav-group">
+          <a data-own-profile-link href="profile.html">PROFILE</a>
+          <a class="dashboard-link" href="dashboard.html" aria-label="Open dashboard">+</a>
+        </span>
+      </nav>
+    </template>
   </header>
 
   <main class="discover-main">
