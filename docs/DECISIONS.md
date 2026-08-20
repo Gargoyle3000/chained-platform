@@ -148,3 +148,10 @@ Last updated: 2026-08-18
 
 \- Private Access uses `[ DISCOVER ]` as its public return action; authenticated navigation remains separate.
 
+\- Anonymous Discover remains the temporary public entry; About/application/admission information may be added later.
+
+\## Management identity
+
+\- Management pages use a static, non-interactive `+` marker with `PROFILE LOADING` / hydrated profile name and `ARTIST ACCOUNT`; the global navigation `+` remains interactive.
+\- `PROFILE LOADING` is intentional dry/computer-like product language during identity hydration.
+

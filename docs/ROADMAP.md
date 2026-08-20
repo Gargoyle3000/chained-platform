@@ -2,10 +2,6 @@
 
 Last updated: 2026-08-19
 
-## PRE-TESTER
-
-1. Dashboard / `+` management-page exploration: reconsider visible naming and presentation without deciding on a label yet; preserve the conceptual link to the `+` navigation.
-
 ## POLISH
 
 - Mobile dashboard:

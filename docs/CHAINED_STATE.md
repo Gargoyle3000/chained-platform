@@ -1,10 +1,10 @@
 # CHAINED — CURRENT STATE
 
-Last updated: 2026-08-18
+Last updated: 2026-08-20
 
 ## NOW
 
-Current focus: small visual/mobile polish before returning to larger product work.
+Current focus: pre-tester security/usability review before returning to larger product work.
 
 ### Auth UX rollout
 
@@ -13,10 +13,9 @@ Current focus: small visual/mobile polish before returning to larger product wor
 - Hosted redirect allowlist, invite redirect and recovery configuration are deployed and validated in production.
 - Public entry is Discover-first: anonymous visitors browse Discover with `<CHAINED>` and `[ LOG IN ]`; Private Access returns with `[ DISCOVER ]`.
 
-### Mobile visual polish
+### Validated frontend polish
 
 - Archive mobile: only SINGLE and GRID; the former SUPERGRID presentation is now the mobile GRID (validated).
-- Former mobile SUPERGRID layout is now the validated mobile GRID presentation.
 - Mobile-only change; desktop/tablet Archive views must remain unchanged.
 - Archive, Discover NOSY and Following mobile mixed-ratio GRID images are centered and balanced without crop/stretch (validated).
 - PROFILE mobile name-to-navigation spacing is compact (validated).
@@ -24,6 +23,10 @@ Current focus: small visual/mobile polish before returning to larger product wor
 - Dashboard/Works mobile spacing is currently good.
 - Public Profile mobile spacing is currently good.
 - Mobile Portfolio PDF download works in Android Chrome production; the cross-browser download helper is live.
+- Anonymous Discover uses a minimal `<CHAINED>` / `[ LOG IN ]` header; Private Access uses `[ DISCOVER ]`.
+- Management pages use the static `+` / `PROFILE LOADING` / `ARTIST ACCOUNT` identity.
+- Portfolio Export uses immediate disabled `EXPORTING…` progress and final `PORTFOLIO READY` status.
+- Management language uses concise `WORKS`, `PRESENTATIONS`, and `AGENDA` headings.
 
 ## DONE — IMPORTANT INFRASTRUCTURE
 
