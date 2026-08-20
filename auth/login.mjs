@@ -55,7 +55,7 @@ async function initializeLogin() {
     runtime = await getFrontendRuntime();
   } catch {
     form.hidden = true;
-    setStatus("LOCAL AUTHENTICATION CONFIGURATION IS UNAVAILABLE.");
+    setStatus("AUTHENTICATION IS UNAVAILABLE.");
     return;
   }
 

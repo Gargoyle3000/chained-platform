@@ -11,8 +11,8 @@ function resolveDashboardIdentity(profiles = [], mode = "") {
 
   if (mode === "prototype") {
     return {
-      name: "LOCAL PROTOTYPE",
-      greetingName: "LOCAL PROTOTYPE"
+      name: "PROFILE SETUP REQUIRED",
+      greetingName: ""
     };
   }
 

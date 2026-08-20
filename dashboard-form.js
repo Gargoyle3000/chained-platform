@@ -843,7 +843,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       showFormStatus(
         localSupabaseMode
           ? "WORK IS CURRENTLY UNAVAILABLE"
-          : "LOCAL WORK STORAGE IS UNAVAILABLE",
+          : "WORK STORAGE IS UNAVAILABLE",
         true
       );
     }
