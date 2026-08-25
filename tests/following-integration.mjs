@@ -312,7 +312,7 @@ try {
   stage = "following profiles through the real profile control";
   await setBrowserSession(session);
   stage = "waiting for the first authenticated profile control";
-  await navigate(`profile.html?slug=${encodeURIComponent(slugs[0])}`, "document.querySelectorAll('.profile-work').length === 3");
+  await navigate(`profile.html?slug=${encodeURIComponent(slugs[0])}`, "document.querySelectorAll('.profile-work').length === 3 && !document.querySelector('#profile-follow-control').hidden && document.querySelector('#profile-follow-action').dataset.following === 'false'");
   const profileAccess = await evaluate(`(async () => {
     const { getFrontendRuntime } = await import('./auth/supabase-client.mjs');
     const { readApplicationSession } = await import('./auth/session.mjs');
@@ -411,7 +411,15 @@ try {
         return {
           overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
           below: contentTop >= header.bottom - 1,
-          uncropped: [...document.querySelectorAll('main img')].every((image) => getComputedStyle(image).objectFit === 'contain'),
+          uncropped: [...document.querySelectorAll('main img')].every((image) => {
+            const carousel = image.closest('.discover-work')?.classList.contains('has-public-work-carousel');
+            const objectFit = getComputedStyle(image).objectFit;
+            if (carousel || objectFit === 'contain') return objectFit === 'contain';
+            const frame = image.getBoundingClientRect();
+            const naturalRatio = image.naturalWidth / image.naturalHeight;
+            const renderedRatio = frame.width / frame.height;
+            return Number.isFinite(naturalRatio) && Number.isFinite(renderedRatio) && Math.abs(renderedRatio - naturalRatio) <= 0.02;
+          }),
           realButton: !action || action.tagName === 'BUTTON'
         };
       })()`);
@@ -428,9 +436,12 @@ try {
   const prototype = await evaluate(`(() => ({
     staticItems: document.querySelectorAll('.discover-work[data-artist-id]').length,
     mode: document.body.dataset.authMode,
-    requests: performance.getEntriesByType('resource').filter((entry) => entry.name.includes('/rest/v1/profile_follows') || entry.name.includes('/rpc/list_following_feed')).length
+    followRequests: performance.getEntriesByType('resource').filter((entry) => entry.name.includes('/rest/v1/profile_follows')).length,
+    feedRequests: performance.getEntriesByType('resource').filter((entry) => entry.name.includes('/rpc/list_following_feed')).length,
+    streamVisible: !document.querySelector('.discover-stream').hidden,
+    emptyVisible: !document.querySelector('.following-empty').hidden
   }))()`);
-  record("prototype Following stays static and makes no Supabase follow request", prototype.mode === "prototype" && prototype.staticItems === 5 && prototype.requests === 0);
+  record("prototype Following stays empty and makes no Supabase follow request", prototype.mode === "prototype" && prototype.staticItems === 0 && prototype.followRequests === 0 && prototype.feedRequests === 0 && !prototype.streamVisible && prototype.emptyVisible);
   await rename(disabledConfigPath, configPath);
 
   process.stdout.write(JSON.stringify({ ok: true, assertions: assertions.length }));

@@ -77,16 +77,26 @@ select is(
   'RLS is forced on every exposed application table'
 );
 
-select is(
+select ok(
   (
-    select count(*)
+    select p.prosecdef
+       and exists (
+         select 1
+           from unnest(coalesce(p.proconfig, array[]::text[])) as setting
+          where setting like 'search_path=%'
+       )
+      from pg_catalog.pg_proc as p
+     where p.oid = 'public.list_published_curated_collection_items(uuid[])'::regprocedure
+  )
+  and not exists (
+    select 1
       from pg_catalog.pg_proc as p
       join pg_catalog.pg_namespace as n on n.oid = p.pronamespace
      where n.nspname = 'public'
        and p.prosecdef
+       and p.oid <> 'public.list_published_curated_collection_items(uuid[])'::regprocedure
   ),
-  0::bigint,
-  'no SECURITY DEFINER helper exists in the exposed public schema'
+  'only the allowlisted public CURATED SECURITY DEFINER wrapper fixes its search_path'
 );
 
 select is(
