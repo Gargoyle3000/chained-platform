@@ -23,6 +23,13 @@ export interface InvitationRecord {
   status: InvitationStatus;
   approved_roles: AllowedRole[];
   expires_at: string;
+  artist_workspace_display_name?: string | null;
+  artist_workspace_slug?: string | null;
+}
+
+export interface ArtistWorkspace {
+  displayName: string;
+  slug: string;
 }
 
 export interface ApprovalResult {
@@ -44,12 +51,18 @@ export interface InviteDependencies {
   approveInvitation(input: {
     email: string;
     roles: AllowedRole[];
+    artistWorkspace: ArtistWorkspace | null;
     approvedByAccountId: string;
   }): Promise<ApprovalResult>;
   claimInvitationForSending(id: string): Promise<InvitationRecord | null>;
   readInvitation(id: string): Promise<InvitationRecord | null>;
   inviteAuthUser(email: string): Promise<void>;
   markInvitationFailed(id: string, failureCode: string): Promise<void>;
+  repairAcceptedArtistWorkspace(input: {
+    invitationId: string;
+    artistWorkspace: ArtistWorkspace;
+    approvedByAccountId: string;
+  }): Promise<void>;
   allowedOrigins: ReadonlySet<string>;
 }
 
@@ -78,6 +91,8 @@ export class InvitationConflictFailure extends Error {
     super("An actionable invitation already exists with different roles");
   }
 }
+
+export class WorkspaceSlugConflictFailure extends Error {}
 
 function jsonResponse(
   status: number,
@@ -152,6 +167,39 @@ export function normalizeRoles(value: unknown): AllowedRole[] {
   }
 
   return ALLOWED_ROLES.filter((role) => requested.has(role));
+}
+
+export function normalizeArtistWorkspace(value: unknown): ArtistWorkspace {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new RequestFailure(400, "invalid_artist_workspace");
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const displayName = typeof candidate.displayName === "string"
+    ? candidate.displayName.trim()
+    : "";
+  const slug = typeof candidate.slug === "string"
+    ? candidate.slug.trim().toLowerCase()
+    : "";
+
+  if (displayName.length < 1 || displayName.length > 160) {
+    throw new RequestFailure(400, "invalid_artist_workspace");
+  }
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+    throw new RequestFailure(400, "invalid_artist_workspace");
+  }
+
+  return Object.freeze({ displayName, slug });
+}
+
+function normalizeInvitationId(value: unknown): string {
+  if (
+    typeof value !== "string"
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+  ) {
+    throw new RequestFailure(400, "invalid_invitation_id");
+  }
+  return value.toLowerCase();
 }
 
 export function sanitizedAuthFailureCode(error: unknown): string {
@@ -255,12 +303,33 @@ export function createInviteHandler(dependencies: InviteDependencies) {
       }
 
       const body = await parseBody(request);
+      if (body.action === "repair_artist_workspace") {
+        const invitationId = normalizeInvitationId(body.invitationId);
+        const artistWorkspace = normalizeArtistWorkspace(body.artistWorkspace);
+        await dependencies.repairAcceptedArtistWorkspace({
+          invitationId,
+          artistWorkspace,
+          approvedByAccountId: caller.id,
+        });
+        return jsonResponse(200, "artist_workspace_repaired", {}, corsHeaders);
+      }
+      if (body.action != null) {
+        throw new RequestFailure(400, "invalid_action");
+      }
+
       const email = normalizeEmail(body.email);
       const roles = normalizeRoles(body.roles);
+      const artistWorkspace = roles.includes("artist")
+        ? normalizeArtistWorkspace(body.artistWorkspace)
+        : null;
+      if (!roles.includes("artist") && body.artistWorkspace != null) {
+        throw new RequestFailure(400, "invalid_artist_workspace");
+      }
 
       const approval = await dependencies.approveInvitation({
         email,
         roles,
+        artistWorkspace,
         approvedByAccountId: caller.id,
       });
 
@@ -314,6 +383,9 @@ export function createInviteHandler(dependencies: InviteDependencies) {
         corsHeaders,
       );
     } catch (error) {
+      if (error instanceof WorkspaceSlugConflictFailure) {
+        return jsonResponse(409, "artist_workspace_slug_conflict", {}, corsHeaders);
+      }
       if (error instanceof InvitationConflictFailure) {
         return jsonResponse(409, "invitation_conflict", {}, corsHeaders);
       }

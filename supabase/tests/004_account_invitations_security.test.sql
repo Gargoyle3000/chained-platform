@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(53);
+select plan(77);
 
 insert into auth.users (
   instance_id,
@@ -43,11 +43,15 @@ select lives_ok(
       id,
       email_normalized,
       approved_roles,
+      artist_workspace_display_name,
+      artist_workspace_slug,
       approved_by_account_id
     ) values (
       '00000000-0000-0000-0000-000000001201',
       '  INVITED.ARTIST@EXAMPLE.TEST  ',
       array['artist'::public.application_role],
+      ' INVITED ARTIST ',
+      'INVITED-ARTIST',
       '00000000-0000-0000-0000-000000001101'
     )
   $$,
@@ -75,6 +79,16 @@ select is(
   ),
   true,
   'private_member is automatically included with the approved artist role'
+);
+
+select is(
+  (
+    select artist_workspace_display_name || ':' || artist_workspace_slug
+      from public.account_invitations
+     where id = '00000000-0000-0000-0000-000000001201'
+  ),
+  'INVITED ARTIST:invited-artist',
+  'artist workspace identity is normalized with the invitation approval'
 );
 
 select results_eq(
@@ -193,6 +207,49 @@ select results_eq(
 );
 
 select results_eq(
+  $$
+    select count(*)
+      from public.public_profiles
+     where profile_type = 'artist'
+       and slug = 'invited-artist'
+       and display_name = 'INVITED ARTIST'
+       and publication_status = 'draft'
+       and claim_state = 'claimed'
+       and primary_controller_account_id = '00000000-0000-0000-0000-000000001103'
+       and claimed_at is not null
+  $$,
+  array[1::bigint],
+  'acceptance provisions one claimed draft artist workspace for the accepted account'
+);
+
+select results_eq(
+  $$
+    select count(*)
+      from public.profile_members as pm
+      join public.public_profiles as p on p.id = pm.profile_id
+     where p.slug = 'invited-artist'
+       and pm.account_id = '00000000-0000-0000-0000-000000001103'
+       and pm.membership_level = 'owner'
+       and pm.status = 'active'
+       and pm.revoked_at is null
+  $$,
+  array[1::bigint],
+  'acceptance provisions one active owner membership'
+);
+
+select results_eq(
+  $$
+    select count(*)
+      from public.audit_events
+     where action = 'artist_workspace.provisioned'
+       and metadata ->> 'invitation_id' = '00000000-0000-0000-0000-000000001201'
+       and metadata ->> 'source' = 'invitation_acceptance'
+  $$,
+  array[1::bigint],
+  'artist workspace provisioning is audited'
+);
+
+select results_eq(
   $$select count(*) from public.account_roles where account_id = '00000000-0000-0000-0000-000000001103' and role not in ('private_member', 'artist') and revoked_at is null$$,
   array[0::bigint],
   'Auth metadata cannot grant unapproved roles or admin'
@@ -243,6 +300,378 @@ select results_eq(
   array[2::bigint],
   'repeated acceptance does not duplicate roles'
 );
+
+select results_eq(
+  $$select count(*) from public.public_profiles where slug = 'invited-artist' and deleted_at is null$$,
+  array[1::bigint],
+  'repeated acceptance does not duplicate the artist workspace'
+);
+
+insert into auth.users (
+  instance_id, id, aud, role, email, invited_at, created_at, updated_at
+) values (
+  '00000000-0000-0000-0000-000000000000',
+  '00000000-0000-0000-0000-000000001111',
+  'authenticated',
+  'authenticated',
+  'legacy.artist@example.test',
+  now(),
+  now(),
+  now()
+);
+
+set local session_replication_role = replica;
+insert into public.account_invitations (
+  id, email_normalized, status, approved_roles, approved_by_account_id,
+  auth_user_id, approved_at, sending_at, sent_at, expires_at
+) values (
+  '00000000-0000-0000-0000-000000001211',
+  'legacy.artist@example.test',
+  'sent',
+  array['private_member'::public.application_role, 'artist'::public.application_role],
+  '00000000-0000-0000-0000-000000001101',
+  '00000000-0000-0000-0000-000000001111',
+  now(), now(), now(), now() + interval '1 hour'
+);
+set local session_replication_role = origin;
+
+select lives_ok(
+  $$
+    update auth.users
+       set email_confirmed_at = now(),
+           updated_at = now()
+     where id = '00000000-0000-0000-0000-000000001111'
+  $$,
+  'legacy sent artist invitation without workspace intent still completes admission'
+);
+
+select results_eq(
+  $$
+    select status::text,
+           count(*) filter (where role = 'private_member' and revoked_at is null),
+           count(*) filter (where role = 'artist' and revoked_at is null)
+      from public.accounts as a
+      left join public.account_roles as ar on ar.account_id = a.id
+     where a.id = '00000000-0000-0000-0000-000000001111'
+     group by status
+  $$,
+  $$values ('active'::text, 1::bigint, 1::bigint)$$,
+  'legacy acceptance creates the active account and approved roles'
+);
+
+select is_empty(
+  $$
+    select p.id
+      from public.public_profiles as p
+      left join public.profile_members as pm
+        on pm.profile_id = p.id
+       and pm.account_id = '00000000-0000-0000-0000-000000001111'
+       and pm.status = 'active'
+       and pm.revoked_at is null
+     where p.primary_controller_account_id = '00000000-0000-0000-0000-000000001111'
+        or pm.id is not null
+  $$,
+  'legacy acceptance creates no inferred artist workspace or membership'
+);
+
+select results_eq(
+  $$select status::text from public.account_invitations where id = '00000000-0000-0000-0000-000000001211'$$,
+  $$values ('accepted'::text)$$,
+  'legacy artist invitation is marked accepted without workspace provisioning'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-000000001111","role":"authenticated"}',
+  true
+);
+select throws_ok(
+  $$
+    select public.service_repair_accepted_artist_workspace(
+      '00000000-0000-0000-0000-000000001211',
+      'LEGACY ARTIST',
+      'legacy-artist',
+      '00000000-0000-0000-0000-000000001111'
+    )
+  $$,
+  '42501',
+  null,
+  'ordinary authenticated users cannot invoke artist workspace repair'
+);
+reset role;
+
+insert into auth.users (
+  instance_id, id, aud, role, email, created_at, updated_at
+) values (
+  '00000000-0000-0000-0000-000000000000',
+  '00000000-0000-0000-0000-000000001112',
+  'authenticated',
+  'authenticated',
+  'legacy.member@example.test',
+  now(),
+  now()
+);
+insert into public.accounts (id, status)
+values ('00000000-0000-0000-0000-000000001112', 'active');
+insert into public.account_roles (account_id, role)
+values ('00000000-0000-0000-0000-000000001112', 'private_member');
+set local session_replication_role = replica;
+insert into public.account_invitations (
+  id, email_normalized, status, approved_roles, approved_by_account_id,
+  auth_user_id, approved_at, sending_at, sent_at, accepted_at, expires_at
+) values (
+  '00000000-0000-0000-0000-000000001212',
+  'legacy.member@example.test',
+  'accepted',
+  array['private_member'::public.application_role],
+  '00000000-0000-0000-0000-000000001101',
+  '00000000-0000-0000-0000-000000001112',
+  now(), now(), now(), now(), now() + interval '1 hour'
+);
+set local session_replication_role = origin;
+
+set local role service_role;
+select throws_ok(
+  $$
+    select public.service_repair_accepted_artist_workspace(
+      '00000000-0000-0000-0000-000000001212',
+      'NOT AN ARTIST',
+      'not-an-artist',
+      '00000000-0000-0000-0000-000000001101'
+    )
+  $$,
+  '23503',
+  null,
+  'repair rejects an accepted non-artist invitation'
+);
+
+reset role;
+
+select lives_ok(
+  $$
+    insert into public.account_invitations (
+      id, email_normalized, approved_roles, artist_workspace_display_name,
+      artist_workspace_slug, approved_by_account_id
+    ) values (
+      '00000000-0000-0000-0000-000000001213',
+      'slug.one@example.test',
+      array['artist'::public.application_role],
+      'SLUG ONE',
+      'reserved-artist',
+      '00000000-0000-0000-0000-000000001101'
+    )
+  $$,
+  'first actionable artist invitation reserves its canonical workspace slug'
+);
+
+select throws_ok(
+  $$
+    insert into public.account_invitations (
+      email_normalized, approved_roles, artist_workspace_display_name,
+      artist_workspace_slug, approved_by_account_id
+    ) values (
+      'slug.two@example.test',
+      array['artist'::public.application_role],
+      'SLUG TWO',
+      'RESERVED-ARTIST',
+      '00000000-0000-0000-0000-000000001101'
+    )
+  $$,
+  '23505',
+  null,
+  'case-variant actionable artist workspace slug is rejected by the database'
+);
+
+update public.account_invitations
+   set status = 'failed',
+       failure_code = 'test_failure'
+ where id = '00000000-0000-0000-0000-000000001213';
+select lives_ok(
+  $$
+    insert into public.account_invitations (
+      email_normalized, approved_roles, artist_workspace_display_name,
+      artist_workspace_slug, approved_by_account_id
+    ) values (
+      'slug.three@example.test',
+      array['artist'::public.application_role],
+      'SLUG THREE',
+      'reserved-artist',
+      '00000000-0000-0000-0000-000000001101'
+    )
+  $$,
+  'failed artist invitation releases its workspace slug reservation'
+);
+
+insert into auth.users (
+  instance_id, id, aud, role, email, invited_at, created_at, updated_at
+) values (
+  '00000000-0000-0000-0000-000000000000',
+  '00000000-0000-0000-0000-000000001113',
+  'authenticated',
+  'authenticated',
+  'rollback.artist@example.test',
+  now(),
+  now(),
+  now()
+);
+set local session_replication_role = replica;
+insert into public.account_invitations (
+  id, email_normalized, status, approved_roles, artist_workspace_display_name,
+  artist_workspace_slug, approved_by_account_id, auth_user_id, approved_at,
+  sending_at, sent_at, expires_at
+) values (
+  '00000000-0000-0000-0000-000000001214',
+  'rollback.artist@example.test',
+  'sent',
+  array['private_member'::public.application_role, 'artist'::public.application_role],
+  'ROLLBACK ARTIST',
+  'invited-artist',
+  '00000000-0000-0000-0000-000000001101',
+  '00000000-0000-0000-0000-000000001113',
+  now(), now(), now(), now() + interval '1 hour'
+);
+set local session_replication_role = origin;
+
+select throws_ok(
+  $$
+    update auth.users
+       set email_confirmed_at = now(),
+           updated_at = now()
+     where id = '00000000-0000-0000-0000-000000001113'
+  $$,
+  '23505',
+  null,
+  'workspace provisioning failure aborts invite acceptance'
+);
+
+select results_eq(
+  $$
+    select count(*) from public.accounts where id = '00000000-0000-0000-0000-000000001113'
+    union all
+    select count(*) from public.account_roles where account_id = '00000000-0000-0000-0000-000000001113'
+    union all
+    select count(*) from public.public_profiles where primary_controller_account_id = '00000000-0000-0000-0000-000000001113'
+    union all
+    select count(*) from public.profile_members where account_id = '00000000-0000-0000-0000-000000001113'
+    union all
+    select count(*) from public.account_invitations where id = '00000000-0000-0000-0000-000000001214' and status = 'accepted'
+  $$,
+  $$values (0::bigint), (0::bigint), (0::bigint), (0::bigint), (0::bigint)$$,
+  'failed provisioning leaves no account, roles, workspace, membership, or accepted invitation behind'
+);
+
+set local role service_role;
+select lives_ok(
+  $$
+    select public.service_repair_accepted_artist_workspace(
+      '00000000-0000-0000-0000-000000001211',
+      'LEGACY ARTIST',
+      'legacy-artist',
+      '00000000-0000-0000-0000-000000001101'
+    )
+  $$,
+  'active admin can repair an accepted legacy artist workspace'
+);
+
+reset role;
+select results_eq(
+  $$
+    select count(*) filter (where p.slug = 'legacy-artist'
+                              and p.display_name = 'LEGACY ARTIST'
+                              and p.profile_type = 'artist'
+                              and p.publication_status = 'draft'
+                              and p.claim_state = 'claimed'
+                              and p.primary_controller_account_id = '00000000-0000-0000-0000-000000001111'),
+           count(*) filter (where pm.membership_level = 'owner'
+                              and pm.status = 'active'
+                              and pm.revoked_at is null),
+           count(*) filter (where ae.action = 'artist_workspace.provisioned'
+                              and ae.metadata ->> 'invitation_id' = '00000000-0000-0000-0000-000000001211')
+      from public.public_profiles as p
+      left join public.profile_members as pm on pm.profile_id = p.id
+      left join public.audit_events as ae on ae.target_id = p.id
+     where p.primary_controller_account_id = '00000000-0000-0000-0000-000000001111'
+     group by p.id
+  $$,
+  $$values (1::bigint, 1::bigint, 1::bigint)$$,
+  'repair creates exactly the expected workspace, owner membership, and audit event'
+);
+
+set local role service_role;
+select lives_ok(
+  $$
+    select public.service_repair_accepted_artist_workspace(
+      '00000000-0000-0000-0000-000000001211',
+      'LEGACY ARTIST',
+      'legacy-artist',
+      '00000000-0000-0000-0000-000000001101'
+    )
+  $$,
+  'exact repair retry returns the existing workspace successfully'
+);
+
+reset role;
+select results_eq(
+  $$
+    select count(*) from public.public_profiles where primary_controller_account_id = '00000000-0000-0000-0000-000000001111'
+    union all
+    select count(*) from public.profile_members where account_id = '00000000-0000-0000-0000-000000001111' and membership_level = 'owner' and status = 'active' and revoked_at is null
+    union all
+    select count(*) from public.audit_events where action = 'artist_workspace.provisioned' and metadata ->> 'invitation_id' = '00000000-0000-0000-0000-000000001211'
+  $$,
+  $$values (1::bigint), (1::bigint), (1::bigint)$$,
+  'repair retry creates no duplicate profile, membership, or audit event'
+);
+
+set local role service_role;
+select throws_ok(
+  $$
+    select public.service_repair_accepted_artist_workspace(
+      '00000000-0000-0000-0000-000000001211',
+      'DIFFERENT ARTIST',
+      'different-artist',
+      '00000000-0000-0000-0000-000000001101'
+    )
+  $$,
+  '23505',
+  null,
+  'repair rejects an existing workspace that differs from the expected identity'
+);
+
+select throws_ok(
+  $$
+    select public.service_repair_accepted_artist_workspace(
+      '00000000-0000-0000-0000-000000001211',
+      'LEGACY ARTIST',
+      'legacy-artist',
+      '00000000-0000-0000-0000-000000001111'
+    )
+  $$,
+  '42501',
+  null,
+  'repair independently rejects a non-admin actor even through the service wrapper'
+);
+reset role;
+
+update public.accounts
+   set status = 'disabled'
+ where id = '00000000-0000-0000-0000-000000001111';
+set local role service_role;
+select throws_ok(
+  $$
+    select public.service_repair_accepted_artist_workspace(
+      '00000000-0000-0000-0000-000000001211',
+      'LEGACY ARTIST',
+      'legacy-artist',
+      '00000000-0000-0000-0000-000000001101'
+    )
+  $$,
+  '42501',
+  null,
+  'repair rejects a disabled target account even when a workspace already exists'
+);
+reset role;
 
 select lives_ok(
   $$
@@ -462,11 +891,13 @@ select results_eq(
 select lives_ok(
   $$
     insert into public.account_invitations (
-      id, email_normalized, approved_roles, approved_by_account_id
+      id, email_normalized, approved_roles, artist_workspace_display_name, artist_workspace_slug, approved_by_account_id
     ) values (
       '00000000-0000-0000-0000-000000001206',
       'invited.artist@example.test',
       array['artist'::public.application_role],
+      'INVITED ARTIST RETRY',
+      'invited-artist-retry',
       '00000000-0000-0000-0000-000000001101'
     )
   $$,
@@ -581,6 +1012,12 @@ select set_config(
   'request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-000000001103","role":"authenticated"}',
   true
+);
+
+select results_eq(
+  $$select slug from public.list_manageable_artist_profiles()$$,
+  $$values ('invited-artist'::varchar)$$,
+  'accepted artist resolves the provisioned workspace through the normal Work-management RPC'
 );
 
 select throws_ok(

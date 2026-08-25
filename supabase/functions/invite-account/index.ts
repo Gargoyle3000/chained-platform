@@ -3,6 +3,7 @@ import {
   createInviteHandler,
   type InvitationRecord,
   InvitationConflictFailure,
+  WorkspaceSlugConflictFailure,
   type AllowedRole,
 } from "./logic.ts";
 import {
@@ -52,7 +53,7 @@ async function readInvitationById(id: string): Promise<InvitationRecord | null> 
   const response = await fetch(
     restUrl("account_invitations", {
       id: `eq.${id}`,
-      select: "id,status,approved_roles,expires_at",
+      select: "id,status,approved_roles,expires_at,artist_workspace_display_name,artist_workspace_slug",
       limit: "1",
     }),
     { headers: serviceHeaders() },
@@ -68,7 +69,7 @@ async function readActionableInvitation(
     restUrl("account_invitations", {
       email_normalized: `eq.${email}`,
       status: "in.(approved,sending,sent)",
-      select: "id,status,approved_roles,expires_at",
+      select: "id,status,approved_roles,expires_at,artist_workspace_display_name,artist_workspace_slug",
       order: "created_at.desc",
       limit: "1",
     }),
@@ -78,9 +79,52 @@ async function readActionableInvitation(
   return rows[0] ?? null;
 }
 
+async function readActionableInvitationByWorkspaceSlug(
+  slug: string,
+): Promise<InvitationRecord | null> {
+  const response = await fetch(
+    restUrl("account_invitations", {
+      artist_workspace_slug: `eq.${slug}`,
+      status: "in.(approved,sending,sent)",
+      select: "id,status,approved_roles,expires_at,artist_workspace_display_name,artist_workspace_slug",
+      order: "created_at.desc",
+      limit: "1",
+    }),
+    { headers: serviceHeaders() },
+  );
+  const rows = await parseRows(response);
+  return rows[0] ?? null;
+}
+
+async function existingProfileUsesSlug(slug: string): Promise<boolean> {
+  const response = await fetch(
+    restUrl("public_profiles", {
+      slug: `eq.${slug}`,
+      deleted_at: "is.null",
+      select: "id",
+      limit: "1",
+    }),
+    { headers: serviceHeaders() },
+  );
+  if (!response.ok) throw new Error("Profile slug lookup failed");
+  const rows: unknown = await response.json();
+  return Array.isArray(rows) && rows.length > 0;
+}
+
 function sameRoles(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length
     && left.every((role, index) => role === right[index]);
+}
+
+function sameWorkspace(
+  left: { displayName: string; slug: string } | null,
+  right: InvitationRecord,
+): boolean {
+  if (!left) {
+    return !right.artist_workspace_display_name && !right.artist_workspace_slug;
+  }
+  return left.displayName === right.artist_workspace_display_name
+    && left.slug === right.artist_workspace_slug;
 }
 
 const handler = createInviteHandler({
@@ -141,10 +185,14 @@ const handler = createInviteHandler({
     };
   },
 
-  async approveInvitation({ email, roles, approvedByAccountId }) {
+  async approveInvitation({ email, roles, artistWorkspace, approvedByAccountId }) {
+    if (artistWorkspace && await existingProfileUsesSlug(artistWorkspace.slug)) {
+      throw new WorkspaceSlugConflictFailure();
+    }
+
     const response = await fetch(
       restUrl("account_invitations", {
-        select: "id,status,approved_roles,expires_at",
+        select: "id,status,approved_roles,expires_at,artist_workspace_display_name,artist_workspace_slug",
       }),
       {
         method: "POST",
@@ -152,6 +200,8 @@ const handler = createInviteHandler({
         body: JSON.stringify({
           email_normalized: email,
           approved_roles: roles,
+          artist_workspace_display_name: artistWorkspace?.displayName ?? null,
+          artist_workspace_slug: artistWorkspace?.slug ?? null,
           approved_by_account_id: approvedByAccountId,
         }),
       },
@@ -168,11 +218,19 @@ const handler = createInviteHandler({
     }
 
     const existing = await readActionableInvitation(email);
-    if (!existing || !sameRoles(existing.approved_roles, roles)) {
+    if (existing && sameRoles(existing.approved_roles, roles) && sameWorkspace(artistWorkspace, existing)) {
+      return { invitation: existing, created: false };
+    }
+
+    if (artistWorkspace && await readActionableInvitationByWorkspaceSlug(artistWorkspace.slug)) {
+      throw new WorkspaceSlugConflictFailure();
+    }
+
+    if (!existing) {
       throw new InvitationConflictFailure();
     }
 
-    return { invitation: existing, created: false };
+    throw new InvitationConflictFailure();
   },
 
   async claimInvitationForSending(id) {
@@ -180,7 +238,7 @@ const handler = createInviteHandler({
       restUrl("account_invitations", {
         id: `eq.${id}`,
         status: "eq.approved",
-        select: "id,status,approved_roles,expires_at",
+        select: "id,status,approved_roles,expires_at,artist_workspace_display_name,artist_workspace_slug",
       }),
       {
         method: "PATCH",
@@ -225,6 +283,27 @@ const handler = createInviteHandler({
       },
     );
     if (!response.ok) throw new Error("Unable to record invitation failure");
+  },
+
+  async repairAcceptedArtistWorkspace({
+    invitationId,
+    artistWorkspace,
+    approvedByAccountId,
+  }) {
+    const response = await fetch(
+      restUrl("rpc/service_repair_accepted_artist_workspace", {}),
+      {
+        method: "POST",
+        headers: serviceHeaders(),
+        body: JSON.stringify({
+          target_invitation_id: invitationId,
+          target_display_name: artistWorkspace.displayName,
+          target_slug: artistWorkspace.slug,
+          actor_account_id: approvedByAccountId,
+        }),
+      },
+    );
+    if (!response.ok) throw new Error("Artist workspace repair failed");
   },
 });
 

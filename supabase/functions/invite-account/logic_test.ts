@@ -4,6 +4,7 @@ import {
   type InviteDependencies,
   type InvitationRecord,
   MAX_BODY_BYTES,
+  WorkspaceSlugConflictFailure,
 } from "./logic.ts";
 
 function assert(condition: unknown, message = "Assertion failed"): asserts condition {
@@ -40,6 +41,8 @@ function testDependencies(overrides: Partial<InviteDependencies> = {}) {
   };
   let inviteCalls = 0;
   let approvedRoles: readonly string[] = [];
+  let approvedWorkspace: unknown = null;
+  let repairInput: unknown = null;
   let failureCode: string | null = null;
 
   const dependencies: InviteDependencies = {
@@ -52,7 +55,13 @@ function testDependencies(overrides: Partial<InviteDependencies> = {}) {
     },
     async approveInvitation(input) {
       approvedRoles = input.roles;
-      invitation = { ...invitation, approved_roles: [...input.roles] };
+      approvedWorkspace = input.artistWorkspace;
+      invitation = {
+        ...invitation,
+        approved_roles: [...input.roles],
+        artist_workspace_display_name: input.artistWorkspace?.displayName ?? null,
+        artist_workspace_slug: input.artistWorkspace?.slug ?? null,
+      };
       return { invitation, created: true };
     },
     async claimInvitationForSending() {
@@ -70,6 +79,9 @@ function testDependencies(overrides: Partial<InviteDependencies> = {}) {
       failureCode = code;
       invitation = { ...invitation, status: "failed" };
     },
+    async repairAcceptedArtistWorkspace(input) {
+      repairInput = input;
+    },
     ...overrides,
   };
 
@@ -80,6 +92,12 @@ function testDependencies(overrides: Partial<InviteDependencies> = {}) {
     },
     get approvedRoles() {
       return approvedRoles;
+    },
+    get approvedWorkspace() {
+      return approvedWorkspace;
+    },
+    get repairInput() {
+      return repairInput;
     },
     get failureCode() {
       return failureCode;
@@ -114,9 +132,14 @@ Deno.test("authenticated non-admin is rejected", async () => {
       return { accountStatus: "active", isAdmin: false };
     },
   });
-  const response = await fixture.handler(post({ email: "person@example.test", roles: [] }));
+  const response = await fixture.handler(post({
+    action: "repair_artist_workspace",
+    invitationId: "00000000-0000-4000-8000-000000001002",
+    artistWorkspace: { displayName: "Blocked Repair", slug: "blocked-repair" },
+  }));
   assertEquals(response.status, 403);
   assertEquals((await responseBody(response)).code, "admin_required");
+  assertEquals(fixture.repairInput, null);
 });
 
 Deno.test("suspended admin is rejected before service operations", async () => {
@@ -132,11 +155,68 @@ Deno.test("suspended admin is rejected before service operations", async () => {
 
 Deno.test("active admin can issue a successful invitation", async () => {
   const fixture = testDependencies();
-  const response = await fixture.handler(post({ email: "ARTIST@EXAMPLE.TEST", roles: ["artist"] }));
+  const response = await fixture.handler(post({
+    email: "ARTIST@EXAMPLE.TEST",
+    roles: ["artist"],
+    artistWorkspace: { displayName: "Artist Name", slug: "ARTIST-NAME" },
+  }));
   const body = await responseBody(response);
   assertEquals(response.status, 201);
   assertEquals(body.code, "invitation_sent");
   assertEquals(fixture.inviteCalls, 1);
+  assertEquals(fixture.approvedWorkspace, { displayName: "Artist Name", slug: "artist-name" });
+});
+
+Deno.test("artist invitation requires explicit workspace identity", async () => {
+  const fixture = testDependencies();
+  const response = await fixture.handler(post({ email: "artist@example.test", roles: ["artist"] }));
+  assertEquals(response.status, 400);
+  assertEquals((await responseBody(response)).code, "invalid_artist_workspace");
+  assertEquals(fixture.inviteCalls, 0);
+});
+
+Deno.test("non-artist invitation rejects workspace data", async () => {
+  const fixture = testDependencies();
+  const response = await fixture.handler(post({
+    email: "member@example.test",
+    roles: [],
+    artistWorkspace: { displayName: "Not An Artist", slug: "not-an-artist" },
+  }));
+  assertEquals(response.status, 400);
+  assertEquals((await responseBody(response)).code, "invalid_artist_workspace");
+});
+
+Deno.test("workspace slug conflict is rejected before Auth dispatch", async () => {
+  const fixture = testDependencies({
+    async approveInvitation() {
+      throw new WorkspaceSlugConflictFailure();
+    },
+  });
+  const response = await fixture.handler(post({
+    email: "artist@example.test",
+    roles: ["artist"],
+    artistWorkspace: { displayName: "Artist", slug: "artist" },
+  }));
+  assertEquals(response.status, 409);
+  assertEquals((await responseBody(response)).code, "artist_workspace_slug_conflict");
+  assertEquals(fixture.inviteCalls, 0);
+});
+
+Deno.test("active admin can repair an accepted artist workspace without dispatching Auth", async () => {
+  const fixture = testDependencies();
+  const response = await fixture.handler(post({
+    action: "repair_artist_workspace",
+    invitationId: "00000000-0000-4000-8000-000000001001",
+    artistWorkspace: { displayName: "Repair Artist", slug: "REPAIR-ARTIST" },
+  }));
+  assertEquals(response.status, 200);
+  assertEquals((await responseBody(response)).code, "artist_workspace_repaired");
+  assertEquals(fixture.repairInput, {
+    invitationId: "00000000-0000-4000-8000-000000001001",
+    artistWorkspace: { displayName: "Repair Artist", slug: "repair-artist" },
+    approvedByAccountId: "00000000-0000-0000-0000-000000000001",
+  });
+  assertEquals(fixture.inviteCalls, 0);
 });
 
 Deno.test("malformed email is rejected", async () => {
