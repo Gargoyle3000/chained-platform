@@ -1151,6 +1151,31 @@ footer {
   display: none;
 }
 
+/* Public multi-image browsing keeps the existing cover-defined frame. */
+.discover-work.has-public-work-carousel .discover-image-link {
+  touch-action: pan-y;
+}
+
+.discover-page:not(.following-page)[data-view="single"] .discover-work.has-public-work-carousel .discover-image-link[data-contained-hit-area] {
+  clip-path: none;
+}
+
+.discover-page[data-view="grid"] .discover-work.has-public-work-carousel .discover-image-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: var(--public-carousel-cover-ratio);
+}
+
+.discover-page[data-view="grid"] .discover-work.has-public-work-carousel .discover-image-link img {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center center;
+}
+
 .discover-page[data-view="grid"] .discover-archive-action {
   display: block;
   margin-top: 8px;
@@ -1209,6 +1234,23 @@ footer {
     width: 100%;
     height: auto;
     max-height: none;
+  }
+
+  .discover-page:not(.following-page)[data-view="single"] .discover-work.has-public-work-carousel .discover-image-link,
+  .following-page[data-view="single"] .discover-work.has-public-work-carousel .discover-image-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: var(--public-carousel-cover-ratio);
+  }
+
+  .discover-page:not(.following-page)[data-view="single"] .discover-work.has-public-work-carousel .discover-image-link img,
+  .following-page[data-view="single"] .discover-work.has-public-work-carousel .discover-image-link img {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: center center;
   }
 
   .discover-curated-collection {

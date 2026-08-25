@@ -208,7 +208,13 @@ function replaceBrokenImage(link) {
   link.replaceChildren(state);
 }
 
-function createDiscoverWork(work, archiveState = null, createArchiveAction = null, announceArchiveStatus = () => {}) {
+function createDiscoverWork(
+  work,
+  archiveState = null,
+  createArchiveAction = null,
+  announceArchiveStatus = () => {},
+  carousel = null
+) {
   const article = document.createElement("article");
   const metadata = document.createElement("div");
   const artist = document.createElement("a");
@@ -263,6 +269,15 @@ function createDiscoverWork(work, archiveState = null, createArchiveAction = nul
   image.addEventListener("error", () => replaceBrokenImage(imageLink), { once: true });
   imageLink.append(image);
   registerContainedImageHitArea(imageLink, image, work.image);
+  carousel?.attach({
+    link: imageLink,
+    image,
+    article,
+    workId: work.id,
+    coverImage: work.image,
+    loadImages: carousel.loadImages,
+    label: `View ${work.title} by ${work.artistName}`
+  });
 
   article.append(metadata, imageLink);
   return article;
@@ -362,14 +377,18 @@ async function initialiseLocalDiscover() {
     { createDiscoverFilterState, createDiscoverRequestGate },
     { createDiscoverChannelState },
     { FORMAT_DISCIPLINES },
-    { createArchiveWorkAction, loadArchiveWorkState }
+    { createArchiveWorkAction, loadArchiveWorkState },
+    { createPublicWorkImageLoader },
+    { attachPublicWorkCarousel }
   ] = await Promise.all([
     import("./data/discover-repository.mjs"),
     import("./data/discover-ordering.mjs"),
     import("./data/discover-filter-state.mjs"),
     import("./data/discover-channel-state.mjs"),
     import("./data/work-format-disciplines.mjs"),
-    import("./data/archive-work-action.mjs")
+    import("./data/archive-work-action.mjs"),
+    import("./data/public-work-images.mjs"),
+    import("./public-work-carousel.mjs")
   ]);
   const { runtime, repository } = await getDiscoverRepository();
 
@@ -378,6 +397,11 @@ async function initialiseLocalDiscover() {
   const filterState = createDiscoverFilterState();
   const channelState = createDiscoverChannelState();
   const archiveStatePromise = loadArchiveWorkState();
+  const publicImages = createPublicWorkImageLoader(runtime.client, runtime.config);
+  const carousel = Object.freeze({
+    loadImages: (workId, coverImage) => publicImages.load(workId, coverImage),
+    attach: attachPublicWorkCarousel
+  });
   let archiveState = null;
   let archiveStatus = null;
   let loadMoreRegion = null;
@@ -427,7 +451,7 @@ async function initialiseLocalDiscover() {
       const appendBatch = () => {
         const batch = batches.next();
         stream.append(...batch.appended.map((work) => (
-          createDiscoverWork(work, archiveState, createArchiveWorkAction, announceArchiveStatus)
+          createDiscoverWork(work, archiveState, createArchiveWorkAction, announceArchiveStatus, carousel)
         )));
         if (!batch.hasMore) removeLoadMore();
       };

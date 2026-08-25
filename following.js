@@ -101,7 +101,13 @@ document.addEventListener("DOMContentLoaded", () => {
     link.replaceChildren(state);
   }
 
-  function createFollowingWork(work, archiveState = null, createArchiveAction = null, announceArchiveStatus = () => {}) {
+  function createFollowingWork(
+    work,
+    archiveState = null,
+    createArchiveAction = null,
+    announceArchiveStatus = () => {},
+    carousel = null
+  ) {
     const article = document.createElement("article");
     const metadata = document.createElement("div");
     const artist = document.createElement("a");
@@ -146,6 +152,15 @@ document.addEventListener("DOMContentLoaded", () => {
     image.alt = `${work.title} by ${work.artistName}`;
     image.addEventListener("error", () => replaceBrokenImage(imageLink), { once: true });
     imageLink.append(image);
+    carousel?.attach({
+      link: imageLink,
+      image,
+      article,
+      workId: work.id,
+      coverImage: work.image,
+      loadImages: carousel.loadImages,
+      label: `View ${work.title} by ${work.artistName}`
+    });
     article.append(metadata, imageLink);
     return article;
   }
@@ -186,14 +201,23 @@ document.addEventListener("DOMContentLoaded", () => {
       const [
         { getFollowingRepository },
         { appendFollowingPage },
-        { createArchiveWorkAction, loadArchiveWorkState }
+        { createArchiveWorkAction, loadArchiveWorkState },
+        { createPublicWorkImageLoader },
+        { attachPublicWorkCarousel }
       ] = await Promise.all([
         import("./data/following-repository.mjs"),
         import("./data/following-mapping.mjs"),
-        import("./data/archive-work-action.mjs")
+        import("./data/archive-work-action.mjs"),
+        import("./data/public-work-images.mjs"),
+        import("./public-work-carousel.mjs")
       ]);
       const { runtime, repository } = await getFollowingRepository();
       if (runtime.mode !== "supabase" || !repository) return;
+      const publicImages = createPublicWorkImageLoader(runtime.client, runtime.config);
+      const carousel = Object.freeze({
+        loadImages: (workId, coverImage) => publicImages.load(workId, coverImage),
+        attach: attachPublicWorkCarousel
+      });
 
       const archiveStatePromise = loadArchiveWorkState();
       const [hasFollows, firstPage] = await Promise.all([
@@ -235,7 +259,7 @@ document.addEventListener("DOMContentLoaded", () => {
       loadMoreRegion.append(loadMore);
 
       stream.replaceChildren(...visible.map((work) => (
-        createFollowingWork(work, archiveState, createArchiveWorkAction, announceArchiveStatus)
+        createFollowingWork(work, archiveState, createArchiveWorkAction, announceArchiveStatus, carousel)
       )));
       emptyRegion.hidden = true;
       stream.hidden = false;
@@ -252,7 +276,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const pageResult = await repository.loadFollowingFeed(cursor);
           const nextVisible = appendFollowingPage(visible, pageResult.items);
           stream.append(...nextVisible.slice(visible.length).map((work) => (
-            createFollowingWork(work, archiveState, createArchiveWorkAction, announceArchiveStatus)
+            createFollowingWork(work, archiveState, createArchiveWorkAction, announceArchiveStatus, carousel)
           )));
           visible = nextVisible;
           cursor = pageResult.nextCursor;

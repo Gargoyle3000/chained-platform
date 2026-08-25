@@ -7,6 +7,8 @@ import {
   createPublicProfileLink,
   isValidProfileSlug
 } from "./data/public-work-mapping.mjs";
+import { createPublicWorkImageLoader } from "./data/public-work-images.mjs";
+import { attachPublicWorkCarousel } from "./public-work-carousel.mjs";
 
 const worksContainer = document.querySelector("#works");
 const profileName = document.querySelector("#profile-name");
@@ -152,7 +154,7 @@ function applyOrientation(article, image, dimensions) {
   }, { once: true });
 }
 
-function createWorkArticle(work) {
+function createWorkArticle(work, carousel = null) {
   const article = document.createElement("article");
   const imageLink = document.createElement("a");
   const image = document.createElement("img");
@@ -170,6 +172,15 @@ function createWorkArticle(work) {
   image.addEventListener("error", () => replaceBrokenImage(imageLink), { once: true });
   applyOrientation(article, image, work.image);
   imageLink.append(image);
+  carousel?.attach({
+    link: imageLink,
+    image,
+    article,
+    workId: work.id,
+    coverImage: work.image,
+    loadImages: carousel.loadImages,
+    label: `View ${work.title} by ${work.artistName}`
+  });
 
   metadata.className = "profile-work-meta";
   titleLink.href = work.artworkHref;
@@ -226,7 +237,7 @@ function renderUnavailable(connectionError = false) {
   ));
 }
 
-function renderProfile(result) {
+function renderProfile(result, carousel = null) {
   const { profile, works } = result;
   const profileHref = createPublicProfileLink(profile.slug);
   document.title = `${profile.displayName} — CHAINED`;
@@ -292,7 +303,7 @@ function renderProfile(result) {
   if (profile.showWorks === true) {
     worksContainer.replaceChildren(
       ...(works.length
-        ? works.map(createWorkArticle)
+        ? works.map((work) => createWorkArticle(work, carousel))
         : [createState("NO PUBLISHED WORKS")])
     );
   } else {
@@ -396,7 +407,12 @@ async function initialiseProfile() {
       return;
     }
 
-    renderProfile(result);
+    const publicImages = createPublicWorkImageLoader(runtime.client, runtime.config);
+    const carousel = Object.freeze({
+      loadImages: (workId, coverImage) => publicImages.load(workId, coverImage),
+      attach: attachPublicWorkCarousel
+    });
+    renderProfile(result, carousel);
     await initialiseAuthenticatedProfileNavigation(runtime.client);
     await initialiseFollowControl(runtime.client, result.followIdentity);
   } catch {
