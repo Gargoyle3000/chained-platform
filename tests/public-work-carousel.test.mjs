@@ -15,13 +15,17 @@ function classList() {
 
 function element() {
   const target = new EventTarget();
+  const captures = new Set();
   target.attributes = new Map();
   target.dataset = {};
   target.classList = classList();
   target.style = { setProperty() {} };
   target.setAttribute = (key, value) => target.attributes.set(key, String(value));
   target.getAttribute = (key) => target.attributes.get(key) || null;
-  target.setPointerCapture = () => {};
+  target.setPointerCapture = (pointerId) => captures.add(pointerId);
+  target.hasPointerCapture = (pointerId) => captures.has(pointerId);
+  target.releasePointerCapture = (pointerId) => captures.delete(pointerId);
+  target.hasCapturedPointer = (pointerId) => captures.has(pointerId);
   return target;
 }
 
@@ -63,6 +67,20 @@ test("a cover-only card makes no secondary request or navigation change until it
   assert.equal(article.classList.contains("has-public-work-carousel"), false);
 });
 
+test("desktop drag disables native image dragging and prevents scoped dragstart", () => {
+  const link = element();
+  const image = element();
+  const article = element();
+  attachPublicWorkCarousel({
+    link, image, article, workId: "11111111-1111-4111-8111-111111111111",
+    coverImage: images[0], loadImages: async () => images, label: "View Work"
+  });
+  assert.equal(image.draggable, false);
+  const dragStart = new Event("dragstart", { cancelable: true });
+  image.dispatchEvent(dragStart);
+  assert.equal(dragStart.defaultPrevented, true);
+});
+
 test("swipe changes images, vertical movement does not, and a completed drag suppresses navigation", async () => {
   const link = element();
   const image = element();
@@ -89,6 +107,56 @@ test("swipe changes images, vertical movement does not, and a completed drag sup
   link.dispatchEvent(verticalUp);
   assert.equal(image.src, "second.webp");
   assert.equal(verticalUp.defaultPrevented, false);
+});
+
+test("pointer capture keeps an intentional drag alive outside the stage and releases on pointerup", async () => {
+  const link = element();
+  const image = element();
+  const article = element();
+  image.src = "cover.webp";
+  attachPublicWorkCarousel({
+    link, image, article, workId: "11111111-1111-4111-8111-111111111111",
+    coverImage: images[0], loadImages: async () => images, label: "View Work"
+  });
+  link.dispatchEvent(pointer("pointerdown", { pointerId: 7, clientX: 140, clientY: 40 }));
+  assert.equal(link.hasCapturedPointer(7), true);
+  await Promise.resolve();
+  link.dispatchEvent(pointer("pointermove", { pointerId: 7, clientX: 80, clientY: 42 }));
+  const up = pointer("pointerup", { pointerId: 7, clientX: 80, clientY: 42 });
+  link.dispatchEvent(up);
+  assert.equal(image.src, "second.webp");
+  assert.equal(link.hasCapturedPointer(7), false);
+});
+
+test("pointercancel clears the gesture and releases capture", () => {
+  const link = element();
+  const image = element();
+  const article = element();
+  image.src = "cover.webp";
+  attachPublicWorkCarousel({
+    link, image, article, workId: "11111111-1111-4111-8111-111111111111",
+    coverImage: images[0], loadImages: async () => images, label: "View Work"
+  });
+  link.dispatchEvent(pointer("pointerdown", { pointerId: 8, clientX: 140, clientY: 40 }));
+  const cancel = pointer("pointercancel", { pointerId: 8, clientX: 80, clientY: 42 });
+  link.dispatchEvent(cancel);
+  link.dispatchEvent(pointer("pointermove", { pointerId: 8, clientX: 20, clientY: 42 }));
+  link.dispatchEvent(pointer("pointerup", { pointerId: 8, clientX: 20, clientY: 42 }));
+  assert.equal(image.src, "cover.webp");
+  assert.equal(link.hasCapturedPointer(8), false);
+});
+
+test("normal click remains unmodified when no drag was completed", () => {
+  const link = element();
+  const image = element();
+  const article = element();
+  attachPublicWorkCarousel({
+    link, image, article, workId: "11111111-1111-4111-8111-111111111111",
+    coverImage: images[0], loadImages: async () => images, label: "View Work"
+  });
+  const click = new Event("click", { cancelable: true });
+  link.dispatchEvent(click);
+  assert.equal(click.defaultPrevented, false);
 });
 
 test("a missing synthetic swipe click cannot suppress the next deliberate activation", async () => {

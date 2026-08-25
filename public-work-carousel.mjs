@@ -44,7 +44,38 @@ export function attachPublicWorkCarousel({
   let requestStarted = false;
   let loadPromise = null;
   let pointer = null;
+  let capturedPointerId = null;
   let suppressClick = false;
+
+  image.draggable = false;
+
+  const onDragStart = (event) => {
+    event.preventDefault();
+  };
+
+  const capturePointer = (pointerId) => {
+    if (typeof link.setPointerCapture !== "function") return;
+    try {
+      link.setPointerCapture(pointerId);
+      if (typeof link.hasPointerCapture !== "function" || link.hasPointerCapture(pointerId)) {
+        capturedPointerId = pointerId;
+      }
+    } catch {
+      capturedPointerId = null;
+    }
+  };
+
+  const releasePointer = (pointerId) => {
+    if (capturedPointerId !== pointerId) return;
+    try {
+      if (typeof link.hasPointerCapture !== "function" || link.hasPointerCapture(pointerId)) {
+        link.releasePointerCapture?.(pointerId);
+      }
+    } catch {
+      // Pointer capture may already have been released by the browser.
+    }
+    capturedPointerId = null;
+  };
 
   const update = () => {
     const current = state.images[state.activeIndex];
@@ -97,7 +128,7 @@ export function attachPublicWorkCarousel({
       y: event.clientY,
       moved: false
     };
-    link.setPointerCapture?.(event.pointerId);
+    capturePointer(event.pointerId);
   };
   const onPointerMove = (event) => {
     if (!pointer || pointer.id !== event.pointerId) return;
@@ -118,6 +149,11 @@ export function attachPublicWorkCarousel({
       }
       event.preventDefault();
     }
+    releasePointer(event.pointerId);
+    pointer = null;
+  };
+  const onPointerCancel = (event) => {
+    releasePointer(event.pointerId);
     pointer = null;
   };
   const onClick = (event) => {
@@ -144,7 +180,9 @@ export function attachPublicWorkCarousel({
   link.addEventListener("pointerdown", onPointerDown);
   link.addEventListener("pointermove", onPointerMove);
   link.addEventListener("pointerup", onPointerUp);
-  link.addEventListener("pointercancel", () => { pointer = null; });
+  link.addEventListener("pointercancel", onPointerCancel);
+  link.addEventListener("dragstart", onDragStart);
+  image.addEventListener("dragstart", onDragStart);
   link.addEventListener("click", onClick, true);
   link.addEventListener("keydown", onKeyDown);
 
@@ -162,6 +200,9 @@ export function attachPublicWorkCarousel({
     link.removeEventListener("pointerdown", onPointerDown);
     link.removeEventListener("pointermove", onPointerMove);
     link.removeEventListener("pointerup", onPointerUp);
+    link.removeEventListener("pointercancel", onPointerCancel);
+    link.removeEventListener("dragstart", onDragStart);
+    image.removeEventListener("dragstart", onDragStart);
     link.removeEventListener("click", onClick, true);
     link.removeEventListener("keydown", onKeyDown);
   };
