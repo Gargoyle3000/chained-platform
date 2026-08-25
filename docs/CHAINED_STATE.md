@@ -44,6 +44,7 @@ Current focus: pre-tester security/usability review before returning to larger p
 - Discover + Following implemented.
 - Mobile core flows usable.
 - Work metadata uses structured MEDIUM and one comma-separated MATERIALS field; legacy material fields are unified on read and migrated when that Work is saved.
+- Artist workspace provisioning is live: a fresh official artist invite receives a managed profile, can create a draft Work, finalize images, publish the Work, and publish the profile through Settings.
 - Git working tree clean after API-key migration.
 
 ## AFTER EXPORT

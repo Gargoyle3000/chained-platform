@@ -4,6 +4,10 @@ Last updated: 2026-08-25
 
 ## POLISH
 
+- Archive SINGLE / GRID should gain the same proven swipe interaction as Discover and Following, while preserving existing view behavior, image ratios, and layout.
+- Add an optional, compact `[?]` GUIDE / HELP layer. It should be system-oriented and context-aware (for example Work publication, Archive privacy/projects/tags, or Profile draft/published state), with a possible central GUIDE entry from Settings/navigation. No mandatory onboarding or tutorial.
+- Clarify the valid state where a Work is published while its owner profile remains draft/private, for example `WORK PUBLISHED · PROFILE STILL PRIVATE [?]`, optionally linking to Settings. Never auto-publish the profile as a Work-publication side effect.
+
 - Mobile dashboard:
   - Show 10 recent Works / Presentations initially.
   - If more than 10 exist, show `[ LOAD MORE ]`.
