@@ -47,6 +47,7 @@ export function attachPublicWorkCarousel({
   let capturedPointerId = null;
   let suppressClick = false;
 
+  link.draggable = false;
   image.draggable = false;
 
   const onDragStart = (event) => {

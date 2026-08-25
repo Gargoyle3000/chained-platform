@@ -67,7 +67,7 @@ test("a cover-only card makes no secondary request or navigation change until it
   assert.equal(article.classList.contains("has-public-work-carousel"), false);
 });
 
-test("desktop drag disables native image dragging and prevents scoped dragstart", () => {
+test("desktop drag disables native link/image dragging and prevents scoped dragstart", () => {
   const link = element();
   const image = element();
   const article = element();
@@ -75,10 +75,14 @@ test("desktop drag disables native image dragging and prevents scoped dragstart"
     link, image, article, workId: "11111111-1111-4111-8111-111111111111",
     coverImage: images[0], loadImages: async () => images, label: "View Work"
   });
+  assert.equal(link.draggable, false);
   assert.equal(image.draggable, false);
-  const dragStart = new Event("dragstart", { cancelable: true });
-  image.dispatchEvent(dragStart);
-  assert.equal(dragStart.defaultPrevented, true);
+  const imageDragStart = new Event("dragstart", { cancelable: true });
+  image.dispatchEvent(imageDragStart);
+  assert.equal(imageDragStart.defaultPrevented, true);
+  const linkDragStart = new Event("dragstart", { cancelable: true });
+  link.dispatchEvent(linkDragStart);
+  assert.equal(linkDragStart.defaultPrevented, true);
 });
 
 test("swipe changes images, vertical movement does not, and a completed drag suppresses navigation", async () => {
