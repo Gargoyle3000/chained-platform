@@ -130,3 +130,11 @@ During implementation:
 - Preserve intentional prototype behavior unless the requested task changes it.
 - Do not redesign unrelated sections.
 - Do not continue into the next task until the current task has been validated and closed.
+
+## AI/Codex working method
+
+- ChatGPT is the orchestrator and reviewer; Codex is the default executing repository agent. For code work, ChatGPT should provide one complete, copy-paste-ready Codex task rather than requiring the user to relay loose PowerShell commands.
+- For meaningful work, Codex reads `AGENTS.md` and relevant project docs, inspects the current code and working patterns, then reports repository facts, affected files/locations, risks, hypotheses, and the proposed approach before changing anything. Larger or risky tasks start inspection-only and proceed to implementation after review; small, explicit, well-bounded tasks may be implemented directly when authorized.
+- Keep changes within scope, run focused validation, inspect the diff, and run `git diff --check`. Commit, push, deploy, reset, and revert only on explicit instruction.
+- Model choice has two dimensions: family (`LUNA`, `TERRA`, `SOL`) and reasoning (`LIGHT`, `MEDIUM`, `HIGH`). Always name the combination (for example, `LUNA LIGHT` or `SOL HIGH`), never only “Codex High” or “Medium”. Choose the lightest reliable combination: `LUNA LIGHT` for tiny clear local/documentation tasks; `LUNA/TERRA MEDIUM` for normal focused implementation and debugging; `TERRA HIGH` / `SOL MEDIUM` for complex interaction or important backend/frontend work; and `SOL HIGH` only when repository-wide architecture, security, RLS/Storage/Auth, or difficult debugging genuinely benefits from it. These are guidelines; scale back after heavy work when possible.
+- For security work, begin with the threat model and trust boundaries, support findings with concrete repository evidence, distinguish confirmed vulnerabilities from hardening suggestions and false positives, make no security-code changes during an inspection-only audit, and test authorization server-side rather than relying on hidden UI.
