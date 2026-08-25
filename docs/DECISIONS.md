@@ -2,7 +2,7 @@
 
 
 
-Last updated: 2026-08-18
+Last updated: 2026-08-25
 
 
 
@@ -154,4 +154,13 @@ Last updated: 2026-08-18
 
 \- Management pages use a static, non-interactive `+` marker with `PROFILE LOADING` / hydrated profile name and `ARTIST ACCOUNT`; the global navigation `+` remains interactive.
 \- `PROFILE LOADING` is intentional dry/computer-like product language during identity hydration.
+
+\## Public Work carousel
+
+\- The carousel is public-only and limited to Discover, Following and Public Profile.
+\- Work detail remains a full vertical image sequence.
+\- The current `is_cover=true` image is first; remaining public images use `sort_order`, then deterministic `id` order.
+\- The cover defines fixed stage geometry; secondary ratios use contain behavior with no crop or stretch.
+\- No visible arrows, dots or autoplay are required.
+\- Interaction remains an invisible swipe/drag model with keyboard Left/Right support; no persistent carousel chrome.
 

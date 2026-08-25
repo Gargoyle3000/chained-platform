@@ -1,6 +1,6 @@
 # CHAINED — CURRENT STATE
 
-Last updated: 2026-08-20
+Last updated: 2026-08-25
 
 ## NOW
 
@@ -27,6 +27,7 @@ Current focus: pre-tester security/usability review before returning to larger p
 - Management pages use the static `+` / `PROFILE LOADING` / `ARTIST ACCOUNT` identity.
 - Portfolio Export uses immediate disabled `EXPORTING…` progress and final `PORTFOLIO READY` status.
 - Management language uses concise `WORKS`, `PRESENTATIONS`, and `AGENDA` headings.
+- Public multi-image carousel is live and manually validated on Discover, Following and Public Profile; Work detail remains a vertical full-image sequence.
 
 ## DONE — IMPORTANT INFRASTRUCTURE
 
@@ -58,3 +59,10 @@ Current focus: pre-tester security/usability review before returning to larger p
 - Cloudflare Pages + clean routes.
 - Further desktop/tablet polish.
 - Additional search/filter improvements.
+
+## CURRENT HANDOFF
+
+- Production is stable after the public multi-image carousel rollout.
+- Next technical milestone: private preview derivatives, before Portfolio `ALL IMAGES / SELECT IMAGES`.
+- Protect the authorized private-media gateway, PDF export, public-media behavior, and current Discover/Following/Profile geometry.
+- Optional drag-follow carousel animation is future polish, not an active bug.

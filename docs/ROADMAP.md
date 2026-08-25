@@ -1,6 +1,6 @@
 # CHAINED — ROADMAP
 
-Last updated: 2026-08-19
+Last updated: 2026-08-25
 
 ## POLISH
 
@@ -46,6 +46,10 @@ Implementation should verify the largest real preview display and HiDPI needs be
 - Cloudflare Pages + clean routes.
 - Further desktop/tablet polish.
 
-## LATER INTERACTION
+## COMPLETED / LIVE
 
-- Quiet multi-image Work browsing on Discover, Following and Public Profile only: swipe on mobile, drag/grab and optional invisible click zones on desktop, with no persistent carousel chrome. Keep Work detail as the full image sequence and preserve current card geometry, natural ratios, containment, and lazy secondary-image loading.
+- Quiet multi-image Work browsing is live on Discover, Following and Public Profile only: swipe on mobile and drag/grab on desktop, with no persistent carousel chrome. Work detail remains the full image sequence; current card geometry, natural ratios, containment, and lazy secondary-image loading are preserved.
+
+## OPTIONAL LATER POLISH
+
+- Allow the image to visually track a horizontal drag before settling to the next or previous image. This is optional interaction polish, not a bug or a prerequisite for private preview derivatives.
