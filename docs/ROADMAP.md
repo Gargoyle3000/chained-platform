@@ -8,6 +8,8 @@ Last updated: 2026-08-25
 - Add an optional, compact `[?]` GUIDE / HELP layer. It should be system-oriented and context-aware (for example Work publication, Archive privacy/projects/tags, or Profile draft/published state), with a possible central GUIDE entry from Settings/navigation. No mandatory onboarding or tutorial.
 - Clarify the valid state where a Work is published while its owner profile remains draft/private, for example `WORK PUBLISHED · PROFILE STILL PRIVATE [?]`, optionally linking to Settings. Never auto-publish the profile as a Work-publication side effect.
 
+- Video support direction: support video and video documentation without changing the still, image-led feed. Every video Work requires a cover still for Discover, Following, GRID, Archive overviews and relevant exports; no autoplay or moving thumbnails. Playback belongs on Work detail, with mixed media (for example `IMAGE · IMAGE · VIDEO · IMAGE`) supported later. Prefer external hosting/embed for v1; managed video infrastructure can follow if scale warrants it.
+
 - Mobile dashboard:
   - Show 10 recent Works / Presentations initially.
   - If more than 10 exist, show `[ LOAD MORE ]`.

@@ -45,6 +45,7 @@ Current focus: pre-tester security/usability review before returning to larger p
 - Mobile core flows usable.
 - Work metadata uses structured MEDIUM and one comma-separated MATERIALS field; legacy material fields are unified on read and migrated when that Work is saved.
 - Artist workspace provisioning is live: a fresh official artist invite receives a managed profile, can create a draft Work, finalize images, publish the Work, and publish the profile through Settings.
+- Production security validation is complete: anonymous and cross-account private-media access is denied without URL leakage; an existing session loses protected access immediately when its account is suspended and regains it after reactivation. The fresh artist invite → workspace → Work → images → publish → profile-publish flow is also validated.
 - Git working tree clean after API-key migration.
 
 ## AFTER EXPORT
