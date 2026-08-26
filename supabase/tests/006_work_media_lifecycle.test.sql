@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(66);
+select plan(74);
 
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at)
 values
@@ -127,6 +127,20 @@ select ok(
     jsonb_build_object('mimetype', 'image/webp', 'contentLength', '12')
   ),
   'exact reserved preview accepts only its server-derived WebP object'
+);
+select ok(
+  private.can_insert_reserved_work_original(
+    current_setting('test.preview_path', true),
+    jsonb_build_object('mimetype', 'image/webp', 'contentLength', '999')
+  ),
+  'exact reserved preview accepts multipart request-length overhead'
+);
+select ok(
+  private.can_insert_reserved_work_original(
+    current_setting('test.preview_path', true),
+    jsonb_build_object('mimetype', 'image/webp')
+  ),
+  'exact reserved preview does not require transport content length'
 );
 select ok(
   not private.can_insert_reserved_work_original(
@@ -264,6 +278,34 @@ select ok(
   'exact reserved original path passes upload policy logic'
 );
 select ok(
+  private.can_insert_reserved_work_original(
+    (select private_object_path from public.work_images where original_filename = '../CLIENT NAME.JPG'),
+    jsonb_build_object('mimetype', 'image/jpeg', 'contentLength', '999')
+  ),
+  'exact reserved original accepts multipart request-length overhead'
+);
+select ok(
+  private.can_insert_reserved_work_original(
+    (select private_object_path from public.work_images where original_filename = '../CLIENT NAME.JPG'),
+    jsonb_build_object('mimetype', 'image/jpeg')
+  ),
+  'exact reserved original does not require transport content length'
+);
+select ok(
+  not private.can_insert_reserved_work_original(
+    (select private_object_path from public.work_images where original_filename = '../CLIENT NAME.JPG'),
+    jsonb_build_object('mimetype', 'image/png', 'contentLength', '4')
+  ),
+  'exact reserved original rejects an incorrect MIME type'
+);
+select ok(
+  not private.can_insert_reserved_work_original(
+    replace((select private_object_path from public.work_images where original_filename = '../CLIENT NAME.JPG'), 'original.jpg', 'preview.webp'),
+    jsonb_build_object('mimetype', 'image/webp', 'contentLength', '999')
+  ),
+  'legacy original-only reservation rejects a preview path'
+);
+select ok(
   not private.can_insert_reserved_work_original('arbitrary/original.jpg', jsonb_build_object('mimetype', 'image/jpeg', 'contentLength', '4')),
   'arbitrary private path fails upload policy logic'
 );
@@ -274,6 +316,15 @@ select ok(
   ),
   'another Work path fails upload policy logic'
 );
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
+select ok(
+  not private.can_insert_reserved_work_original(
+    (select private_object_path from public.work_images where original_filename = '../CLIENT NAME.JPG'),
+    jsonb_build_object('mimetype', 'image/jpeg', 'contentLength', '4')
+  ),
+  'another artist cannot upload to an exact reserved original path'
+);
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 select set_config('storage.operation', 'storage.object.get_authenticated', true);
 select ok(
   storage.allow_only_operation('object.get_authenticated')
@@ -354,6 +405,17 @@ select results_eq(
   $$values ('ready'::text, true, true)$$,
   'legacy original-only reservation still reaches ready through the legacy marker'
 );
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+select set_config('storage.operation', 'storage.object.upload', true);
+select ok(
+  not private.can_insert_reserved_work_original(
+    (select private_object_path from public.work_images where original_filename = '../CLIENT NAME.JPG'),
+    jsonb_build_object('mimetype', 'image/jpeg', 'contentLength', '4')
+  ),
+  'a non-reserved original cannot be uploaded again'
+);
+reset role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 select results_eq(
   $$select count(*)::bigint from public.work_images where work_id = '50000000-0000-4000-8000-000000000001' and upload_status = 'ready' and original_verified_at is not null$$,
   $$select count(*)::bigint from public.work_images where work_id = '50000000-0000-4000-8000-000000000001' and deleted_at is null$$,
