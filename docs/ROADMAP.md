@@ -1,6 +1,6 @@
 # CHAINED — ROADMAP
 
-Last updated: 2026-08-25
+Last updated: 2026-08-26
 
 ## POLISH
 
@@ -59,3 +59,18 @@ Implementation should verify the largest real preview display and HiDPI needs be
 ## OPTIONAL LATER POLISH
 
 - Allow the image to visually track a horizontal drag before settling to the next or previous image. This is optional interaction polish, not a bug or a prerequisite for private preview derivatives.
+
+## PRODUCT DIRECTIONS TO IMPLEMENT
+
+- Build the optional page GUIDE overlay and one-time first-login introduction; finalize copy in the sitewide copy audit.
+- Add persistent Profile publication status and the one-time Work-published/Profile-private explanation without changing visibility rules.
+- Implement external Vimeo-first video on Work detail: still selection, duration, mixed media, playback lifecycle and still-based PDF representation.
+- Implement CHAINED/CHAINED+ limits, upgrade handling and technical abuse ceilings while preserving existing content at limits.
+- Add account-type support for UNCHAINED, ARTIST, INSTITUTION teams/subtypes and CURATOR access, with invitation/admission and APPLY/FIRST CHAIN flows.
+- Extend CURATED with ordered Works, cover, optional text, privacy-aware unpublishing and Following integration.
+- Add the future system-only notification layer and explicit action-required/informational event handling.
+- Implement shared Presentations with participant Work links, external identities, documentation images, aliases and claim/merge support.
+- Implement Agenda moments, standalone events, cancellation, geography and structured time behavior without RSVP or location permissions.
+- Add Publications as a separate documented object with representative images and external links, not hosted PDFs.
+- Extend Projects with ordered Work sets and export/select/share workflows, plus tier limits; keep Tags freeform and filter-oriented.
+- Add human-reviewed profile claim flows and Artist-controlled APPEARS IN visibility controls.
