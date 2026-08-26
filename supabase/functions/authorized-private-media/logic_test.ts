@@ -32,6 +32,15 @@ function image(imageId: string) {
   };
 }
 
+function previewImage(imageId: string) {
+  return {
+    work_image_id: imageId,
+    object_path: `owner/work/${imageId}/preview.webp`,
+    mime_type: "image/webp",
+    file_size: 456,
+  };
+}
+
 function gatewayDependencies(
   options: Partial<AuthorizedPrivateMediaDependencies> = {},
 ): AuthorizedPrivateMediaDependencies {
@@ -89,10 +98,27 @@ Deno.test("private-media gateway deduplicates IDs in first-seen order and signs 
   assert(response.status === 200);
   assert(JSON.stringify(rpcBodies[0]?.image_ids) === JSON.stringify([SECOND_IMAGE_ID, IMAGE_ID]));
   assert(rpcBodies[0]?.actor_account_id === ACCOUNT_ID);
+  assert(rpcBodies[0]?.media_purpose === "preview");
   assert(signedPaths.length === 2 && signedTtl === PRIVATE_MEDIA_TTLS.preview);
   assert(media.length === 2 && media[0].imageId === SECOND_IMAGE_ID && media[1].imageId === IMAGE_ID);
   assert(body.expiresAt === "2026-08-18T12:05:00.000Z");
   assert(!JSON.stringify(body).includes("object_path") && !JSON.stringify(body).includes("bucket"));
+});
+
+Deno.test("private-media gateway requests purpose-bound preview derivatives while PDF keeps originals", async () => {
+  const pathsByPurpose: Record<string, string[]> = {};
+  for (const purpose of ["preview", "pdf_export"] as const) {
+    const response = await handleAuthorizedPrivateMedia(post({ imageIds: [IMAGE_ID], purpose }), gatewayDependencies({
+      rpc: async (_name, body) => ({ images: body.media_purpose === "preview" ? [previewImage(IMAGE_ID)] : [image(IMAGE_ID)] }),
+      signPrivateOriginals: async (paths) => {
+        pathsByPurpose[purpose] = paths;
+        return paths.map((path) => ({ path, url: `https://project.supabase.co/storage/v1/object/sign/work-originals/${path}?token=signed` }));
+      },
+    }));
+    assert(response.status === 200);
+  }
+  assert(pathsByPurpose.preview[0]?.endsWith("/preview.webp"));
+  assert(pathsByPurpose.pdf_export[0]?.endsWith("/original.webp"));
 });
 
 Deno.test("private-media gateway uses the exact PDF TTL and does not accept a caller TTL", async () => {

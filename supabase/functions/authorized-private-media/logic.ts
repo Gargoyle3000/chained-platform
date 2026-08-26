@@ -123,6 +123,7 @@ export async function handleAuthorizedPrivateMedia(
       resolved = await dependencies.rpc("service_resolve_authorized_private_work_images", {
         actor_account_id: caller.accountId,
         image_ids: imageIds,
+        media_purpose: purpose,
       });
     } catch (error) {
       mediaUnavailable(error);

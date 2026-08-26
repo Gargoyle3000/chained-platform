@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(33);
+select plan(41);
 
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at)
 values
@@ -86,9 +86,29 @@ update public.works
        purge_after = now() + interval '30 days'
  where id = '84000000-0000-4000-8000-000000000004';
 
+update public.work_images
+   set preview_object_path = replace(private_object_path, '/original.jpg', '/preview.webp'),
+       preview_file_size = 12,
+       preview_verified_at = now()
+ where id = '85000000-0000-4000-8000-000000000001';
+
+update public.work_images
+   set preview_object_path = replace(private_object_path, '/original.jpg', '/preview.webp'),
+       preview_file_size = 12,
+       upload_status = 'reserved'
+ where id = '85000000-0000-4000-8000-000000000002';
+
 select has_function(
   'private', 'service_resolve_authorized_private_work_images', array['uuid', 'uuid[]'],
   'private batch resolver exists'
+);
+select has_function(
+  'private', 'service_resolve_authorized_private_work_images', array['uuid', 'uuid[]', 'text'],
+  'purpose-bound private batch resolver exists'
+);
+select has_function(
+  'public', 'service_resolve_authorized_private_work_images', array['uuid', 'uuid[]', 'text'],
+  'purpose-bound service wrapper exists'
 );
 select has_function(
   'public', 'service_resolve_authorized_private_work_images', array['uuid', 'uuid[]'],
@@ -105,6 +125,11 @@ select isnt_definer(
 select ok(
   not has_function_privilege('authenticated', 'public.service_resolve_authorized_private_work_images(uuid,uuid[])', 'execute'),
   'authenticated clients cannot execute the resolver wrapper'
+);
+select ok(
+  has_function_privilege('service_role', 'public.service_resolve_authorized_private_work_images(uuid,uuid[],text)', 'execute')
+  and not has_function_privilege('authenticated', 'public.service_resolve_authorized_private_work_images(uuid,uuid[],text)', 'execute'),
+  'only service role may invoke the purpose-bound resolver wrapper'
 );
 select ok(
   not has_function_privilege('anon', 'public.service_resolve_authorized_private_work_images(uuid,uuid[])', 'execute'),
@@ -142,16 +167,57 @@ select results_eq(
   'owner resolves one ready draft image'
 );
 select results_eq(
+  $$select item->>'object_path'
+      from jsonb_array_elements(public.service_resolve_authorized_private_work_images(
+        '81000000-0000-4000-8000-000000000001',
+        array['85000000-0000-4000-8000-000000000001']::uuid[], 'preview'
+      )->'images') as item$$,
+  $$values ('82000000-0000-4000-8000-000000000001/84000000-0000-4000-8000-000000000001/85000000-0000-4000-8000-000000000001/preview.webp'::text)$$,
+  'preview purpose resolves the verified private derivative'
+);
+select results_eq(
+  $$select item->>'object_path'
+      from jsonb_array_elements(public.service_resolve_authorized_private_work_images(
+        '81000000-0000-4000-8000-000000000001',
+        array['85000000-0000-4000-8000-000000000001']::uuid[], 'pdf_export'
+      )->'images') as item$$,
+  $$values ('82000000-0000-4000-8000-000000000001/84000000-0000-4000-8000-000000000001/85000000-0000-4000-8000-000000000001/original.jpg'::text)$$,
+  'PDF purpose remains bound to the authoritative original'
+);
+select results_eq(
+  $$select item->>'object_path'
+      from jsonb_array_elements(public.service_resolve_authorized_private_work_images(
+        '81000000-0000-4000-8000-000000000001',
+        array['85000000-0000-4000-8000-000000000003']::uuid[], 'preview'
+      )->'images') as item$$,
+  $$values ('82000000-0000-4000-8000-000000000001/84000000-0000-4000-8000-000000000002/85000000-0000-4000-8000-000000000003/original.jpg'::text)$$,
+  'legacy image without a derivative falls back to its verified original only'
+);
+select throws_ok(
+  $$select public.service_resolve_authorized_private_work_images(
+      '81000000-0000-4000-8000-000000000001',
+      array['85000000-0000-4000-8000-000000000002']::uuid[], 'preview'
+    )$$,
+  '42501', 'Private media is unavailable.', 'unverified reserved preview never falls back to the original'
+);
+select throws_ok(
+  $$select public.service_resolve_authorized_private_work_images(
+      '81000000-0000-4000-8000-000000000001',
+      array['85000000-0000-4000-8000-000000000001']::uuid[], 'other'
+    )$$,
+  '22023', 'Private media purpose is unavailable.', 'unknown private-media purpose is rejected server-side'
+);
+select results_eq(
   $$select item->>'work_image_id'
       from jsonb_array_elements(public.service_resolve_authorized_private_work_images(
         '81000000-0000-4000-8000-000000000001',
         array[
-          '85000000-0000-4000-8000-000000000002',
+          '85000000-0000-4000-8000-000000000003',
           '85000000-0000-4000-8000-000000000001'
         ]::uuid[]
       )->'images') as item$$,
   $$values
-      ('85000000-0000-4000-8000-000000000002'::text),
+      ('85000000-0000-4000-8000-000000000003'::text),
       ('85000000-0000-4000-8000-000000000001'::text)$$,
   'multi-image batch preserves requested order'
 );

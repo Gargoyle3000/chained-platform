@@ -50,6 +50,22 @@ Deno.test("image deletion removes an unexpected stale public copy", async () => 
   assert(response.status === 200 && buckets.length === 2);
 });
 
+Deno.test("image deletion removes its exact private preview together with the original", async () => {
+  let privatePaths: string[] = [];
+  const response = await handleDeleteWorkImage(post({ work_image_id: IMAGE_ID }), dependencies({
+    rpc: async (name) => name === "service_begin_work_image_deletion"
+      ? { ...deleting, preview_object_path: "owner/work/image/preview.webp" }
+      : {},
+    remove: async (bucket, paths) => {
+      if (bucket === "work-originals") privatePaths = paths;
+      return true;
+    },
+  }));
+  assert(response.status === 200 && JSON.stringify(privatePaths) === JSON.stringify([
+    "owner/work/image/original.jpg", "owner/work/image/preview.webp",
+  ]));
+});
+
 Deno.test("image deletion records cleanup failure and remains retryable", async () => {
   let recorded = false;
   const response = await handleDeleteWorkImage(post({ work_image_id: IMAGE_ID }), dependencies({
@@ -81,4 +97,3 @@ Deno.test("image deletion response contains no object path or secret", async () 
   const text = await response.text();
   assert(!text.includes("owner/work") && !text.toLowerCase().includes("token"));
 });
-

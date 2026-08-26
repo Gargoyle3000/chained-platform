@@ -32,12 +32,26 @@ export async function handleFinalizeWorkImageUpload(
       throw new MediaError(409, "upload_not_finalizable");
     }
 
+    let failureStage: "original" | "preview" = "original";
     try {
       const objectPath = String(context.object_path ?? "");
       const mimeType = String(context.mime_type ?? "");
       const fileSize = Number(context.file_size);
       const object = await dependencies.download(ORIGINAL_BUCKET, objectPath);
       validateStoredObject(object, mimeType, fileSize, objectPath);
+
+      if (context.preview_required === true) {
+        failureStage = "preview";
+        const previewPath = String(context.preview_object_path ?? "");
+        const previewMimeType = String(context.preview_mime_type ?? "");
+        const previewFileSize = Number(context.preview_file_size);
+        if (!previewPath || previewMimeType !== "image/webp" || !Number.isSafeInteger(previewFileSize)
+          || previewFileSize <= 0 || previewFileSize > 5 * 1024 * 1024) {
+          throw new MediaError(422, "preview_contract_invalid");
+        }
+        const preview = await dependencies.download(ORIGINAL_BUCKET, previewPath);
+        validateStoredObject(preview, previewMimeType, previewFileSize, previewPath);
+      }
     } catch (error) {
       const code = error instanceof MediaError ? error.code : "verification_failed";
       await dependencies.rpc("service_mark_work_image_upload", {
@@ -45,6 +59,7 @@ export async function handleFinalizeWorkImageUpload(
         actor_account_id: caller.accountId,
         verified: false,
         failure_code: code,
+        ...(context.preview_required === true ? { preview_failure: failureStage === "preview" } : {}),
       });
       throw error;
     }
@@ -54,6 +69,7 @@ export async function handleFinalizeWorkImageUpload(
       actor_account_id: caller.accountId,
       verified: true,
       failure_code: null,
+      ...(context.preview_required === true ? { preview_failure: false } : {}),
     });
     return jsonResponse(200, { ok: true, status: "ready", idempotent: false });
   } catch (error) {

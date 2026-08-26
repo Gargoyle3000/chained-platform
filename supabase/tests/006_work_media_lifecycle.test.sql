@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(52);
+select plan(66);
 
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at)
 values
@@ -91,6 +91,64 @@ select ok(
   ),
   'reservation path is server-generated and filename-independent'
 );
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+select lives_ok(
+  $$select public.reserve_work_image_upload_with_preview('50000000-0000-4000-8000-000000000001', 'preview-aware.jpg', 'image/jpeg', 4, 12, false)$$,
+  'authorised artist can opt into one original plus one private preview reservation'
+);
+reset role;
+select ok(
+  exists (
+    select 1 from public.work_images
+     where work_id = '50000000-0000-4000-8000-000000000001'
+       and preview_object_path ~ '^20000000-0000-4000-8000-000000000001/50000000-0000-4000-8000-000000000001/[0-9a-f-]{36}/preview[.]webp$'
+       and preview_file_size = 12
+       and preview_verified_at is null
+  ),
+  'preview reservation path and expected size are server-derived'
+);
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+select results_eq(
+  $$select preview_mime_type || ':' || preview_max_file_size::text
+      from public.reserve_work_image_upload_with_preview('50000000-0000-4000-8000-000000000001', 'contract.jpg', 'image/jpeg', 4, 12, false)$$,
+  $$values ('image/webp:5242880'::text)$$,
+  'preview reservation exposes the fixed WebP and five MiB contract'
+);
+reset role;
+select set_config('test.preview_path',
+  (select preview_object_path from public.work_images where original_filename = 'preview-aware.jpg'), true);
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+select ok(
+  private.can_insert_reserved_work_original(
+    current_setting('test.preview_path', true),
+    jsonb_build_object('mimetype', 'image/webp', 'contentLength', '12')
+  ),
+  'exact reserved preview accepts only its server-derived WebP object'
+);
+select ok(
+  not private.can_insert_reserved_work_original(
+    current_setting('test.preview_path', true),
+    jsonb_build_object('mimetype', 'image/jpeg', 'contentLength', '12')
+  ),
+  'preview reservation rejects an incorrect MIME type'
+);
+select ok(
+  not private.can_insert_reserved_work_original(
+    replace(current_setting('test.preview_path', true), 'preview.webp', 'forged.webp'),
+    jsonb_build_object('mimetype', 'image/webp', 'contentLength', '12')
+  ),
+  'preview reservation rejects an arbitrary private path'
+);
+select set_config('storage.operation', 'storage.object.get_authenticated', true);
+select ok(
+  storage.allow_only_operation('object.get_authenticated')
+  and private.can_read_exact_work_original(current_setting('test.preview_path', true)),
+  'authorised manager may retrieve the exact reserved preview but no broad private bucket access'
+);
+reset role;
 select results_eq(
   $$select count(*)::bigint from public.work_images where work_id = '50000000-0000-4000-8000-000000000001' and is_cover and deleted_at is null$$,
   $$values (1::bigint)$$,
@@ -122,6 +180,10 @@ select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-0000000
 select throws_ok(
   $$select public.reserve_work_image_upload('50000000-0000-4000-8000-000000000001', 'bad.gif', 'image/gif', 4, false)$$,
   '22023', null, 'unsupported MIME is rejected'
+);
+select throws_ok(
+  $$select public.reserve_work_image_upload_with_preview('50000000-0000-4000-8000-000000000001', 'preview-too-large.jpg', 'image/jpeg', 4, 5242881, false)$$,
+  '22023', null, 'preview reservation rejects a derivative above five MiB'
 );
 select throws_ok(
   $$select public.reserve_work_image_upload('50000000-0000-4000-8000-000000000001', 'large.jpg', 'image/jpeg', 52428801, false)$$,
@@ -243,10 +305,54 @@ select public.reserve_work_image_upload('50000000-0000-4000-8000-000000000006', 
 reset role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 
+select throws_ok(
+  $$select public.service_mark_work_image_upload(
+      (select id from public.work_images where original_filename = 'preview-aware.jpg'),
+      '10000000-0000-4000-8000-000000000001', true, null
+    )$$,
+  '22023', 'Preview-aware uploads require preview verification.',
+  'legacy completion marker fails closed for a preview-aware reservation'
+);
+select results_eq(
+  $$select upload_status::text, original_verified_at is null, preview_verified_at is null
+      from public.work_images where original_filename = 'preview-aware.jpg'$$,
+  $$values ('reserved'::text, true, true)$$,
+  'legacy completion rejection leaves the preview-aware reservation unverified'
+);
+select throws_ok(
+  $$update public.work_images
+       set upload_status = 'ready', original_verified_at = statement_timestamp()
+     where original_filename = 'preview-aware.jpg'$$,
+  '23514', null,
+  'database rejects a ready preview-aware row without preview verification'
+);
+select results_eq(
+  $$select upload_status::text, original_verified_at is null, preview_verified_at is null
+      from public.work_images where original_filename = 'preview-aware.jpg'$$,
+  $$values ('reserved'::text, true, true)$$,
+  'rejected inconsistent update leaves no partial preview validation state'
+);
+select lives_ok(
+  $$select public.service_mark_work_image_upload(
+      id, '10000000-0000-4000-8000-000000000001', true, null, false
+    )
+      from public.work_images
+     where original_filename in ('preview-aware.jpg', 'contract.jpg')$$,
+  'preview-aware reservations finalize only through the preview-aware marker'
+);
+
 select lives_ok(
   $$select public.service_mark_work_image_upload(id, '10000000-0000-4000-8000-000000000001', true, null)
-      from public.work_images where work_id in ('50000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000005','50000000-0000-4000-8000-000000000006')$$,
-  'trusted verifier can mark reserved images ready'
+      from public.work_images
+     where work_id in ('50000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000005','50000000-0000-4000-8000-000000000006')
+       and preview_object_path is null$$,
+  'legacy completion marker still finalizes original-only reservations'
+);
+select results_eq(
+  $$select upload_status::text, original_verified_at is not null, preview_object_path is null
+      from public.work_images where original_filename = '../CLIENT NAME.JPG'$$,
+  $$values ('ready'::text, true, true)$$,
+  'legacy original-only reservation still reaches ready through the legacy marker'
 );
 select results_eq(
   $$select count(*)::bigint from public.work_images where work_id = '50000000-0000-4000-8000-000000000001' and upload_status = 'ready' and original_verified_at is not null$$,

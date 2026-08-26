@@ -73,10 +73,77 @@ Deno.test("finalize accepts a valid delegated caller", async () => {
   assert(response.status === 200);
 });
 
+Deno.test("finalize validates a reserved WebP preview before making a preview-aware upload ready", async () => {
+  const previewContext = {
+    ...context,
+    preview_required: true,
+    preview_object_path: `owner/work/${IMAGE_ID}/preview.webp`,
+    preview_mime_type: "image/webp",
+    preview_file_size: 12,
+  };
+  const downloaded: string[] = [];
+  let markedPreviewReady = false;
+  const response = await handleFinalizeWorkImageUpload(post({ work_image_id: IMAGE_ID }), dependencies({
+    rpc: async (name, body) => {
+      if (name === "service_get_work_image_upload") return previewContext;
+      markedPreviewReady = body.preview_failure === false && body.verified === true;
+      return {};
+    },
+    download: async (_bucket, path) => {
+      downloaded.push(path);
+      return path.endsWith("preview.webp")
+        ? { bytes: new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]), mimeType: "image/webp", size: 12 }
+        : { bytes: new Uint8Array([0xff, 0xd8, 0xff, 0x00]), mimeType: "image/jpeg", size: 4 };
+    },
+  }));
+  assert(response.status === 200 && downloaded.length === 2 && markedPreviewReady);
+});
+
+Deno.test("finalize fails a preview-aware upload without leaving it ready when the preview is invalid", async () => {
+  const previewContext = {
+    ...context,
+    preview_required: true,
+    preview_object_path: `owner/work/${IMAGE_ID}/preview.webp`,
+    preview_mime_type: "image/webp",
+    preview_file_size: 4,
+  };
+  let previewFailure = false;
+  const response = await handleFinalizeWorkImageUpload(post({ work_image_id: IMAGE_ID }), dependencies({
+    rpc: async (name, body) => {
+      if (name === "service_get_work_image_upload") return previewContext;
+      previewFailure = body.verified === false && body.preview_failure === true;
+      return {};
+    },
+    download: async (_bucket, path) => path.endsWith("preview.webp")
+      ? { bytes: new Uint8Array([0, 0, 0, 0]), mimeType: "image/webp", size: 4 }
+      : { bytes: new Uint8Array([0xff, 0xd8, 0xff, 0x00]), mimeType: "image/jpeg", size: 4 },
+  }));
+  assert(response.status === 422 && previewFailure);
+});
+
 Deno.test("finalize is idempotent for an already verified image", async () => {
   let downloaded = false;
   const response = await handleFinalizeWorkImageUpload(post({ work_image_id: IMAGE_ID }), dependencies({
     rpc: async () => ({ ...context, upload_status: "ready", verified: true }),
+    download: async () => {
+      downloaded = true;
+      throw new Error("unexpected");
+    },
+  }));
+  const body = await responseJson(response);
+  assert(response.status === 200 && body.idempotent === true && !downloaded);
+});
+
+Deno.test("finalize is idempotent only after both preview-aware objects were verified", async () => {
+  let downloaded = false;
+  const response = await handleFinalizeWorkImageUpload(post({ work_image_id: IMAGE_ID }), dependencies({
+    rpc: async () => ({
+      ...context,
+      upload_status: "ready",
+      verified: true,
+      preview_required: true,
+      preview_verified: true,
+    }),
     download: async () => {
       downloaded = true;
       throw new Error("unexpected");
@@ -122,4 +189,3 @@ Deno.test("finalize responses never expose media paths or credentials", async ()
   const text = await response.text();
   assert(!text.includes("original.jpg") && !text.toLowerCase().includes("token") && !text.toLowerCase().includes("key"));
 });
-

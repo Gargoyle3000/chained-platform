@@ -34,9 +34,11 @@ export async function handleDeleteWorkImage(
     }
 
     const privatePath = String(deletion.private_object_path ?? "");
+    const previewPath = String(deletion.preview_object_path ?? "");
     const publicPath = String(deletion.public_object_path ?? "");
-    const privateRemoved = privatePath
-      ? await dependencies.remove(ORIGINAL_BUCKET, [privatePath])
+    const privatePaths = [privatePath, previewPath].filter(Boolean);
+    const privateRemoved = privatePaths.length > 0
+      ? await dependencies.remove(ORIGINAL_BUCKET, privatePaths)
       : true;
     const publicRemoved = publicPath
       ? await dependencies.remove(PUBLIC_BUCKET, [publicPath])
