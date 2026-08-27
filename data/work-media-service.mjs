@@ -3,6 +3,8 @@ import { sanitizeWorkError, WorkError, WORK_ERROR_CODES } from "./work-errors.mj
 
 export const IMAGE_TYPES = Object.freeze(new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]));
 export const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
+export const MAX_PRIVATE_PREVIEW_BYTES = 5 * 1024 * 1024;
+export const PRIVATE_PREVIEW_LONGEST_EDGE = 2048;
 export const UPLOAD_STAGES = Object.freeze(["RESERVING", "UPLOADING", "VERIFYING", "READY"]);
 export const PRIVATE_MEDIA_PURPOSES = Object.freeze(new Set(["preview", "pdf_export"]));
 export const PRIVATE_MEDIA_BATCH_SIZE = 100;
@@ -15,6 +17,62 @@ export function validateImageFile(file) {
   if (!Number.isFinite(file.size) || file.size <= 0) throw new WorkError(WORK_ERROR_CODES.INVALID, "EMPTY IMAGE FILES CANNOT BE ADDED");
   if (file.size > MAX_IMAGE_BYTES) throw new WorkError(WORK_ERROR_CODES.INVALID, "THE MAXIMUM IMAGE SIZE IS 50 MB");
   return file;
+}
+
+function previewError(message) {
+  return new WorkError(WORK_ERROR_CODES.INVALID, message);
+}
+
+function canvasToWebp(canvas) {
+  if (typeof canvas.convertToBlob === "function") {
+    return canvas.convertToBlob({ type: "image/webp", quality: 0.84 });
+  }
+  if (typeof canvas.toBlob !== "function") {
+    throw previewError("THIS BROWSER CANNOT ENCODE A PRIVATE WEBP PREVIEW");
+  }
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(previewError("THIS BROWSER CANNOT ENCODE A PRIVATE WEBP PREVIEW")), "image/webp", 0.84);
+  });
+}
+
+export async function createPrivateImagePreview(file, {
+  createImageBitmap: decode = globalThis.createImageBitmap,
+  createCanvas = () => globalThis.document?.createElement("canvas")
+} = {}) {
+  validateImageFile(file);
+  if (typeof decode !== "function") throw previewError("THIS BROWSER CANNOT DECODE THIS IMAGE FOR A PRIVATE PREVIEW");
+
+  let bitmap;
+  try {
+    bitmap = await decode(file, { imageOrientation: "from-image" });
+    const sourceWidth = Number(bitmap?.width);
+    const sourceHeight = Number(bitmap?.height);
+    if (!Number.isSafeInteger(sourceWidth) || !Number.isSafeInteger(sourceHeight) || sourceWidth < 1 || sourceHeight < 1) {
+      throw previewError("THE IMAGE DIMENSIONS COULD NOT BE READ");
+    }
+
+    const scale = Math.min(1, PRIVATE_PREVIEW_LONGEST_EDGE / Math.max(sourceWidth, sourceHeight));
+    const width = Math.max(1, Math.round(sourceWidth * scale));
+    const height = Math.max(1, Math.round(sourceHeight * scale));
+    const canvas = createCanvas();
+    if (!canvas || typeof canvas.getContext !== "function") throw previewError("THIS BROWSER CANNOT CREATE A PRIVATE IMAGE PREVIEW");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d", { alpha: true });
+    if (!context || typeof context.drawImage !== "function") throw previewError("THIS BROWSER CANNOT CREATE A PRIVATE IMAGE PREVIEW");
+    context.drawImage(bitmap, 0, 0, width, height);
+
+    const preview = await canvasToWebp(canvas);
+    if (!(preview instanceof Blob) || preview.type.toLowerCase() !== "image/webp" || preview.size < 1 || preview.size > MAX_PRIVATE_PREVIEW_BYTES) {
+      throw previewError("THE PRIVATE WEBP PREVIEW COULD NOT BE CREATED WITHIN 5 MB");
+    }
+    return preview;
+  } catch (error) {
+    if (error instanceof WorkError) throw error;
+    throw previewError("THIS BROWSER CANNOT DECODE OR ENCODE THIS IMAGE FOR A PRIVATE PREVIEW");
+  } finally {
+    bitmap?.close?.();
+  }
 }
 
 async function invoke(client, name, body) {
@@ -72,6 +130,18 @@ function validateGatewayMedia(data, requested, purpose) {
   });
 }
 
+function reservedImageId(value) {
+  const id = typeof value?.work_image_id === "string" ? value.work_image_id.trim().toLowerCase() : "";
+  return UUID_PATTERN.test(id) ? id : null;
+}
+
+function managedImageStatus(rows, imageId) {
+  if (!Array.isArray(rows)) return null;
+  const row = rows.find((item) => String(item?.id || "").trim().toLowerCase() === imageId);
+  const status = String(row?.upload_status || "").toLowerCase();
+  return ["ready", "reserved", "failed"].includes(status) ? status : null;
+}
+
 async function mapWithConcurrency(values, limit, mapper) {
   const results = Array(values.length);
   let nextIndex = 0;
@@ -94,9 +164,17 @@ async function waitForGatewayRetry(wait, random, attempt) {
 export function createWorkMediaService(client, config = {}, {
   fetcher = fetch,
   wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
-  random = Math.random
+  random = Math.random,
+  createPreview = createPrivateImagePreview
 } = {}) {
   const urls = createObjectUrlRegistry();
+  const deleteReservedImage = async (imageId) => invoke(client, "delete-work-image", { work_image_id: imageId });
+  const reconcileFinalize = async (workId, imageId) => {
+    try {
+      const { data, error } = await client.rpc("list_managed_work_images", { target_work_id: workId });
+      return error ? null : managedImageStatus(data, imageId);
+    } catch { return null; }
+  };
   const authorize = async (images, purpose) => {
     const requested = normalizePrivateMediaImages(images);
     if (!PRIVATE_MEDIA_PURPOSES.has(purpose)) throw new WorkError(WORK_ERROR_CODES.INVALID, "MEDIA PURPOSE IS INVALID");
@@ -158,19 +236,62 @@ export function createWorkMediaService(client, config = {}, {
     urls,
     async upload(workId, file, makeCover, onStage = () => {}) {
       validateImageFile(file);
+      let reservationId = null;
+      let finalizeAttempted = false;
+      const cleanupReservation = async () => {
+        if (!reservationId) return;
+        const imageId = reservationId;
+        reservationId = null;
+        try { await deleteReservedImage(imageId); }
+        catch {}
+      };
       try {
+        const preview = await createPreview(file);
         onStage("RESERVING");
-        const { data: reserved, error: reserveError } = await client.rpc("reserve_work_image_upload", { target_work_id: workId, original_filename: file.name, mime_type: file.type.toLowerCase(), file_size: file.size, make_cover: makeCover });
+        const { data: reserved, error: reserveError } = await client.rpc("reserve_work_image_upload_with_preview", {
+          target_work_id: workId,
+          original_filename: file.name,
+          mime_type: file.type.toLowerCase(),
+          file_size: file.size,
+          preview_file_size: preview.size,
+          make_cover: makeCover
+        });
         if (reserveError || !reserved?.[0]) throw reserveError || new Error("Reservation failed.");
         const reservation = reserved[0];
+        reservationId = reservedImageId(reservation);
+        if (!reservationId || typeof reservation.bucket_id !== "string" || !reservation.bucket_id || typeof reservation.object_path !== "string" || !reservation.object_path
+          || reservation.preview_mime_type !== "image/webp" || typeof reservation.preview_object_path !== "string" || !reservation.preview_object_path
+          || reservation.preview_file_size !== preview.size || reservation.preview_max_file_size < preview.size) {
+          throw new Error("Preview reservation failed.");
+        }
         onStage("UPLOADING");
         const { error: uploadError } = await client.storage.from(reservation.bucket_id).upload(reservation.object_path, file, { contentType: file.type.toLowerCase(), upsert: false });
         if (uploadError) throw uploadError;
+        const { error: previewUploadError } = await client.storage.from(reservation.bucket_id).upload(reservation.preview_object_path, preview, { contentType: "image/webp", upsert: false });
+        if (previewUploadError) throw previewUploadError;
         onStage("VERIFYING");
-        await invoke(client, "finalize-work-image-upload", { work_image_id: reservation.work_image_id });
+        finalizeAttempted = true;
+        try {
+          await invoke(client, "finalize-work-image-upload", { work_image_id: reservationId });
+        } catch (error) {
+          const status = await reconcileFinalize(workId, reservationId);
+          if (status === "ready") {
+            onStage("READY");
+            return reservationId;
+          }
+          if (status === "failed") {
+            await cleanupReservation();
+            throw error;
+          }
+          if (status === "reserved") throw new WorkError(WORK_ERROR_CODES.UNAVAILABLE, "IMAGE VERIFICATION IS INCOMPLETE. RETRY VERIFY.", error);
+          throw new WorkError(WORK_ERROR_CODES.UNAVAILABLE, "IMAGE UPLOAD STATUS COULD NOT BE CONFIRMED", error);
+        }
         onStage("READY");
-        return reservation.work_image_id;
-      } catch (error) { throw sanitizeWorkError(error, "IMAGE COULD NOT BE ADDED"); }
+        return reservationId;
+      } catch (error) {
+        if (reservationId && !finalizeAttempted) await cleanupReservation();
+        throw sanitizeWorkError(error, "IMAGE COULD NOT BE ADDED");
+      }
     },
     async authorizedPrivateMedia(images, { purpose = "preview" } = {}) {
       try { return await authorize(images, purpose); }
@@ -199,7 +320,7 @@ export function createWorkMediaService(client, config = {}, {
     finalize: (id) => invoke(client, "finalize-work-image-upload", { work_image_id: id }),
     publish: (id, key) => invoke(client, "publish-work", { work_id: id, idempotency_key: key }),
     unpublish: (id, key) => invoke(client, "unpublish-work", { work_id: id, idempotency_key: key }),
-    deleteImage: (id) => invoke(client, "delete-work-image", { work_image_id: id }),
+    deleteImage: deleteReservedImage,
     mapImage: databaseImageToClient
   });
 }

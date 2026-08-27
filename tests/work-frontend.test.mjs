@@ -6,14 +6,27 @@ import { FRONTEND_MODES } from "../auth/config.mjs";
 import { selectWorkRepository } from "../data/work-repository.mjs";
 import { INDEXEDDB_BOUNDARY } from "../data/indexeddb-work-repository.mjs";
 import { createSupabaseWorkRepository } from "../data/supabase-work-repository.mjs";
-import { createWorkMediaService, MAX_IMAGE_BYTES, UPLOAD_STAGES, validateImageFile } from "../data/work-media-service.mjs";
+import { createPrivateImagePreview, createWorkMediaService, MAX_IMAGE_BYTES, MAX_PRIVATE_PREVIEW_BYTES, PRIVATE_PREVIEW_LONGEST_EDGE, UPLOAD_STAGES, validateImageFile } from "../data/work-media-service.mjs";
 import { createIdempotencyState, createObjectUrlRegistry, databaseToWork, formToDatabase, isValidWorkId, mapPublicArtworkRows, publicationReadiness, resolveManagedProfileState, WORK_COLUMNS, WORK_SELECT } from "../data/work-mapping.mjs";
-import { sanitizeWorkError, WORK_ERROR_CODES } from "../data/work-errors.mjs";
+import { sanitizeWorkError, WorkError, WORK_ERROR_CODES } from "../data/work-errors.mjs";
 
 const ID = "11111111-1111-4111-8111-111111111111";
 const IMAGE_TWO = "22222222-2222-4222-8222-222222222222";
 const IMAGE_THREE = "33333333-3333-4333-8333-333333333333";
 const baseForm = { title: "  Work  ", year: "2026", workType: "single-work", format: "painting", materials: "Wood, Steel, wood, ", height: "1.5", width: "2", depth: "0", dimensionUnit: "cm", duration: "", edition: "  1/3 ", description: " Text ", collaboratorName: "Name", collaboratorUrl: "https://example.com/a", photoCreditName: "Photo", photoCreditUrl: "https://example.com/p" };
+
+function previewReservation(preview, overrides = {}) {
+  return {
+    work_image_id: ID,
+    bucket_id: "work-originals",
+    object_path: "server/original.png",
+    preview_object_path: "server/preview.webp",
+    preview_mime_type: "image/webp",
+    preview_file_size: preview.size,
+    preview_max_file_size: MAX_PRIVATE_PREVIEW_BYTES,
+    ...overrides
+  };
+}
 
 test("adapter selection is explicit in prototype and local modes", () => {
   const store = { initialiseDatabase() {}, getAllWorks() {}, getWork() {}, createWork() {}, updateWork() {}, deleteWork() {} };
@@ -127,20 +140,216 @@ test("file validation enforces MIME, nonzero, and the 50 MiB boundary", () => {
   assert.throws(() => validateImageFile({ type: "image/png", size: MAX_IMAGE_BYTES + 1 }), /50 MB/);
 });
 
+test("private preview generation requests EXIF-aware decoding and preserves natural orientation for orientation 6 and 8 JPEGs", async () => {
+  for (const orientation of [6, 8]) {
+    const decoded = [];
+    const drawn = [];
+    const bitmap = { width: 1200, height: 2400, close() {} };
+    const preview = await createPrivateImagePreview(
+      { name: `orientation-${orientation}.jpg`, type: "image/jpeg", size: 1 },
+      {
+        createImageBitmap: async (file, options) => { decoded.push({ file, options }); return bitmap; },
+        createCanvas: () => ({
+          getContext: (_kind, options) => ({ drawImage: (...args) => drawn.push({ args, options }) }),
+          toBlob: (callback, type) => callback(new Blob(["preview"], { type }))
+        })
+      }
+    );
+    assert.equal(decoded[0].options.imageOrientation, "from-image");
+    assert.deepEqual(drawn[0].args.slice(1), [0, 0, 1024, PRIVATE_PREVIEW_LONGEST_EDGE]);
+    assert.equal(drawn[0].options.alpha, true);
+    assert.equal(preview.type, "image/webp");
+  }
+});
+
+test("private preview generation supports alpha-capable PNG, WebP, and AVIF browser decode paths without upscaling", async () => {
+  for (const type of ["image/png", "image/webp", "image/avif"]) {
+    let drawn;
+    const preview = await createPrivateImagePreview(
+      { name: `fixture.${type.split("/")[1]}`, type, size: 1 },
+      {
+        createImageBitmap: async () => ({ width: 320, height: 200, close() {} }),
+        createCanvas: () => ({
+          getContext: (_kind, options) => ({ drawImage: (...args) => { drawn = { args, options }; } }),
+          toBlob: (callback, outputType) => callback(new Blob(["preview"], { type: outputType }))
+        })
+      }
+    );
+    assert.deepEqual(drawn.args.slice(1), [0, 0, 320, 200]);
+    assert.equal(drawn.options.alpha, true);
+    assert.equal(preview.type, "image/webp");
+  }
+});
+
+test("private preview generation requests fixed WebP quality and rejects a preview over 5 MiB", async () => {
+  let encode;
+  const file = { name: "x.png", type: "image/png", size: 1 };
+  await createPrivateImagePreview(file, {
+    createImageBitmap: async () => ({ width: 1, height: 1, close() {} }),
+    createCanvas: () => ({
+      getContext: () => ({ drawImage() {} }),
+      toBlob: (callback, type, quality) => { encode = { type, quality }; callback(new Blob(["preview"], { type })); }
+    })
+  });
+  assert.deepEqual(encode, { type: "image/webp", quality: 0.84 });
+  await assert.rejects(() => createPrivateImagePreview(file, {
+    createImageBitmap: async () => ({ width: 1, height: 1, close() {} }),
+    createCanvas: () => ({ getContext: () => ({ drawImage() {} }), toBlob: (callback, type) => callback(new Blob([new Uint8Array(MAX_PRIVATE_PREVIEW_BYTES + 1)], { type })) })
+  }), /WITHIN 5 MB/);
+});
+
+test("private preview generation fails clearly when browser decode or WebP encode is unavailable", async () => {
+  const file = { name: "unsupported.avif", type: "image/avif", size: 1 };
+  await assert.rejects(() => createPrivateImagePreview(file, { createImageBitmap: undefined }), /CANNOT DECODE/);
+  await assert.rejects(() => createPrivateImagePreview(file, {
+    createImageBitmap: async () => ({ width: 1, height: 1, close() {} }),
+    createCanvas: () => ({ getContext: () => ({ drawImage() {} }), toBlob: (callback) => callback(null) })
+  }), /CANNOT ENCODE/);
+});
+
 test("upload reports only the four real stages", async () => {
   const stages = [];
   const client = {
-    rpc: async () => ({ data: [{ work_image_id: ID, bucket_id: "work-originals", object_path: "private", mime_type: "image/png", file_size: 1 }], error: null }),
+    rpc: async () => ({ data: [{ work_image_id: ID, bucket_id: "work-originals", object_path: "private", mime_type: "image/png", file_size: 1, preview_object_path: "preview.webp", preview_mime_type: "image/webp", preview_file_size: 7, preview_max_file_size: 5 * 1024 * 1024 }], error: null }),
     storage: { from: () => ({ upload: async () => ({ error: null }), getPublicUrl: () => ({ data: {} }) }) },
     functions: { invoke: async () => ({ data: { ok: true }, error: null }) }
   };
-  await createWorkMediaService(client).upload(ID, { name: "x.png", type: "image/png", size: 1 }, true, (stage) => stages.push(stage));
+  const preview = new Blob(["preview"], { type: "image/webp" });
+  await createWorkMediaService(client, {}, { createPreview: async () => preview }).upload(ID, { name: "x.png", type: "image/png", size: 1 }, true, (stage) => stages.push(stage));
   assert.deepEqual(stages, UPLOAD_STAGES);
 });
 
 test("upload errors are sanitized", async () => {
   const client = { rpc: async () => ({ data: null, error: new Error("private path leaked") }), storage: { from: () => ({ getPublicUrl: () => ({ data: {} }) }) }, functions: {} };
-  await assert.rejects(() => createWorkMediaService(client).upload(ID, { name: "x.png", type: "image/png", size: 1 }, true), /IMAGE COULD NOT BE ADDED/);
+  await assert.rejects(() => createWorkMediaService(client, {}, { createPreview: async () => new Blob(["preview"], { type: "image/webp" }) }).upload(ID, { name: "x.png", type: "image/png", size: 1 }, true), /IMAGE COULD NOT BE ADDED/);
+});
+
+test("preview-capable upload reserves returned paths and uploads the original and WebP derivative before finalization", async () => {
+  const calls = [];
+  const uploads = [];
+  const functionCalls = [];
+  const preview = new Blob(["preview"], { type: "image/webp" });
+  const client = {
+    rpc: async (name, body) => {
+      calls.push({ name, body });
+      return { data: [previewReservation(preview)], error: null };
+    },
+    storage: { from: () => ({ upload: async (path, body, options) => { uploads.push({ path, body, options }); return { error: null }; }, getPublicUrl: () => ({ data: {} }) }) },
+    functions: { invoke: async (name, { body }) => { functionCalls.push({ name, body }); return { data: { ok: true }, error: null }; } }
+  };
+  await createWorkMediaService(client, {}, { createPreview: async () => preview }).upload(ID, { name: "x.png", type: "image/png", size: 1 }, true);
+  assert.deepEqual(calls, [{ name: "reserve_work_image_upload_with_preview", body: { target_work_id: ID, original_filename: "x.png", mime_type: "image/png", file_size: 1, preview_file_size: preview.size, make_cover: true } }]);
+  assert.deepEqual(uploads.map(({ path, options }) => ({ path, options })), [
+    { path: "server/original.png", options: { contentType: "image/png", upsert: false } },
+    { path: "server/preview.webp", options: { contentType: "image/webp", upsert: false } }
+  ]);
+  assert.deepEqual(functionCalls, [{ name: "finalize-work-image-upload", body: { work_image_id: ID } }]);
+});
+
+test("preview generation failure creates no reservation or cleanup request", async () => {
+  let reserved = false;
+  let cleaned = false;
+  const client = {
+    rpc: async () => { reserved = true; return { data: [], error: null }; },
+    storage: { from: () => ({ getPublicUrl: () => ({ data: {} }) }) },
+    functions: { invoke: async (name) => { if (name === "delete-work-image") cleaned = true; return { data: { ok: true }, error: null }; } }
+  };
+  await assert.rejects(() => createWorkMediaService(client, {}, { createPreview: async () => { throw new WorkError(WORK_ERROR_CODES.INVALID, "PREVIEW FAILED"); } }).upload(ID, { name: "x.png", type: "image/png", size: 1 }, true), /PREVIEW FAILED/);
+  assert.equal(reserved, false);
+  assert.equal(cleaned, false);
+});
+
+test("post-reservation original, preview, and finalize failures invoke authoritative cleanup while preserving the primary error", async () => {
+  for (const failure of ["original", "preview", "finalize"]) {
+    const preview = new Blob(["preview"], { type: "image/webp" });
+    const calls = [];
+    const primary = new WorkError(WORK_ERROR_CODES.UNAVAILABLE, `${failure.toUpperCase()} FAILED`);
+    let uploadCount = 0;
+    const client = {
+      rpc: async (name) => name === "reserve_work_image_upload_with_preview"
+        ? { data: [previewReservation(preview)], error: null }
+        : { data: [{ id: ID, upload_status: "failed" }], error: null },
+      storage: { from: () => ({
+        upload: async () => {
+          uploadCount += 1;
+          return { error: (failure === "original" && uploadCount === 1) || (failure === "preview" && uploadCount === 2) ? primary : null };
+        },
+        getPublicUrl: () => ({ data: {} })
+      }) },
+      functions: { invoke: async (name, { body }) => {
+        calls.push({ name, body });
+        if (name === "finalize-work-image-upload" && failure === "finalize") return { data: null, error: primary };
+        if (name === "delete-work-image") return { data: null, error: new Error("cleanup failed") };
+        return { data: { ok: true }, error: null };
+      } }
+    };
+    await assert.rejects(() => createWorkMediaService(client, {}, { createPreview: async () => preview }).upload(ID, { name: "x.png", type: "image/png", size: 1 }, true), new RegExp(`${failure.toUpperCase()} FAILED`));
+    assert.deepEqual(calls.at(-1), { name: "delete-work-image", body: { work_image_id: ID } });
+  }
+});
+
+test("a malformed preview reservation with an image ID is cleaned through delete-work-image", async () => {
+  const preview = new Blob(["preview"], { type: "image/webp" });
+  const calls = [];
+  const client = {
+    rpc: async () => ({ data: [previewReservation(preview, { preview_object_path: "" })], error: null }),
+    storage: { from: () => ({ getPublicUrl: () => ({ data: {} }) }) },
+    functions: { invoke: async (name, { body }) => { calls.push({ name, body }); return { data: { ok: true }, error: null }; } }
+  };
+  await assert.rejects(() => createWorkMediaService(client, {}, { createPreview: async () => preview }).upload(ID, { name: "x.png", type: "image/png", size: 1 }, true), /IMAGE COULD NOT BE ADDED/);
+  assert.deepEqual(calls, [{ name: "delete-work-image", body: { work_image_id: ID } }]);
+});
+
+test("ambiguous finalize responses reconcile an authoritative ready image without deletion", async () => {
+  for (const response of [
+    { data: null, error: new WorkError(WORK_ERROR_CODES.UNAVAILABLE, "FINALIZE NETWORK FAILED") },
+    { data: { ok: false }, error: null }
+  ]) {
+    const preview = new Blob(["preview"], { type: "image/webp" });
+    const calls = [];
+    const client = {
+      rpc: async (name) => name === "reserve_work_image_upload_with_preview"
+        ? { data: [previewReservation(preview)], error: null }
+        : { data: [{ id: ID, upload_status: "ready" }], error: null },
+      storage: { from: () => ({ upload: async () => ({ error: null }), getPublicUrl: () => ({ data: {} }) }) },
+      functions: { invoke: async (name, { body }) => { calls.push({ name, body }); return name === "finalize-work-image-upload" ? response : { data: { ok: true }, error: null }; } }
+    };
+    assert.equal(await createWorkMediaService(client, {}, { createPreview: async () => preview }).upload(ID, { name: "x.png", type: "image/png", size: 1 }, true), ID);
+    assert.deepEqual(calls, [{ name: "finalize-work-image-upload", body: { work_image_id: ID } }]);
+  }
+});
+
+test("ambiguous finalize reconciliation preserves failed and reserved rows according to authoritative status", async () => {
+  for (const [status, message, deletes] of [
+    ["failed", "FINALIZE FAILED", 1],
+    ["reserved", "IMAGE VERIFICATION IS INCOMPLETE", 0]
+  ]) {
+    const preview = new Blob(["preview"], { type: "image/webp" });
+    const calls = [];
+    const client = {
+      rpc: async (name) => name === "reserve_work_image_upload_with_preview"
+        ? { data: [previewReservation(preview)], error: null }
+        : { data: [{ id: ID, upload_status: status }], error: null },
+      storage: { from: () => ({ upload: async () => ({ error: null }), getPublicUrl: () => ({ data: {} }) }) },
+      functions: { invoke: async (name, { body }) => { calls.push({ name, body }); return name === "finalize-work-image-upload" ? { data: null, error: new WorkError(WORK_ERROR_CODES.UNAVAILABLE, "FINALIZE FAILED") } : { data: { ok: true }, error: null }; } }
+    };
+    await assert.rejects(() => createWorkMediaService(client, {}, { createPreview: async () => preview }).upload(ID, { name: "x.png", type: "image/png", size: 1 }, true), new RegExp(message));
+    assert.equal(calls.filter((call) => call.name === "delete-work-image").length, deletes);
+  }
+});
+
+test("unknown authoritative status after finalize ambiguity is retained without deletion", async () => {
+  const preview = new Blob(["preview"], { type: "image/webp" });
+  const calls = [];
+  const client = {
+    rpc: async (name) => name === "reserve_work_image_upload_with_preview"
+      ? { data: [previewReservation(preview)], error: null }
+      : { data: null, error: new Error("status unavailable") },
+    storage: { from: () => ({ upload: async () => ({ error: null }), getPublicUrl: () => ({ data: {} }) }) },
+    functions: { invoke: async (name, { body }) => { calls.push({ name, body }); return name === "finalize-work-image-upload" ? { data: null, error: new WorkError(WORK_ERROR_CODES.UNAVAILABLE, "FINALIZE FAILED") } : { data: { ok: true }, error: null }; } }
+  };
+  await assert.rejects(() => createWorkMediaService(client, {}, { createPreview: async () => preview }).upload(ID, { name: "x.png", type: "image/png", size: 1 }, true), /STATUS COULD NOT BE CONFIRMED/);
+  assert.equal(calls.some((call) => call.name === "delete-work-image"), false);
 });
 
 test("private media requests use deduplicated image IDs, purpose, and gateway response order", async () => {

@@ -703,7 +703,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       } catch (error) {
         failure = error;
         image.uploadStatus = "failed";
-        showImageValidation([`${image.filename} COULD NOT BE ADDED.`]);
+        showImageValidation([`${image.filename} COULD NOT BE ADDED: ${error.message}`]);
       } finally { imageOperationBusy = false; }
     }
     await reloadCurrentWork();
