@@ -1,0 +1,129 @@
+CHAINED — EXTERNAL SERVICES REGISTER
+
+Purpose
+This is an operational overview of external services that CHAINED demonstrably
+uses in production or has explicitly planned to use. It is also a starting point
+for a future public transparency or subprocessor notice. It is not a complete
+legal privacy notice.
+
+Last reviewed: 2026-08-27
+
+
+SUPABASE
+STATUS: ACTIVE
+
+PURPOSE:
+Supabase runs CHAINED's application backend. It provides sign-in, the database,
+private and public image storage, access rules, and server-side functions.
+
+DATA / ACCESS:
+It stores CHAINED account and profile records, Works and related metadata,
+private original images and previews, public image copies, publication data,
+and audit records. It processes sign-in sessions and authorized requests.
+Private originals are restricted; public copies are available only for content
+that CHAINED has published.
+
+WHY CHAINED USES IT:
+It supplies the database, authentication, storage, authorization, and server
+operations as one managed backend, with the access controls CHAINED requires.
+
+PORTABILITY / EXIT:
+Dependence is material but bounded. Database data can be exported and the
+frontend uses ordinary HTTP APIs. Images can be copied to another object store.
+Authentication, access policies, and server functions would need a deliberate
+replacement or migration.
+
+PRIVACY / TRANSPARENCY NOTE:
+Any future public notice should identify Supabase as a hosting and backend
+provider and explain that it handles account data and CHAINED media according to
+the access rules described above. Supabase's own terms and data-location details
+would need to be linked separately.
+
+
+GITHUB
+STATUS: ACTIVE
+
+PURPOSE:
+GitHub hosts CHAINED's authoritative source-code repository and its change
+history, and serves the production static frontend through GitHub Pages.
+
+DATA / ACCESS:
+It receives application source code, configuration templates, migrations, tests,
+and documentation, and serves the public production frontend files and assets.
+The repository and Pages site must not contain production credentials, Supabase
+private originals, account database contents, private user media, or other
+private production user content.
+
+WHY CHAINED USES IT:
+It provides version control, review, backup, and a durable record of changes to
+the software that operates CHAINED. Production frontend releases are made by
+committing and pushing the relevant changes to the main branch.
+
+PORTABILITY / EXIT:
+High portability. The Git repository and its history can be cloned or moved to
+another Git host. Any separate automation or access integrations would need to
+be recreated.
+
+PRIVACY / TRANSPARENCY NOTE:
+GitHub is both production static-hosting infrastructure and source-code
+infrastructure. A future public notice should distinguish the public frontend
+files served by GitHub Pages from Supabase-hosted account data and private media;
+private originals and account database contents are not intentionally stored on
+GitHub.
+
+
+GOOGLE CLOUD RUN
+STATUS: PLANNED
+
+PURPOSE:
+One small scale-to-zero container service is planned for trusted public-image
+derivative processing after an original image has been verified.
+
+DATA / ACCESS:
+The planned processor will receive only the verified image original needed for
+that job and will produce:
+
+- SMALL: 960px maximum long edge, WebP quality 90
+- LARGE: 3200px maximum long edge, WebP quality 94
+
+The pipeline will use deterministic pinned-sRGB colour handling. It does not
+need account passwords or user-to-user messages. It is not intended to receive
+arbitrary browser paths or general CHAINED credentials.
+
+WHY CHAINED USES IT:
+The measured image workload is too memory-intensive and slow for ordinary
+Supabase Edge Function processing. Cloud Run is intended to supply isolated
+container hosting for this one trusted worker.
+
+PORTABILITY / EXIT:
+The processor must remain a portable Docker/container service without
+Google-specific image-processing logic. The container and pipeline should be
+movable to another container host; only deployment, secret storage, and network
+configuration would need replacement.
+
+PRIVACY / TRANSPARENCY NOTE:
+This is planned infrastructure, not a current production processor. The exact
+production authentication and data-access model has not been built. When it is
+implemented, a public notice should describe Cloud Run as a processor/hosting
+provider for verified originals and public derivatives, and state the retention
+behavior established by the final implementation.
+
+PLAN / COST:
+The intended service has zero minimum instances and one image job per request.
+No Google Cloud resource has been created as part of this register. Cost depends
+on the final region, resource size, request time, storage, and data transfer; no
+price is committed here.
+
+
+SERVICES NOT CURRENTLY LISTED
+
+The repository does not identify Porkbun or another domain registrar, so no
+registrar is named. The production domain alone is not evidence of which
+registrar or DNS arrangement is used. Cloudflare Pages is roadmap-only and is
+not active.
+
+
+MAINTENANCE
+
+Whenever a production external service is added, materially changed, or removed,
+update this register.
