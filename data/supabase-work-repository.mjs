@@ -21,8 +21,8 @@ async function anonymousRest(config, table, query) {
   return response.json();
 }
 
-export function createSupabaseWorkRepository(client, config) {
-  const media = createWorkMediaService(client, config);
+export function createSupabaseWorkRepository(client, config, mediaDependencies) {
+  const media = createWorkMediaService(client, config, mediaDependencies);
 
   async function listImages(workId) {
     const { data, error } = await client.rpc("list_managed_work_images", { target_work_id: requireId(workId) });

@@ -4,6 +4,15 @@ import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { createSupabaseWorkRepository } from "../data/supabase-work-repository.mjs";
 
+const PRIVATE_PREVIEW_WEBP = Buffer.from(
+  "UklGRiIAAABXRUJQVlA4IBYAAADQAQCdASoBAAEAAUAmJaQAA3AA/vuUAAA=",
+  "base64"
+);
+
+function createIntegrationPrivatePreview() {
+  return new Blob([PRIVATE_PREVIEW_WEBP], { type: "image/webp" });
+}
+
 const outcomes = [];
 let stage = "reading local status";
 
@@ -175,7 +184,11 @@ try {
   assert.equal(ownerSession.response.ok && delegateSession.response.ok, true);
   const ownerClient = localClient(status, ownerSession.data.access_token);
   const delegateClient = localClient(status, delegateSession.data.access_token);
-  const ownerRepository = createSupabaseWorkRepository(ownerClient, { supabaseUrl: status.api, supabaseKey: status.publishable });
+  const ownerRepository = createSupabaseWorkRepository(
+    ownerClient,
+    { supabaseUrl: status.api, supabaseKey: status.publishable },
+    { createPreview: createIntegrationPrivatePreview }
+  );
   const delegateRepository = createSupabaseWorkRepository(delegateClient, { supabaseUrl: status.api, supabaseKey: status.publishable });
 
   stage = "testing repository metadata flow";
