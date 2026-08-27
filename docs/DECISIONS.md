@@ -2,7 +2,7 @@
 
 
 
-Last updated: 2026-08-26
+Last updated: 2026-08-27
 
 
 
@@ -112,6 +112,8 @@ Last updated: 2026-08-26
 
 \- MATERIALS is one free comma-separated field in v1, without autocomplete or a dropdown.
 
+\- User-facing metadata values use normal prose capitalization and conjunctions, for example `Acrylic, canvas and aluminium frame`; do not render conjunctions such as `AND` in system-style uppercase.
+
 \- Material terms are trimmed and de-duplicated case-insensitively for display and future normalized search; legacy material fields are unified on read and migrated when that Work is saved.
 
 
@@ -162,7 +164,10 @@ Last updated: 2026-08-26
 \- The current `is_cover=true` image is first; remaining public images use `sort_order`, then deterministic `id` order.
 \- The cover defines fixed stage geometry; secondary ratios use contain behavior with no crop or stretch.
 \- No visible arrows, dots or autoplay are required.
+\- Media carousels loop circularly: last → next returns to first, and first → previous returns to last.
 \- Interaction remains an invisible swipe/drag model with keyboard Left/Right support; no persistent carousel chrome.
+
+\- Work detail with one image should prefer a fixed, non-scrolling visual presentation where the viewport permits it. Work detail with multiple images allows scrolling/swiping through media. Metadata must remain accessible on smaller screens even when a fixed presentation is preferred.
 
 \## Portfolio export images
 
@@ -216,7 +221,7 @@ Last updated: 2026-08-26
 
 \- A Presentation is a shared durable context where possible, not a duplicate per Artist. The host/creator controls overall data; Artists attach their own authoritative Works. External Artists and Institutions may be represented, with aliases and later claim/merge preserving relationships.
 \- Presentations may contain documentation/exhibition images that are not Works and never become Discover Works. One series-level photo credit is sufficient by default. Presentations remain public/history after their date; participants control whether they surface them on their own Profile, and incorrect associations can be reported/corrected. One Presentation may contain multiple Agenda moments such as OPENING, ARTIST TALK and FINISSAGE, including a single moment for a one-evening event.
-\- Agenda moments feed Agenda automatically; no duplicate entry is required. Standalone Agenda items are allowed, including events hosted by Institutions not yet on CHAINED. Personal Agenda comes from followed accounts; there is no RSVP/GOING/INTERESTED system and CHAINED does not track attendance intent.
+\- Agenda moments feed Agenda automatically; no duplicate entry is required. Standalone Agenda items are allowed, including events hosted by Institutions not yet on CHAINED. Personal Agenda comes from followed accounts; Agenda supports `[ ALL ]` and `[ FOLLOWING ]` views. There is no RSVP/GOING/INTERESTED system and CHAINED does not track attendance intent.
 \- Start/end times may be optional where appropriate. Changing only a time does not notify or repost/reorder an event when its date is unchanged; changing the date changes chronological placement. `CANCELLED` is supported. Past events leave active Agenda but remain in Presentation/history. Use structured CITY/COUNTRY for later filters; do not add `ONLINE`/`HYBRID`, location permissions or “events near you”. FOLLOWING is newly published content/context; AGENDA is scheduled happenings.
 
 \## Press, Publications and Archive

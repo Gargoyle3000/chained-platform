@@ -1,6 +1,6 @@
 # CHAINED — CURRENT STATE
 
-Last updated: 2026-08-25
+Last updated: 2026-08-27
 
 ## NOW
 
@@ -65,6 +65,7 @@ Current focus: pre-tester security/usability review before returning to larger p
 ## CURRENT HANDOFF
 
 - Production is stable after the public multi-image carousel rollout.
-- Next technical milestone: private preview derivatives, before Portfolio `ALL IMAGES / SELECT IMAGES`.
+- Private preview frontend implementation is deployed and production-validated: the browser generates a fixed private WebP derivative before reservation, uploads both server-reserved objects, and finalizes them together. Production smoke covered JPEG and transparent PNG images, including full and partial alpha. Broader browser/device matrix validation remains future hardening.
+- Next technical milestone: controlled preview backfill before Portfolio `ALL IMAGES / SELECT IMAGES`.
 - Protect the authorized private-media gateway, PDF export, public-media behavior, and current Discover/Following/Profile geometry.
 - Optional drag-follow carousel animation is future polish, not an active bug.

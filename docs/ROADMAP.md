@@ -1,10 +1,17 @@
 # CHAINED — ROADMAP
 
-Last updated: 2026-08-26
+Last updated: 2026-08-27
 
 ## POLISH
 
 - Archive SINGLE / GRID should gain the same proven swipe interaction as Discover and Following, while preserving existing view behavior, image ratios, and layout.
+- Implement circular media-carousel navigation: last → next returns to first, and first → previous returns to last.
+- Add Agenda `[ ALL ]` and `[ FOLLOWING ]` views.
+- Use normal prose capitalization and conjunctions for user-facing metadata values, rather than system-style uppercase conjunctions.
+- Refine Work detail so a single image prefers a fixed/non-scrolling presentation where the viewport permits it, while multiple images remain scrollable/swipeable and metadata stays accessible on smaller screens.
+- Investigate and implement public web-image optimization. Very large originals can load visibly more slowly than manually web-ready versions. Preserve originals unchanged; first inspect the existing public-media pipeline and determine a high-quality public derivative/responsive strategy without visible quality loss. Do not freeze the final derivative architecture in DECISIONS yet.
+- Investigate a possible cover-image deletion/state issue observed during testing: non-cover images appeared to delete immediately while the probable cover remained visible until `SAVE AS DRAFT`. This is an observation/hypothesis, not a confirmed root cause.
+- Improve stale soft-deleted Work UX: a locally stale save currently collapses `THIS WORK IS NOT AVAILABLE` into generic `WORK COULD NOT BE SAVED`. This does not block private-preview rollout.
 - Add an optional, compact `[?]` GUIDE / HELP layer. It should be system-oriented and context-aware (for example Work publication, Archive privacy/projects/tags, or Profile draft/published state), with a possible central GUIDE entry from Settings/navigation. No mandatory onboarding or tutorial.
 - Clarify the valid state where a Work is published while its owner profile remains draft/private, for example `WORK PUBLISHED · PROFILE STILL PRIVATE [?]`, optionally linking to Settings. Never auto-publish the profile as a Work-publication side effect.
 
@@ -17,7 +24,7 @@ Last updated: 2026-08-26
   - No infinite scroll.
   - Desktop internal-scroll behavior stays unchanged.
 
-## PRIVATE PREVIEW DERIVATIVES
+## PRIVATE PREVIEW DERIVATIVES — DEPLOYED
 
 Before Portfolio image selection, add one lightweight private screen-preview rendition per Work image.
 
@@ -32,8 +39,10 @@ Before Portfolio image selection, add one lightweight private screen-preview ren
 Preferred sequencing:
 
 1. Backend/Storage foundation: deterministic path, reservation authorization, finalization, deletion, gateway routing, and security tests.
-2. Browser generation/upload, retry behavior, and validation alignment.
+2. Browser generation/upload, retry behavior, and validation alignment — implemented, deployed, and production-validated for JPEG and transparent PNG smoke coverage.
 3. Controlled backfill, coverage verification, and fallback removal.
+
+The broader browser/device compatibility matrix remains future hardening; production validation does not imply every browser or platform has been tested.
 
 Implementation should verify the largest real preview display and HiDPI needs before freezing dimensions/quality. Reconcile the current editor validation mismatch (approximately 25 MiB and no AVIF versus the service/backend 50 MiB and AVIF support) during that work.
 
