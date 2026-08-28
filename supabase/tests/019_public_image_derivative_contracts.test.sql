@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(35);
+select plan(40);
 
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at)
 values
@@ -28,6 +28,8 @@ values
   ('94000000-0000-4000-8000-000000000002', '93000000-0000-4000-8000-000000000001', '92000000-0000-4000-8000-000000000001/93000000-0000-4000-8000-000000000001/94000000-0000-4000-8000-000000000002/original.jpg', 'stale.jpg', 'image/jpeg', 4, 1, false, 'ready', now(), '91000000-0000-4000-8000-000000000001', '91000000-0000-4000-8000-000000000001'),
   ('94000000-0000-4000-8000-000000000003', '93000000-0000-4000-8000-000000000001', '92000000-0000-4000-8000-000000000001/93000000-0000-4000-8000-000000000001/94000000-0000-4000-8000-000000000003/original.jpg', 'deleted.jpg', 'image/jpeg', 4, 2, false, 'ready', now(), '91000000-0000-4000-8000-000000000001', '91000000-0000-4000-8000-000000000001'),
   ('94000000-0000-4000-8000-000000000004', '93000000-0000-4000-8000-000000000002', '92000000-0000-4000-8000-000000000002/93000000-0000-4000-8000-000000000002/94000000-0000-4000-8000-000000000004/original.jpg', 'other.jpg', 'image/jpeg', 4, 0, true, 'ready', now(), '91000000-0000-4000-8000-000000000002', '91000000-0000-4000-8000-000000000002');
+update public.work_images set pixel_width = 4912, pixel_height = 7360
+ where id in ('94000000-0000-4000-8000-000000000001', '94000000-0000-4000-8000-000000000002', '94000000-0000-4000-8000-000000000003', '94000000-0000-4000-8000-000000000004');
 
 select has_table('private', 'work_image_derivative_jobs', 'internal derivative jobs table exists');
 select has_table('private', 'work_image_derivatives', 'internal derivative records table exists');
@@ -52,14 +54,19 @@ set local role service_role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 
 select throws_ok($$select public.service_enqueue_work_image_derivatives('94000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002')$$, '42501', null, 'service callers cannot enqueue another account image');
-select is((public.service_enqueue_work_image_derivatives('94000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000001')->>'status'), 'pending', 'verified source creates one pending job');
+select set_config('test.primary', public.service_enqueue_work_image_derivatives('94000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000001')::text, true);
+select is((current_setting('test.primary')::jsonb->>'status'), 'pending', 'verified source creates one pending job');
 select is((public.service_enqueue_work_image_derivatives('94000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000001')->>'idempotent')::boolean, true, 'duplicate enqueue is idempotent');
 reset role;
 select is((select count(*) from private.work_image_derivatives where work_image_id = '94000000-0000-4000-8000-000000000001'), 2::bigint, 'enqueue creates SMALL and LARGE records');
 select results_eq($$select rendition_key::text || ':' || staging_bucket from private.work_image_derivatives where work_image_id = '94000000-0000-4000-8000-000000000001' order by rendition_key$$, $$values ('small:work-derivative-staging'::text), ('large:work-derivative-staging'::text)$$, 'staging namespace is server-owned and fixed');
 
 set local role service_role;
-select set_config('test.claim', public.service_claim_work_image_derivative_job()::text, true);
+select set_config(
+  'test.claim',
+  public.service_claim_work_image_derivative_job((current_setting('test.primary')::jsonb->>'job_id')::uuid)::text,
+  true
+);
 select is((current_setting('test.claim')::jsonb->>'status'), 'processing', 'claim atomically moves job to processing');
 reset role;
 select is((select attempt_count from private.work_image_derivative_jobs where work_image_id = '94000000-0000-4000-8000-000000000001'), 1::smallint, 'claim increments attempts');
@@ -69,7 +76,11 @@ select throws_ok($$select public.service_complete_work_image_derivative_job((cur
 reset role;
 update private.work_image_derivative_jobs set lease_expires_at = statement_timestamp() - interval '1 second' where id = (current_setting('test.claim')::jsonb->>'job_id')::uuid;
 set local role service_role;
-select set_config('test.reclaim', public.service_claim_work_image_derivative_job()::text, true);
+select set_config(
+  'test.reclaim',
+  public.service_claim_work_image_derivative_job((current_setting('test.claim')::jsonb->>'job_id')::uuid)::text,
+  true
+);
 reset role;
 select is((select attempt_count from private.work_image_derivative_jobs where id = (current_setting('test.reclaim')::jsonb->>'job_id')::uuid), 2::smallint, 'expired processing lease is reclaimed with a new attempt');
 set local role service_role;
@@ -80,7 +91,11 @@ select is((select state::text from private.work_image_derivative_jobs where work
 
 set local role service_role;
 select set_config('test.stale', public.service_enqueue_work_image_derivatives('94000000-0000-4000-8000-000000000002','91000000-0000-4000-8000-000000000001')::text, true);
-select set_config('test.stale_claim', public.service_claim_work_image_derivative_job()::text, true);
+select set_config(
+  'test.stale_claim',
+  public.service_claim_work_image_derivative_job((current_setting('test.stale')::jsonb->>'job_id')::uuid)::text,
+  true
+);
 reset role;
 update public.work_images set deleted_at = statement_timestamp(), deleted_by_account_id = '91000000-0000-4000-8000-000000000001' where id = '94000000-0000-4000-8000-000000000002';
 set local role service_role;
@@ -90,16 +105,37 @@ select set_config('test.deleted', public.service_enqueue_work_image_derivatives(
 reset role;
 update public.work_images set deleted_at = statement_timestamp(), deleted_by_account_id = '91000000-0000-4000-8000-000000000001' where id = '94000000-0000-4000-8000-000000000003';
 set local role service_role;
-select is((public.service_claim_work_image_derivative_job()->>'status'), 'obsolete', 'deleted image cannot be claimed');
+select is(
+  (public.service_claim_work_image_derivative_job((current_setting('test.deleted')::jsonb->>'job_id')::uuid)->>'status'),
+  'obsolete',
+  'deleted image cannot be claimed'
+);
 reset role;
 select is((select state::text from private.work_image_derivative_jobs where id = (current_setting('test.deleted')::jsonb->>'job_id')::uuid), 'failed', 'deleted image job becomes terminally failed');
 
 set local role service_role;
 select set_config('test.fail', public.service_enqueue_work_image_derivatives('94000000-0000-4000-8000-000000000004','91000000-0000-4000-8000-000000000002')::text, true);
-select set_config('test.fail_claim', public.service_claim_work_image_derivative_job()::text, true);
-select is((public.service_fail_work_image_derivative_job((current_setting('test.fail_claim')::jsonb->>'job_id')::uuid, (current_setting('test.fail_claim')::jsonb->>'lease_token')::uuid, 'decoder_failed', 'safe detail')->>'status'), 'failed', 'valid lease can mark a job failed');
+select set_config(
+  'test.fail_claim',
+  public.service_claim_work_image_derivative_job((current_setting('test.fail')::jsonb->>'job_id')::uuid)::text,
+  true
+);
+select throws_ok($$select public.service_fail_work_image_derivative_job((current_setting('test.fail_claim')::jsonb->>'job_id')::uuid, gen_random_uuid(), 'wrong_lease', 'safe detail', true)$$, '42501', null, 'wrong lease cannot fail a job');
+select set_config('test.retry', public.service_fail_work_image_derivative_job((current_setting('test.fail_claim')::jsonb->>'job_id')::uuid, (current_setting('test.fail_claim')::jsonb->>'lease_token')::uuid, 'decoder_failed', 'safe detail', true)::text, true);
 reset role;
-select is((select failure_code from private.work_image_derivative_jobs where id = (current_setting('test.fail')::jsonb->>'job_id')::uuid), 'decoder_failed', 'failed job retains a sanitized code');
+select is((current_setting('test.retry')::jsonb->>'status'), 'pending', 'retryable failure returns job to pending');
+select is((select failure_code from private.work_image_derivative_jobs where id = (current_setting('test.fail')::jsonb->>'job_id')::uuid), 'decoder_failed', 'retry retains a sanitized code');
+select ok((current_setting('test.retry')::jsonb->>'available_at')::timestamptz >= statement_timestamp() + interval '59 seconds', 'first retry uses one-minute backoff');
+update private.work_image_derivative_jobs set available_at = statement_timestamp() - interval '1 second' where id = (current_setting('test.fail')::jsonb->>'job_id')::uuid;
+set local role service_role;
+select set_config('test.retry_claim', public.service_claim_work_image_derivative_job((current_setting('test.fail')::jsonb->>'job_id')::uuid)::text, true);
+reset role;
+select is((current_setting('test.retry_claim')::jsonb->>'status'), 'processing', 'eligible retry claims again');
+select is((select attempt_count from private.work_image_derivative_jobs where id = (current_setting('test.fail')::jsonb->>'job_id')::uuid), 2::smallint, 'retry claim increments attempt count');
+set local role service_role;
+select set_config('test.retry_two', public.service_fail_work_image_derivative_job((current_setting('test.fail')::jsonb->>'job_id')::uuid, (current_setting('test.retry_claim')::jsonb->>'lease_token')::uuid, 'decoder_failed', 'safe detail', true)::text, true);
+reset role;
+select ok((current_setting('test.retry_two')::jsonb->>'available_at')::timestamptz >= statement_timestamp() + interval '9 minutes', 'second retry uses ten-minute backoff');
 
 set local role service_role;
 select lives_ok(
