@@ -1,0 +1,17 @@
+{
+  "name": "@chained/public-image-processor",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": { "node": "22.x" },
+  "scripts": {
+    "prepare-profile": "node scripts/materialize-profile.mjs",
+    "test": "npm run prepare-profile && node --test test/*.test.mjs",
+    "process-image": "npm run prepare-profile --silent && node bin/process-image.mjs",
+    "healthcheck": "node bin/healthcheck.mjs",
+    "validate-real": "npm run prepare-profile --silent && node scripts/run-real-image-validation.mjs"
+  },
+  "dependencies": {
+    "sharp": "0.34.1"
+  }
+}

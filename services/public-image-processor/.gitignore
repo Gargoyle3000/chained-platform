@@ -1,0 +1,4 @@
+node_modules/
+assets/chained-srgb-v4.icc
+test-output/
+real-output/
