@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(33);
+select plan(35);
 
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at)
 values
@@ -100,6 +100,18 @@ select set_config('test.fail_claim', public.service_claim_work_image_derivative_
 select is((public.service_fail_work_image_derivative_job((current_setting('test.fail_claim')::jsonb->>'job_id')::uuid, (current_setting('test.fail_claim')::jsonb->>'lease_token')::uuid, 'decoder_failed', 'safe detail')->>'status'), 'failed', 'valid lease can mark a job failed');
 reset role;
 select is((select failure_code from private.work_image_derivative_jobs where id = (current_setting('test.fail')::jsonb->>'job_id')::uuid), 'decoder_failed', 'failed job retains a sanitized code');
+
+set local role service_role;
+select lives_ok(
+  $$select public.service_mark_work_image_upload('94000000-0000-4000-8000-000000000004', '91000000-0000-4000-8000-000000000002', true, null, false, 4912, 7360)$$,
+  'trusted finalizer overload accepts verified stored dimensions'
+);
+reset role;
+select results_eq(
+  $$select pixel_width, pixel_height from public.work_images where id = '94000000-0000-4000-8000-000000000004'$$,
+  $$values (4912::integer, 7360::integer)$$,
+  'trusted finalizer overload stores dimensions on the verified image'
+);
 
 insert into public.work_publication_operations (id, work_id, operation_kind, status, publication_revision, actor_account_id, started_at)
 values ('95000000-0000-4000-8000-000000000001', '93000000-0000-4000-8000-000000000001', 'publish', 'running', '96000000-0000-4000-8000-000000000001', '91000000-0000-4000-8000-000000000001', now());

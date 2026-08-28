@@ -66,6 +66,62 @@ Deno.test("finalize marks a valid direct-owner upload ready", async () => {
   assert(calls.includes("service_mark_work_image_upload"));
 });
 
+Deno.test("finalize sends trusted PNG dimensions only from the stored original", async () => {
+  let marked: Record<string, unknown> = {};
+  const png = new Uint8Array(24); png.set([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a], 0); png.set([0,0,0,2,0,0,0,3],16);
+  const response = await handleFinalizeWorkImageUpload(post({ work_image_id: IMAGE_ID }), dependencies({
+    rpc: async (name, body) => { if (name === "service_get_work_image_upload") return { ...context, object_path: `owner/work/${IMAGE_ID}/original.png`, mime_type: "image/png", file_size: 24 }; marked = body; return {}; },
+    download: async () => ({ bytes: png, mimeType: "image/png", size: 24 }),
+  }));
+  assert(response.status === 200 && marked.pixel_width === 2 && marked.pixel_height === 3);
+});
+
+Deno.test("finalize sends trusted JPEG and WebP dimensions only from stored originals", async () => {
+  const cases = [
+    {
+      mimeType: "image/jpeg", extension: "jpg",
+      bytes: new Uint8Array([0xff, 0xd8, 0xff, 0xc0, 0, 0x11, 8, 0, 3, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+      width: 2, height: 3,
+    },
+    {
+      mimeType: "image/webp", extension: "webp",
+      bytes: new Uint8Array([0x52,0x49,0x46,0x46,0,0,0,0,0x57,0x45,0x42,0x50,0x56,0x50,0x38,0x58,0,0,0,0,0,0,0,0,1,0,0,2,0,0]),
+      width: 2, height: 3,
+    },
+  ];
+  for (const testCase of cases) {
+    let marked: Record<string, unknown> = {};
+    const response = await handleFinalizeWorkImageUpload(post({ work_image_id: IMAGE_ID }), dependencies({
+      rpc: async (name, body) => {
+        if (name === "service_get_work_image_upload") return { ...context, object_path: `owner/work/${IMAGE_ID}/original.${testCase.extension}`, mime_type: testCase.mimeType, file_size: testCase.bytes.byteLength };
+        marked = body;
+        return {};
+      },
+      download: async () => ({ bytes: testCase.bytes, mimeType: testCase.mimeType, size: testCase.bytes.byteLength }),
+    }));
+    assert(response.status === 200 && marked.pixel_width === testCase.width && marked.pixel_height === testCase.height);
+  }
+});
+
+Deno.test("unparsed AVIF and malformed-but-accepted WebP keep the valid original ready without dimensions", async () => {
+  const cases = [
+    { mimeType: "image/avif", extension: "avif", bytes: new Uint8Array([0,0,0,16,0x66,0x74,0x79,0x70,0x61,0x76,0x69,0x66,0,0,0,0]) },
+    { mimeType: "image/webp", extension: "webp", bytes: new Uint8Array([0x52,0x49,0x46,0x46,0,0,0,0,0x57,0x45,0x42,0x50]) },
+  ];
+  for (const testCase of cases) {
+    let marked: Record<string, unknown> = {};
+    const response = await handleFinalizeWorkImageUpload(post({ work_image_id: IMAGE_ID }), dependencies({
+      rpc: async (name, body) => {
+        if (name === "service_get_work_image_upload") return { ...context, object_path: `owner/work/${IMAGE_ID}/original.${testCase.extension}`, mime_type: testCase.mimeType, file_size: testCase.bytes.byteLength };
+        marked = body;
+        return { status: "ready" };
+      },
+      download: async () => ({ bytes: testCase.bytes, mimeType: testCase.mimeType, size: testCase.bytes.byteLength }),
+    }));
+    assert(response.status === 200 && marked.verified === true && !("pixel_width" in marked) && !("pixel_height" in marked));
+  }
+});
+
 Deno.test("finalize accepts a valid delegated caller", async () => {
   const response = await handleFinalizeWorkImageUpload(post({ work_image_id: IMAGE_ID }, "delegate"), dependencies({
     rpc: async (name) => name === "service_get_work_image_upload" ? context : {},

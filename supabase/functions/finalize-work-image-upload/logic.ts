@@ -7,6 +7,7 @@ import {
   parseStrictJson,
   requirePost,
   requireUuid,
+  trustedImageDimensions,
   validateStoredObject,
 } from "../_shared/work-media.ts";
 import type { MediaDependencies } from "../_shared/work-media.ts";
@@ -33,12 +34,14 @@ export async function handleFinalizeWorkImageUpload(
     }
 
     let failureStage: "original" | "preview" = "original";
+    let originalDimensions: { width: number; height: number } | null = null;
     try {
       const objectPath = String(context.object_path ?? "");
       const mimeType = String(context.mime_type ?? "");
       const fileSize = Number(context.file_size);
       const object = await dependencies.download(ORIGINAL_BUCKET, objectPath);
       validateStoredObject(object, mimeType, fileSize, objectPath);
+      originalDimensions = trustedImageDimensions(object.bytes, mimeType);
 
       if (context.preview_required === true) {
         failureStage = "preview";
@@ -69,6 +72,7 @@ export async function handleFinalizeWorkImageUpload(
       actor_account_id: caller.accountId,
       verified: true,
       failure_code: null,
+      ...(originalDimensions ? { pixel_width: originalDimensions.width, pixel_height: originalDimensions.height } : {}),
       ...(context.preview_required === true ? { preview_failure: false } : {}),
     });
     return jsonResponse(200, { ok: true, status: "ready", idempotent: false });
