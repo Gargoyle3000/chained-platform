@@ -1,0 +1,10 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select plan(5);
+select has_function('public', 'service_get_work_image_derivative_claim_context', 'broker context wrapper exists');
+select ok(not has_function_privilege('anon', 'public.service_get_work_image_derivative_claim_context(uuid,uuid)', 'EXECUTE'), 'anon cannot read broker context');
+select ok(not has_function_privilege('authenticated', 'public.service_get_work_image_derivative_claim_context(uuid,uuid)', 'EXECUTE'), 'browser role cannot read broker context');
+select ok(has_function_privilege('service_role', 'public.service_get_work_image_derivative_claim_context(uuid,uuid)', 'EXECUTE'), 'service role can read broker context');
+select ok(not has_table_privilege('authenticated', 'private.work_image_derivative_jobs', 'SELECT'), 'browser cannot read worker job state');
+select * from finish();
+rollback;
