@@ -91,6 +91,24 @@ test("complete is safely rejected after READY or lease reclaim without mutation"
   }
 });
 
+test("fail delegates retryable and terminal state to the lifecycle RPC without paths or backoff logic", async () => {
+  for (const [retryable, state] of [[true, "pending"], [false, "failed"]] as const) {
+    let body: Record<string, unknown> | undefined;
+    const deps = dependencies({ async rpc(name: string, value: Record<string, unknown>) { assert.equal(name, "service_fail_work_image_derivative_job"); body = value; return { status: state, available_at: "database-owned" }; } });
+    const response = await handleWorkerImageBroker(request({ operation: "fail", job_id: JOB, lease_token: LEASE, failure_code: "upload_failed", retryable }), deps as never);
+    assert.deepEqual(await response.json(), { job_id: JOB, state }); assert.equal(body!.retryable, retryable); assert.equal(body!.sanitized_failure_detail, null); assert.equal(JSON.stringify(body).includes("path"), false);
+  }
+});
+
+test("fail rejects malformed, unsafe, stale, ready, and extra worker input safely", async () => {
+  for (const payload of [
+    { operation: "fail", job_id: "bad", lease_token: LEASE, failure_code: "upload_failed", retryable: true },
+    { operation: "fail", job_id: JOB, lease_token: LEASE, failure_code: "raw stack trace", retryable: true },
+    { operation: "fail", job_id: JOB, lease_token: LEASE, failure_code: "upload_failed", retryable: true, source_path: "secret" },
+  ]) { const deps = dependencies(); const response = await handleWorkerImageBroker(request(payload), deps as never); assert.equal(response.status, 400); assert.equal(deps.calls.length, 0); }
+  for (const state of ["wrong_lease", "expired", "reclaimed", "ready"]) { const deps = dependencies({ async rpc() { throw new Error(state); } }); const response = await handleWorkerImageBroker(request({ operation: "fail", job_id: JOB, lease_token: LEASE, failure_code: "upload_failed", retryable: true }), deps as never); assert.equal(response.status, 500); }
+});
+
 test("broker claims only the requested job and issues server-derived exact capabilities", async () => {
   const deps = dependencies(); const response = await handleWorkerImageBroker(request({ operation: "claim", job_id: JOB }), deps as never);
   assert.equal(response.status, 200); const body = await response.json() as Record<string, any>;

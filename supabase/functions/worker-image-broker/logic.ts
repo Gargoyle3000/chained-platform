@@ -4,6 +4,7 @@ export const WORKER_SOURCE_TTL_SECONDS = 120;
 export const STAGING_BUCKET = "work-derivative-staging";
 const PIPELINE_VERSION = "chained-public-image-sharp-0.34.1-v1";
 const ICC_PROFILE_VERSION = "chained-srgb-v4-2026-08-27";
+const FAILURE_CODES = new Set(["broker_unavailable", "download_failed", "upload_failed", "timeout", "unsupported_format", "decoder_failed", "unsupported_tagged_colour", "unsupported_untagged_colour", "decoded_pixel_limit_rejected", "processing_failed"]);
 
 export type WorkerBrokerDependencies = {
   workerToken: string | undefined;
@@ -64,9 +65,16 @@ export async function handleWorkerImageBroker(request: Request, dependencies: Wo
   try {
     requirePost(request);
     requireWorker(request, dependencies.workerToken);
-    const body = await parseStrictJson(request, ["operation", "job_id", "lease_token", "outputs"]);
-    if (body.operation !== "claim" && body.operation !== "complete") throw new MediaError(400, "invalid_operation");
+    const body = await parseStrictJson(request, ["operation", "job_id", "lease_token", "outputs", "failure_code", "retryable"]);
+    if (body.operation !== "claim" && body.operation !== "complete" && body.operation !== "fail") throw new MediaError(400, "invalid_operation");
     const jobId = requireUuid(body.job_id, "job_id");
+    if (body.operation === "fail") {
+      const leaseToken = requireUuid(body.lease_token, "lease_token");
+      if (typeof body.failure_code !== "string" || !FAILURE_CODES.has(body.failure_code) || typeof body.retryable !== "boolean") throw new MediaError(400, "invalid_failure");
+      const result = asRecord(await dependencies.rpc("service_fail_work_image_derivative_job", { target_job_id: jobId, expected_lease_token: leaseToken, sanitized_failure_code: body.failure_code, sanitized_failure_detail: null, retryable: body.retryable }));
+      if (result.status !== "pending" && result.status !== "failed") throw new MediaError(409, "job_unavailable");
+      return jsonResponse(200, { job_id: jobId, state: result.status });
+    }
     if (body.operation === "complete") {
       const leaseToken = requireUuid(body.lease_token, "lease_token");
       const context = asRecord(await dependencies.rpc("service_get_work_image_derivative_claim_context", { target_job_id: jobId, expected_lease_token: leaseToken }));
