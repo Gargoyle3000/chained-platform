@@ -23,5 +23,10 @@ const dependencies = {
     if (typeof value.url !== "string" || typeof value.token !== "string") throw new Error("upload_signing_failed");
     return { url: value.url, token: value.token };
   },
+  async downloadStaging(path: string) {
+    const response = await fetch(`${apiUrl}/storage/v1/object/authenticated/${STAGING_BUCKET}/${encodePath(path)}`, { headers: elevatedServiceHeaders(keys.secret) });
+    if (!response.ok) throw new MediaError(422, "missing_output");
+    return { bytes: new Uint8Array(await response.arrayBuffer()), mimeType: (response.headers.get("content-type") ?? "").split(";", 1)[0]!.trim() };
+  },
 };
 Deno.serve((request) => handleWorkerImageBroker(request, dependencies));
