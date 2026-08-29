@@ -11,4 +11,5 @@ COPY lib ./lib
 COPY scripts ./scripts
 RUN node scripts/materialize-profile.mjs && useradd --system --uid 10001 --create-home processor
 USER 10001
-ENTRYPOINT ["node", "bin/process-image.mjs"]
+ENTRYPOINT ["node"]
+CMD ["bin/http-worker.mjs"]
