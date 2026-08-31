@@ -168,23 +168,23 @@ function createUnavailableRepository() {
     getAgendaItem: async () => null,
 
     async createAgendaItem() {
-      throw new Error("AGENDA REQUIRES THE LOCAL DATABASE");
+      throw new Error("AGENDA IS CURRENTLY UNAVAILABLE");
     },
 
     async updateAgendaItem() {
-      throw new Error("AGENDA REQUIRES THE LOCAL DATABASE");
+      throw new Error("AGENDA IS CURRENTLY UNAVAILABLE");
     },
 
     async publishAgendaItem() {
-      throw new Error("AGENDA REQUIRES THE LOCAL DATABASE");
+      throw new Error("AGENDA IS CURRENTLY UNAVAILABLE");
     },
 
     async unpublishAgendaItem() {
-      throw new Error("AGENDA REQUIRES THE LOCAL DATABASE");
+      throw new Error("AGENDA IS CURRENTLY UNAVAILABLE");
     },
 
     async deleteAgendaItem() {
-      throw new Error("AGENDA REQUIRES THE LOCAL DATABASE");
+      throw new Error("AGENDA IS CURRENTLY UNAVAILABLE");
     }
   });
 }

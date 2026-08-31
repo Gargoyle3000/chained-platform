@@ -61,7 +61,7 @@ async function initializeLogin() {
 
   if (runtime.mode === FRONTEND_MODES.PROTOTYPE) {
     form.hidden = true;
-    setStatus("SIGN-IN IS AVAILABLE ONLY IN THE LOCAL SUPABASE ENVIRONMENT.");
+    setStatus("SIGN-IN IS CURRENTLY UNAVAILABLE.");
     return;
   }
 

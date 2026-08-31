@@ -320,7 +320,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderDashboardAccountIdentity([], "prototype");
 
       noticeElement.textContent =
-        "PRESENTATIONS REQUIRE THE LOCAL DATABASE";
+        "PRESENTATIONS ARE CURRENTLY UNAVAILABLE";
 
       noticeElement.hidden = false;
 

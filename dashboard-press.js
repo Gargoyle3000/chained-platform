@@ -687,7 +687,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
 
       setNotice(
-        "PRESS REQUIRES THE LOCAL DATABASE"
+        "PRESS IS CURRENTLY UNAVAILABLE"
       );
 
       renderItems([]);

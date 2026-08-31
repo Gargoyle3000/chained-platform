@@ -229,7 +229,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       try {
         setEditorBusy(true);
         const result = await workStore.media.deleteImage(imageId);
-        showFormStatus(result.cleanup_status === "cleanup_pending" ? "IMAGE HIDDEN · CLEANUP PENDING" : "IMAGE REMOVED");
+        showFormStatus(result.cleanup_status === "cleanup_pending" ? "IMAGE HIDDEN · REMOVAL IN PROGRESS" : "IMAGE REMOVED");
         await reloadCurrentWork();
       } catch { showFormStatus("IMAGE COULD NOT BE REMOVED", true); }
       finally { setEditorBusy(false); }
@@ -843,7 +843,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       showFormStatus(
         localSupabaseMode
           ? "WORK IS CURRENTLY UNAVAILABLE"
-          : "WORK STORAGE IS UNAVAILABLE",
+          : "WORK SAVING IS CURRENTLY UNAVAILABLE",
         true
       );
     }
@@ -890,7 +890,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const result = await workStore.media.unpublish(currentWorkId, unpublishAttempt.current());
       unpublishAttempt.reset();
       await reloadCurrentWork();
-      showFormStatus(result.cleanup_status === "cleanup_pending" ? "WORK HIDDEN · PUBLIC CLEANUP PENDING" : "WORK UNPUBLISHED");
+      showFormStatus(result.cleanup_status === "cleanup_pending" ? "WORK HIDDEN · PUBLIC REMOVAL IN PROGRESS" : "WORK UNPUBLISHED");
     } catch { showFormStatus("WORK COULD NOT BE UNPUBLISHED", true); }
     finally { setEditorBusy(false); }
   });

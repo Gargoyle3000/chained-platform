@@ -54,5 +54,31 @@ test("prototype identity and local errors avoid implementation prefixes", async 
   assert.doesNotMatch(login, /LOCAL AUTHENTICATION CONFIGURATION/);
   assert.match(login, /AUTHENTICATION IS UNAVAILABLE/);
   assert.doesNotMatch(workForm, /LOCAL WORK STORAGE/);
-  assert.match(workForm, /WORK STORAGE IS UNAVAILABLE/);
+  assert.match(workForm, /WORK SAVING IS CURRENTLY UNAVAILABLE/);
+});
+
+test("prototype fallback copy stays product-facing", async () => {
+  const sources = await Promise.all([
+    "auth/callback.mjs",
+    "auth/guard.mjs",
+    "auth/login.mjs",
+    "auth/password-update.mjs",
+    "dashboard-agenda.js",
+    "dashboard-cv.js",
+    "dashboard-form.js",
+    "dashboard-presentations.js",
+    "dashboard-press.js",
+    "data/agenda-repository.mjs",
+    "data/cv-repository.mjs",
+    "data/presentation-repository.mjs",
+    "data/press-repository.mjs",
+    "data/settings-repository.mjs"
+  ].map((filename) => readFile(new URL(`../${filename}`, import.meta.url), "utf8")));
+  const copy = sources.join("\n");
+
+  assert.match(copy, /SIGN-IN IS CURRENTLY UNAVAILABLE/);
+  assert.match(copy, /AUTHENTICATION IS CURRENTLY UNAVAILABLE/);
+  assert.match(copy, /PASSWORD SETUP IS CURRENTLY UNAVAILABLE/);
+  assert.doesNotMatch(copy, /REQUIRES THE LOCAL DATABASE/);
+  assert.doesNotMatch(copy, /CLEANUP PENDING/);
 });

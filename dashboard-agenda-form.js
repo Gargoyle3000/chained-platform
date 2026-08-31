@@ -258,7 +258,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     independent.value = "";
     independent.textContent =
-      "NO PRESENTATION / INDEPENDENT AGENDA ITEM";
+      "INDEPENDENT AGENDA ITEM";
 
     activitySelect.replaceChildren(
       independent,
@@ -444,7 +444,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       setFormDisabled(true);
 
       setError(
-        "AGENDA REQUIRES THE LOCAL DATABASE"
+        "AGENDA IS CURRENTLY UNAVAILABLE"
       );
 
       return;

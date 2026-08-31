@@ -148,7 +148,7 @@ async function ensureUpdatedRow({
 function createUnavailableRepository() {
   const unavailable = () => {
     throw new Error(
-      "PRESS MANAGEMENT REQUIRES THE LOCAL DATABASE"
+      "PRESS MANAGEMENT IS CURRENTLY UNAVAILABLE"
     );
   };
 

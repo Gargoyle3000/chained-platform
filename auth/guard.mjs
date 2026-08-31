@@ -92,7 +92,7 @@ async function initializeGuard() {
     runtime = await getFrontendRuntime();
   } catch {
     showAccessUnavailable(
-      "AUTHENTICATION CONFIGURATION IS UNAVAILABLE."
+      "AUTHENTICATION IS CURRENTLY UNAVAILABLE."
     );
     return;
   }

@@ -597,7 +597,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderDashboardAccountIdentity([], "prototype");
 
       setNotice(
-        "CV MANAGEMENT REQUIRES THE LOCAL DATABASE"
+        "CV MANAGEMENT IS CURRENTLY UNAVAILABLE"
       );
 
       renderCategories([]);

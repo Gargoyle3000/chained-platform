@@ -93,19 +93,19 @@ function createUnavailableRepository() {
     listPresentations: async () => [],
     getPresentation: async () => null,
     async createPresentation() {
-      throw new Error("PRESENTATIONS REQUIRE THE LOCAL DATABASE");
+      throw new Error("PRESENTATIONS ARE CURRENTLY UNAVAILABLE");
     },
     async updatePresentation() {
-      throw new Error("PRESENTATIONS REQUIRE THE LOCAL DATABASE");
+      throw new Error("PRESENTATIONS ARE CURRENTLY UNAVAILABLE");
     },
     async publishPresentation() {
-      throw new Error("PRESENTATIONS REQUIRE THE LOCAL DATABASE");
+      throw new Error("PRESENTATIONS ARE CURRENTLY UNAVAILABLE");
     },
     async unpublishPresentation() {
-      throw new Error("PRESENTATIONS REQUIRE THE LOCAL DATABASE");
+      throw new Error("PRESENTATIONS ARE CURRENTLY UNAVAILABLE");
     },
     async deletePresentation() {
-      throw new Error("PRESENTATIONS REQUIRE THE LOCAL DATABASE");
+      throw new Error("PRESENTATIONS ARE CURRENTLY UNAVAILABLE");
     }
   });
 }

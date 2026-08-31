@@ -49,13 +49,13 @@ async function initializePasswordUpdate() {
     runtime = await getFrontendRuntime();
   } catch {
     cleanLocation();
-    setStatus("AUTHENTICATION CONFIGURATION IS UNAVAILABLE.");
+    setStatus("AUTHENTICATION IS CURRENTLY UNAVAILABLE.");
     return;
   }
 
   if (runtime.mode === FRONTEND_MODES.PROTOTYPE) {
     cleanLocation();
-    setStatus("PASSWORD SETUP IS UNAVAILABLE IN THIS ENVIRONMENT.");
+    setStatus("PASSWORD SETUP IS CURRENTLY UNAVAILABLE.");
     return;
   }
 

@@ -429,7 +429,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderDashboardAccountIdentity([], "prototype");
       setFormDisabled(true);
       setError(
-        "PRESENTATIONS REQUIRE THE LOCAL DATABASE"
+        "PRESENTATIONS ARE CURRENTLY UNAVAILABLE"
       );
       return;
     }

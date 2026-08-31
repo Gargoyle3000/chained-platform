@@ -379,7 +379,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderDashboardAccountIdentity([], "prototype");
 
       noticeElement.textContent =
-        "AGENDA REQUIRES THE LOCAL DATABASE";
+        "AGENDA IS CURRENTLY UNAVAILABLE";
 
       noticeElement.hidden = false;
 

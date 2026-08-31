@@ -167,7 +167,7 @@ function manualEntryToDatabase(record) {
 
 function createUnavailableRepository() {
   const unavailable = () => {
-    throw new Error("CV MANAGEMENT REQUIRES THE LOCAL DATABASE");
+    throw new Error("CV MANAGEMENT IS CURRENTLY UNAVAILABLE");
   };
 
   return Object.freeze({

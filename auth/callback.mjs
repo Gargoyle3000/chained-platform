@@ -40,7 +40,7 @@ async function initializeCallback() {
     runtime = await getFrontendRuntime();
   } catch {
     cleanCallbackLocation();
-    setState("ACCESS UNAVAILABLE", "AUTHENTICATION CONFIGURATION IS UNAVAILABLE.");
+    setState("ACCESS UNAVAILABLE", "AUTHENTICATION IS CURRENTLY UNAVAILABLE.");
     return;
   }
 
@@ -98,4 +98,3 @@ async function initializeCallback() {
 }
 
 initializeCallback();
-

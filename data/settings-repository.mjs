@@ -78,7 +78,7 @@ function createPrototypeRepository() {
 
     async updateProfileSettings() {
       throw new Error(
-        "SETTINGS REQUIRE THE LOCAL DATABASE"
+        "SETTINGS ARE CURRENTLY UNAVAILABLE"
       );
     }
   });
