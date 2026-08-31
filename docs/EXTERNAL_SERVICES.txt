@@ -115,6 +115,23 @@ job per request. Cost depends on the configured region, resource size, request
 time, storage, and data transfer; no price is committed here.
 
 
+GOOGLE CLOUD SCHEDULER
+STATUS: ACTIVE
+
+PURPOSE:
+Cloud Scheduler wakes the private public-image worker once per minute so
+eligible derivative jobs are processed without browser-held worker credentials.
+
+DATA / ACCESS:
+The europe-west3 Scheduler job sends an OIDC-authenticated POST to the private
+Cloud Run worker. Its dedicated identity has only Run Invoker access on that
+service; it has no service-account private key or Supabase credentials.
+
+WHY CHAINED USES IT:
+It provides a low-cost, retry-safe wake-up mechanism while the durable
+Supabase derivative lifecycle remains authoritative for claiming and backoff.
+
+
 SERVICES NOT CURRENTLY LISTED
 
 The repository does not identify Porkbun or another domain registrar, so no

@@ -124,3 +124,22 @@ test("active, stale, and untrusted jobs mint no capabilities", async () => {
     assert.equal(response.status, 409); assert.equal(signed, false);
   }
 });
+
+test("claim_next uses only the unique service wrapper and returns 204 when empty", async () => {
+  const deps = dependencies({ async rpc(name: string, body: Record<string, unknown>) { assert.equal(name, "service_claim_next_work_image_derivative_job"); assert.deepEqual(body, {}); return { status: "empty" }; } });
+  const response = await handleWorkerImageBroker(request({ operation: "claim_next" }), deps as never);
+  assert.equal(response.status, 204);
+});
+
+test("claim_next reuses exact context and signing behavior for the one claimed job", async () => {
+  const deps = dependencies({ async rpc(name: string, body: Record<string, unknown>) {
+    deps.calls.push({ name, body });
+    if (name === "service_claim_next_work_image_derivative_job") return { status: "processing", job_id: JOB, lease_token: LEASE, lease_expires_at: "2026-08-28T12:00:00.000Z" };
+    return { source_private_object_path: "owner/work/image/original.jpg", source_mime_type: "image/jpeg", pixel_width: 4912, pixel_height: 7360, small_staging_object_path: "owner/work/image/public-derivatives/small.webp", large_staging_object_path: "owner/work/image/public-derivatives/large.webp" };
+  } });
+  const response = await handleWorkerImageBroker(request({ operation: "claim_next" }), deps as never);
+  assert.equal(response.status, 200);
+  const body = await response.json() as { job_id: string };
+  assert.equal(body.job_id, JOB);
+  assert.deepEqual(deps.calls.map((call) => call.name), ["service_claim_next_work_image_derivative_job", "service_get_work_image_derivative_claim_context"]);
+});

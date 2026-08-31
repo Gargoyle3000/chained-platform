@@ -12,6 +12,8 @@ const EXPECTED = Object.freeze({
   cloudService: "chained-image-worker",
 });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const DISPATCH_TIMEOUT_MS = 6 * 60 * 1000;
+const DISPATCH_POLL_MS = 5 * 1000;
 const localEnvFile = new URL("./.local/production-cloud-run-smoke.env", import.meta.url);
 
 function loadLocalSmokeEnvironment() {
@@ -163,6 +165,23 @@ function exactRows(table, id) {
   return productionSql(`select id from public.${table} where id = '${id}'::uuid`, `verify_${table}`);
 }
 
+const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+function readDerivativeState(jobId) {
+  const jobs = productionSql(`select id, state, attempt_count, lease_token is null as lease_cleared, completed_at is not null as completed from private.work_image_derivative_jobs where id = '${jobId}'::uuid`, "read_derivative_job");
+  const derivatives = productionSql(`select rendition_key, state, mime_type, file_size, pixel_width, pixel_height, checksum_sha256, staging_object_path from private.work_image_derivatives where work_image_id = (select work_image_id from private.work_image_derivative_jobs where id = '${jobId}'::uuid) order by rendition_key`, "read_derivatives");
+  return { job: jobs[0], derivatives };
+}
+async function waitForAutomaticDerivativeReady(jobId) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < DISPATCH_TIMEOUT_MS) {
+    const state = readDerivativeState(jobId);
+    if (state.job?.state === "ready") return { ...state, latencyMs: Date.now() - startedAt };
+    if (state.job?.state === "failed") fail("automatic_dispatch:terminal_failure");
+    await sleep(DISPATCH_POLL_MS);
+  }
+  fail("automatic_dispatch:timeout");
+}
+
 async function cleanup(config, state, userToken) {
   const diagnostics = [];
   const attempt = async (code, action) => { try { await action(); } catch (error) { diagnostics.push(`${code}:${sanitize(error)}`); } };
@@ -241,30 +260,20 @@ try {
   const pending = productionSql(`select public.service_enqueue_work_image_derivatives('${state.imageId}'::uuid, '${state.accountId}'::uuid) as result`, "read_pending_derivative_job")[0]?.result;
   if (!UUID.test(pending?.job_id || "") || pending.status !== "pending") fail("pending_derivative_job:verification_failed");
   state.derivativeJobId = pending.job_id;
-  const health = await fetch(`${config.proxy}/health`);
-  if (!health.ok || (await health.json())?.ok !== true) fail("cloud_run_health_failed");
-  const processed = await request(`${config.proxy}/process-job`, { method: "POST", body: { job_id: state.derivativeJobId } });
-  const processResult = requireOk(processed, "cloud_run_process_job");
-  if (processResult?.job_id !== state.derivativeJobId || processResult?.state !== "ready") fail("cloud_run_process_job:invalid_response");
-  const ready = productionSql(`select public.service_enqueue_work_image_derivatives('${state.imageId}'::uuid, '${state.accountId}'::uuid) as result`, "read_ready_derivative_job")[0]?.result;
-  if (ready?.job_id !== state.derivativeJobId || ready?.status !== "ready" || ready?.idempotent !== true) fail("ready_derivative_job:verification_failed");
-  const stagingPaths = [
-    state.privateObjectPath.replace(/\/original\.[^/]+$/, "/public-derivatives/small.webp"),
-    state.privateObjectPath.replace(/\/original\.[^/]+$/, "/public-derivatives/large.webp"),
-  ];
+  const automatic = await waitForAutomaticDerivativeReady(state.derivativeJobId);
+  if (automatic.job?.attempt_count !== 1 || automatic.job?.completed !== true || automatic.job?.lease_cleared !== true || automatic.derivatives.length !== 2) fail("automatic_dispatch:job_verification_failed");
+  const smallRow = automatic.derivatives.find((row) => row.rendition_key === "small");
+  const largeRow = automatic.derivatives.find((row) => row.rendition_key === "large");
+  for (const row of [smallRow, largeRow]) if (row?.state !== "ready" || row.mime_type !== "image/webp" || Number(row.file_size) <= 0 || Number(row.pixel_width) !== 96 || Number(row.pixel_height) !== 64 || !/^[0-9a-f]{64}$/.test(String(row.checksum_sha256 ?? ""))) fail("automatic_dispatch:derivative_verification_failed");
+  const stagingPaths = [smallRow.staging_object_path, largeRow.staging_object_path];
   const [small, large] = await Promise.all(stagingPaths.map((path) => storageObject(config, "work-derivative-staging", path)));
   for (const output of [small, large]) if (output.mimeType !== "image/webp" || output.bytes.byteLength <= 0) fail("staging_output:verification_failed");
-  const beforeReplay = [small.hash, large.hash, small.bytes.byteLength, large.bytes.byteLength];
-  const replay = await request(`${config.proxy}/process-job`, { method: "POST", body: { job_id: state.derivativeJobId } });
-  if (replay.response.ok || replay.response.status !== 502) fail("ready_job_replay:verification_failed");
-  const [smallReplay, largeReplay] = await Promise.all(stagingPaths.map((path) => storageObject(config, "work-derivative-staging", path)));
-  if (JSON.stringify(beforeReplay) !== JSON.stringify([smallReplay.hash, largeReplay.hash, smallReplay.bytes.byteLength, largeReplay.bytes.byteLength])) fail("ready_job_replay:output_changed");
   await cleanup(config, state, sessionToken);
   const [accountRows, profileRows, workRows, imageRowsAfter] = [exactRows("accounts", state.accountId), exactRows("public_profiles", state.profileId), exactRows("works", state.workId), exactRows("work_images", state.imageId)];
   if (accountRows.length || profileRows.length || workRows.length || imageRowsAfter.length) fail("cleanup:public_rows_remain");
   const authAfter = await admin(config, `/auth/v1/admin/users/${encodeURIComponent(state.accountId)}`);
   if (authAfter.response.status !== 404) fail("cleanup:auth_user_remains");
-  process.stdout.write(JSON.stringify({ ok: true, runId: state.runId, fixture: { accountId: state.accountId, profileId: state.profileId, workId: state.workId, imageId: state.imageId, derivativeJobId: state.derivativeJobId }, outputs: { small: { bytes: small.bytes.byteLength, sha256: small.hash }, large: { bytes: large.bytes.byteLength, sha256: large.hash } }, cleanup: "complete" }));
+  process.stdout.write(`${JSON.stringify({ ok: true, dispatch: "automatic", latency_ms: automatic.latencyMs, runId: state.runId, fixture: { accountId: state.accountId, profileId: state.profileId, workId: state.workId, imageId: state.imageId, derivativeJobId: state.derivativeJobId }, outputs: { small: { bytes: small.bytes.byteLength, sha256: small.hash }, large: { bytes: large.bytes.byteLength, sha256: large.hash } }, cleanup: "complete" })}\n`);
 } catch (error) {
   primaryError = error;
   let cleanupError = null;
@@ -272,6 +281,6 @@ try {
     try { await cleanup(config, state, sessionToken); } catch (value) { cleanupError = value; }
   }
   process.stderr.write(`Production Cloud Run smoke failed: ${sanitize(primaryError)}${cleanupError ? `; cleanup: ${sanitize(cleanupError)}` : ""}.`);
-  process.stdout.write(JSON.stringify({ ok: false, runId: state.runId, fixture: { accountId: state.accountId, profileId: state.profileId, workId: state.workId, imageId: state.imageId, derivativeJobId: state.derivativeJobId } }));
+  process.stdout.write(`${JSON.stringify({ ok: false, runId: state.runId, fixture: { accountId: state.accountId, profileId: state.profileId, workId: state.workId, imageId: state.imageId, derivativeJobId: state.derivativeJobId } })}\n`);
   process.exitCode = 1;
 }

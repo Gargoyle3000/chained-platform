@@ -61,12 +61,34 @@ async function verifyOutput(object: { bytes: Uint8Array; mimeType: string }, exp
   const digest = await crypto.subtle.digest("SHA-256", ownedBytes.buffer); return { bytes: object.bytes.byteLength, ...dimensions, checksum: [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("") };
 }
 
+async function prepareClaim(claim: Record<string, unknown>, dependencies: WorkerBrokerDependencies): Promise<Response> {
+  if (claim.status !== "processing") throw new MediaError(409, "job_unavailable");
+  const jobId = requireUuid(claim.job_id, "claimed_job_id");
+  const leaseToken = requireUuid(claim.lease_token, "lease_token");
+  const leaseExpiresAt = text(claim, "lease_expires_at");
+  const context = asRecord(await dependencies.rpc("service_get_work_image_derivative_claim_context", { target_job_id: jobId, expected_lease_token: leaseToken }));
+  const sourcePath = text(context, "source_private_object_path");
+  const smallPath = text(context, "small_staging_object_path");
+  const largePath = text(context, "large_staging_object_path");
+  const [downloadUrl, small, large] = await Promise.all([
+    dependencies.signSource(sourcePath, WORKER_SOURCE_TTL_SECONDS), dependencies.signUpload(smallPath), dependencies.signUpload(largePath),
+  ]);
+  return jsonResponse(200, { job_id: jobId, lease_token: leaseToken, lease_expires_at: leaseExpiresAt,
+    source: { download_url: downloadUrl, mime_type: text(context, "source_mime_type"), pixel_width: positive(context, "pixel_width"), pixel_height: positive(context, "pixel_height") },
+    outputs: { small: { upload_url: small.url, token: small.token, path: smallPath }, large: { upload_url: large.url, token: large.token, path: largePath } } });
+}
+
 export async function handleWorkerImageBroker(request: Request, dependencies: WorkerBrokerDependencies): Promise<Response> {
   try {
     requirePost(request);
     requireWorker(request, dependencies.workerToken);
     const body = await parseStrictJson(request, ["operation", "job_id", "lease_token", "outputs", "failure_code", "retryable"]);
-    if (body.operation !== "claim" && body.operation !== "complete" && body.operation !== "fail") throw new MediaError(400, "invalid_operation");
+    if (body.operation !== "claim" && body.operation !== "claim_next" && body.operation !== "complete" && body.operation !== "fail") throw new MediaError(400, "invalid_operation");
+    if (body.operation === "claim_next") {
+      const claim = asRecord(await dependencies.rpc("service_claim_next_work_image_derivative_job", {}));
+      if (claim.status === "empty" || claim.status === "obsolete" || claim.status === "failed") return new Response(null, { status: 204 });
+      return await prepareClaim(claim, dependencies);
+    }
     const jobId = requireUuid(body.job_id, "job_id");
     if (body.operation === "fail") {
       const leaseToken = requireUuid(body.lease_token, "lease_token");
@@ -88,17 +110,6 @@ export async function handleWorkerImageBroker(request: Request, dependencies: Wo
     const claim = asRecord(await dependencies.rpc("service_claim_work_image_derivative_job", { target_job_id: jobId }));
     if (claim.status !== "processing") throw new MediaError(409, "job_unavailable");
     if (requireUuid(claim.job_id, "claimed_job_id") !== jobId) throw new MediaError(502, "broker_context_invalid");
-    const leaseToken = requireUuid(claim.lease_token, "lease_token");
-    const leaseExpiresAt = text(claim, "lease_expires_at");
-    const context = asRecord(await dependencies.rpc("service_get_work_image_derivative_claim_context", { target_job_id: jobId, expected_lease_token: leaseToken }));
-    const sourcePath = text(context, "source_private_object_path");
-    const smallPath = text(context, "small_staging_object_path");
-    const largePath = text(context, "large_staging_object_path");
-    const [downloadUrl, small, large] = await Promise.all([
-      dependencies.signSource(sourcePath, WORKER_SOURCE_TTL_SECONDS), dependencies.signUpload(smallPath), dependencies.signUpload(largePath),
-    ]);
-    return jsonResponse(200, { job_id: jobId, lease_token: leaseToken, lease_expires_at: leaseExpiresAt,
-      source: { download_url: downloadUrl, mime_type: text(context, "source_mime_type"), pixel_width: positive(context, "pixel_width"), pixel_height: positive(context, "pixel_height") },
-      outputs: { small: { upload_url: small.url, token: small.token, path: smallPath }, large: { upload_url: large.url, token: large.token, path: largePath } } });
+    return await prepareClaim(claim, dependencies);
   } catch (error) { return errorResponse(error); }
 }
