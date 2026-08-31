@@ -150,6 +150,10 @@ export function createRgbJpegFile() {
   return file;
 }
 
+export function createTestWebpFile() {
+  return new Blob([PRIVATE_PREVIEW_WEBP], { type: "image/webp" });
+}
+
 function sanitizeDiagnostic(error) {
   const message = error instanceof Error ? error.message : String(error || "unknown_error");
   return message
@@ -473,6 +477,7 @@ export async function createLocalWorkIntegrationFixture({ onStage = () => {} } =
       ownerRepository: createSupabaseWorkRepository(ownerClient, { supabaseUrl: status.api, supabaseKey: status.publishable }, { createPreview: createPrivatePreview }),
       delegateRepository: createSupabaseWorkRepository(delegateClient, { supabaseUrl: status.api, supabaseKey: status.publishable }),
       createRgbJpegFile,
+      createTestWebpFile,
       runSql: sql,
       cleanup: () => cleanupFixture(resources)
     };

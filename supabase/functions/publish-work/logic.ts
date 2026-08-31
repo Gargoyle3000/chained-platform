@@ -5,7 +5,7 @@ import {
   jsonResponse,
   MediaError,
   optionalUuid,
-  ORIGINAL_BUCKET,
+  DERIVATIVE_STAGING_BUCKET,
   parseStrictJson,
   PUBLIC_BUCKET,
   requirePost,
@@ -31,7 +31,7 @@ export async function handlePublishWork(
     const caller = await dependencies.authorize(request, "work", workId);
     actorAccountId = caller.accountId;
 
-    const claim = asRecord(await dependencies.rpc("service_claim_work_publication", {
+    const claim = asRecord(await dependencies.rpc("service_claim_work_derivative_publication", {
       target_work_id: workId,
       actor_account_id: caller.accountId,
       idempotency_key: idempotencyKey,
@@ -50,7 +50,7 @@ export async function handlePublishWork(
         .map((image) => String(image.public_object_path ?? ""))
         .filter(Boolean);
       const cleanupComplete = await dependencies.remove(PUBLIC_BUCKET, cleanupPaths);
-      await dependencies.rpc("service_fail_work_publication", {
+      await dependencies.rpc("service_fail_work_derivative_publication", {
         target_operation_id: operationId,
         actor_account_id: caller.accountId,
         failure_code: "copy_failed",
@@ -62,23 +62,26 @@ export async function handlePublishWork(
 
     for (const image of operationImages) {
       const imageId = requireUuid(image.work_image_id, "work_image_id");
-      const privatePath = String(image.private_object_path ?? "");
+      const stagingPath = String(image.staging_object_path ?? "");
       const publicPath = String(image.public_object_path ?? "");
       const mimeType = String(image.mime_type ?? "");
       const fileSize = Number(image.file_size);
+      const renditionKey = String(image.rendition_key ?? "");
 
       if (image.copy_status === "created") {
         createdPaths.push(publicPath);
         continue;
       }
 
-      const object = await dependencies.download(ORIGINAL_BUCKET, privatePath);
-      validateStoredObject(object, mimeType, fileSize, privatePath);
+      if (renditionKey !== "small" && renditionKey !== "large") throw new MediaError(422, "publication_not_ready");
+      const object = await dependencies.download(DERIVATIVE_STAGING_BUCKET, stagingPath);
+      validateStoredObject(object, mimeType, fileSize, stagingPath);
       await dependencies.upload(PUBLIC_BUCKET, publicPath, object);
       createdPaths.push(publicPath);
-      await dependencies.rpc("service_record_publication_copy", {
+      await dependencies.rpc("service_record_publication_derivative_copy", {
         target_operation_id: operationId,
         target_image_id: imageId,
+        target_rendition: renditionKey,
         actor_account_id: caller.accountId,
       });
     }
@@ -98,7 +101,7 @@ export async function handlePublishWork(
             .map((image) => String(image.public_object_path ?? "")),
         ].filter(Boolean);
         const cleanupComplete = await dependencies.remove(PUBLIC_BUCKET, cleanupPaths);
-        await dependencies.rpc("service_fail_work_publication", {
+        await dependencies.rpc("service_fail_work_derivative_publication", {
           target_operation_id: operationId,
           actor_account_id: actorAccountId,
           failure_code: error instanceof MediaError ? error.code : "publication_failed",

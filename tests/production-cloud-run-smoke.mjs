@@ -1,9 +1,9 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import sharp from "../services/public-image-processor/node_modules/sharp/lib/index.js";
 
 import { createSupabaseWorkRepository } from "../data/supabase-work-repository.mjs";
-import { createRgbJpegFile } from "./local-work-integration-fixture.mjs";
 
 const EXPECTED = Object.freeze({
   projectRef: "jjtobvxjmbnybbxlvnxs",
@@ -15,6 +15,16 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const DISPATCH_TIMEOUT_MS = 6 * 60 * 1000;
 const DISPATCH_POLL_MS = 5 * 1000;
 const localEnvFile = new URL("./.local/production-cloud-run-smoke.env", import.meta.url);
+const FIXTURE_WIDTH = 1600;
+const FIXTURE_HEIGHT = 1000;
+
+async function createProductionRgbPngFile() {
+  const file = new Blob([await sharp({
+    create: { width: FIXTURE_WIDTH, height: FIXTURE_HEIGHT, channels: 4, background: { r: 40, g: 100, b: 200, alpha: 0.5 } },
+  }).png().toBuffer()], { type: "image/png" });
+  Object.defineProperty(file, "name", { value: "production-derivative-smoke.png" });
+  return file;
+}
 
 function loadLocalSmokeEnvironment() {
   if (!existsSync(localEnvFile)) return;
@@ -161,6 +171,14 @@ async function storageObject(config, bucket, path) {
   const bytes = new Uint8Array(await response.arrayBuffer());
   return { bytes, mimeType: (response.headers.get("content-type") || "").split(";", 1)[0], hash: createHash("sha256").update(bytes).digest("hex") };
 }
+async function storageObjectIsAbsent(config, bucket, path) {
+  const response = await fetch(`${config.api}/storage/v1/object/authenticated/${encodeURIComponent(bucket)}/${encodePath(path)}`, { headers: serviceHeaders(config) });
+  return response.status === 404;
+}
+async function publicStorageObjectIsAbsent(config, path) {
+  const response = await fetch(`${config.api}/storage/v1/object/public/work-public/${encodePath(path)}`, { headers: { apikey: config.publishable } });
+  return response.status === 400 || response.status === 404;
+}
 function exactRows(table, id) {
   return productionSql(`select id from public.${table} where id = '${id}'::uuid`, `verify_${table}`);
 }
@@ -190,11 +208,12 @@ async function cleanup(config, state, userToken) {
     state.privateObjectPath.replace(/\/original\.[^/]+$/, "/public-derivatives/small.webp"),
     state.privateObjectPath.replace(/\/original\.[^/]+$/, "/public-derivatives/large.webp"),
   ] : [];
+  await attempt("storage_public", () => removeStorage(config, "work-public", state.publicObjectPaths));
   await attempt("storage_staging", () => removeStorage(config, "work-derivative-staging", staging));
-  if (state.imageId && userToken) await attempt("delete_image", async () => {
-    const result = await request(`${config.api}/functions/v1/delete-work-image`, { method: "POST", headers: userHeaders(config, userToken), body: { work_image_id: state.imageId } });
-    if (!result.response.ok) requireOk(result, "delete_image");
-  });
+  if (state.imageId) await attempt("delete_publication_operation_images", async () => { productionSql(`delete from public.work_publication_operation_images where work_image_id='${state.imageId}'::uuid`, "delete_publication_operation_images"); });
+  if (state.imageId) await attempt("delete_publication_derivatives", async () => { productionSql(`delete from public.work_publication_derivatives where work_image_id='${state.imageId}'::uuid`, "delete_publication_derivatives"); });
+  if (state.imageId) await attempt("delete_work_images", async () => { productionSql(`delete from public.work_images where id='${state.imageId}'::uuid`, "delete_work_images"); });
+  if (state.workId) await attempt("delete_publication_operations", async () => { productionSql(`delete from public.work_publication_operations where work_id='${state.workId}'::uuid`, "delete_publication_operations"); });
   await attempt("storage_originals", () => removeStorage(config, "work-originals", original));
   for (const [code, table, id] of [
     ["work_images", "work_images", state.imageId], ["works", "works", state.workId], ["profile_members", "profile_members", state.profileMemberId],
@@ -207,7 +226,11 @@ async function cleanup(config, state, userToken) {
   if (diagnostics.length) throw new Error(`production_smoke_cleanup_failed:${diagnostics.join(";")}`);
 }
 
-const state = { runId: null, accountId: null, profileId: null, profileMemberId: null, memberRoleId: null, artistRoleId: null, workId: null, imageId: null, derivativeJobId: null, privateObjectPath: null, previewObjectPath: null };
+function publicationRows(workId, imageId) {
+  return productionSql(`select work.publication_revision::text as revision, image.public_object_path as small_path, derivative.rendition_key, derivative.public_object_path, derivative.mime_type, derivative.file_size, derivative.pixel_width, derivative.pixel_height, source.source_private_object_path, source.checksum_sha256 from public.works work join public.work_images image on image.work_id=work.id join public.work_publication_derivatives derivative on derivative.work_image_id=image.id and derivative.publication_revision=work.publication_revision join private.work_image_derivatives source on source.id=derivative.source_derivative_id where work.id='${workId}'::uuid and image.id='${imageId}'::uuid order by derivative.rendition_key`, "read_publication_derivatives");
+}
+
+const state = { runId: null, accountId: null, profileId: null, profileMemberId: null, memberRoleId: null, artistRoleId: null, workId: null, imageId: null, derivativeJobId: null, privateObjectPath: null, previewObjectPath: null, publicObjectPaths: [] };
 let config;
 let sessionToken = null;
 let primaryError = null;
@@ -237,9 +260,9 @@ try {
   sessionToken = session.access_token;
   const client = productionClient(config, sessionToken);
   const repository = createSupabaseWorkRepository(client, { supabaseUrl: config.api, supabaseKey: config.publishable }, { createPreview: () => new Blob([Buffer.from("UklGRiIAAABXRUJQVlA4IBYAAADQAQCdASoBAAEAAUAmJaQAA3AA/vuUAAA=", "base64")], { type: "image/webp" }) });
-  const work = await repository.createWork({ title: "CHAINED PRODUCTION DERIVATIVE SMOKE", year: "2026", workType: "single-work", format: "digital", materials: "RGB JPEG TEST FIXTURE", height: "64", width: "96", depth: "", dimensionUnit: "cm", duration: "", edition: "", description: "Unpublished production infrastructure smoke fixture.", collaboratorName: "", collaboratorUrl: "", photoCreditName: "", photoCreditUrl: "" }, state.profileId);
+  const work = await repository.createWork({ title: "CHAINED PRODUCTION DERIVATIVE SMOKE", year: "2026", workType: "single-work", format: "digital", materials: "RGB PNG TEST FIXTURE", height: "100", width: "160", depth: "", dimensionUnit: "cm", duration: "", edition: "", description: "Unpublished production Phase 4 smoke fixture.", collaboratorName: "", collaboratorUrl: "", photoCreditName: "", photoCreditUrl: "" }, state.profileId);
   state.workId = work.id;
-  await repository.media.upload(state.workId, createRgbJpegFile(), true, () => {});
+  await repository.media.upload(state.workId, await createProductionRgbPngFile(), true, () => {});
   const image = (await repository.getWork(state.workId))?.images?.[0];
   if (!image?.id || image.uploadStatus !== "ready") fail("finalize_image:not_ready");
   state.imageId = image.id;
@@ -249,8 +272,8 @@ try {
     ["work", imageRow?.work_id === state.workId],
     ["status", imageRow?.upload_status === "ready"],
     ["verified", Boolean(imageRow?.original_verified_at)],
-    ["width", Number(imageRow?.pixel_width) === 96],
-    ["height", Number(imageRow?.pixel_height) === 64],
+    ["width", Number(imageRow?.pixel_width) === FIXTURE_WIDTH],
+    ["height", Number(imageRow?.pixel_height) === FIXTURE_HEIGHT],
     ["original_path", typeof imageRow?.private_object_path === "string"],
     ["preview_path", typeof imageRow?.preview_object_path === "string"],
   ].filter(([, valid]) => !valid).map(([field]) => field);
@@ -264,16 +287,53 @@ try {
   if (automatic.job?.attempt_count !== 1 || automatic.job?.completed !== true || automatic.job?.lease_cleared !== true || automatic.derivatives.length !== 2) fail("automatic_dispatch:job_verification_failed");
   const smallRow = automatic.derivatives.find((row) => row.rendition_key === "small");
   const largeRow = automatic.derivatives.find((row) => row.rendition_key === "large");
-  for (const row of [smallRow, largeRow]) if (row?.state !== "ready" || row.mime_type !== "image/webp" || Number(row.file_size) <= 0 || Number(row.pixel_width) !== 96 || Number(row.pixel_height) !== 64 || !/^[0-9a-f]{64}$/.test(String(row.checksum_sha256 ?? ""))) fail("automatic_dispatch:derivative_verification_failed");
+  if (smallRow?.state !== "ready" || smallRow.mime_type !== "image/webp" || Number(smallRow.file_size) <= 0 || Number(smallRow.pixel_width) !== 960 || Number(smallRow.pixel_height) !== 600 || !/^[0-9a-f]{64}$/.test(String(smallRow.checksum_sha256 ?? ""))) fail("automatic_dispatch:small_verification_failed");
+  if (largeRow?.state !== "ready" || largeRow.mime_type !== "image/webp" || Number(largeRow.file_size) <= 0 || Number(largeRow.pixel_width) !== FIXTURE_WIDTH || Number(largeRow.pixel_height) !== FIXTURE_HEIGHT || !/^[0-9a-f]{64}$/.test(String(largeRow.checksum_sha256 ?? ""))) fail("automatic_dispatch:large_verification_failed");
   const stagingPaths = [smallRow.staging_object_path, largeRow.staging_object_path];
   const [small, large] = await Promise.all(stagingPaths.map((path) => storageObject(config, "work-derivative-staging", path)));
   for (const output of [small, large]) if (output.mimeType !== "image/webp" || output.bytes.byteLength <= 0) fail("staging_output:verification_failed");
+  const original = await storageObject(config, "work-originals", state.privateObjectPath);
+  if (original.bytes.byteLength <= small.bytes.byteLength || small.bytes.byteLength <= 0 || large.bytes.byteLength <= small.bytes.byteLength) fail("fixture_byte_sizes:not_meaningful");
+
+  const publishA = await repository.media.publish(state.workId, randomUUID());
+  if (publishA?.status !== "published") fail("publish_revision_a:not_published");
+  const revisionA = publicationRows(state.workId, state.imageId);
+  if (revisionA.length !== 2 || new Set(revisionA.map((row) => row.revision)).size !== 1 || !revisionA.every((row) => row.source_private_object_path === state.privateObjectPath && row.mime_type === "image/webp" && Number(row.file_size) > 0)) fail("publish_revision_a:database_verification_failed");
+  const revisionAId = revisionA[0].revision;
+  const smallA = revisionA.find((row) => row.rendition_key === "small");
+  const largeA = revisionA.find((row) => row.rendition_key === "large");
+  if (!smallA || !largeA || smallA.small_path !== smallA.public_object_path || !smallA.public_object_path.endsWith(`/${state.imageId}/small.webp`) || !largeA.public_object_path.endsWith(`/${state.imageId}/large.webp`)) fail("publish_revision_a:path_verification_failed");
+  state.publicObjectPaths.push(smallA.public_object_path, largeA.public_object_path);
+  const [publicSmallA, publicLargeA] = await Promise.all([storageObject(config, "work-public", smallA.public_object_path), storageObject(config, "work-public", largeA.public_object_path)]);
+  if (publicSmallA.mimeType !== "image/webp" || publicLargeA.mimeType !== "image/webp" || publicSmallA.hash !== small.hash || publicLargeA.hash !== large.hash) fail("publish_revision_a:storage_verification_failed");
+  if ((await publicStorageObjectIsAbsent(config, state.privateObjectPath)) !== true) fail("publish_revision_a:public_original_exposed");
+  await storageObject(config, "work-originals", state.previewObjectPath);
+
+  const unpublishA = await repository.media.unpublish(state.workId, randomUUID());
+  if (unpublishA?.status !== "draft" || !(await publicStorageObjectIsAbsent(config, smallA.public_object_path)) || !(await publicStorageObjectIsAbsent(config, largeA.public_object_path))) fail("unpublish_revision_a:cleanup_failed");
+  if (productionSql(`select visibility::text from public.works where id='${state.workId}'::uuid`, "read_unpublished_work")[0]?.visibility !== "draft" || publicationRows(state.workId, state.imageId).length !== 0) fail("unpublish_revision_a:database_cleanup_failed");
+  await storageObject(config, "work-originals", state.privateObjectPath);
+  await storageObject(config, "work-originals", state.previewObjectPath);
+
+  const publishB = await repository.media.publish(state.workId, randomUUID());
+  if (publishB?.status !== "published") fail("publish_revision_b:not_published");
+  const revisionB = publicationRows(state.workId, state.imageId);
+  const revisionBId = revisionB[0]?.revision;
+  const smallB = revisionB.find((row) => row.rendition_key === "small");
+  const largeB = revisionB.find((row) => row.rendition_key === "large");
+  if (revisionB.length !== 2 || !revisionBId || revisionBId === revisionAId || !smallB || !largeB || smallB.small_path !== smallB.public_object_path || smallB.public_object_path === smallA.public_object_path || largeB.public_object_path === largeA.public_object_path) fail("publish_revision_b:revision_verification_failed");
+  state.publicObjectPaths.push(smallB.public_object_path, largeB.public_object_path);
+  const [publicSmallB, publicLargeB] = await Promise.all([storageObject(config, "work-public", smallB.public_object_path), storageObject(config, "work-public", largeB.public_object_path)]);
+  if (publicSmallB.mimeType !== "image/webp" || publicLargeB.mimeType !== "image/webp" || publicSmallB.hash !== small.hash || publicLargeB.hash !== large.hash) fail("publish_revision_b:storage_verification_failed");
+
+  const unpublishB = await repository.media.unpublish(state.workId, randomUUID());
+  if (unpublishB?.status !== "draft" || !(await publicStorageObjectIsAbsent(config, smallB.public_object_path)) || !(await publicStorageObjectIsAbsent(config, largeB.public_object_path))) fail("unpublish_revision_b:cleanup_failed");
   await cleanup(config, state, sessionToken);
-  const [accountRows, profileRows, workRows, imageRowsAfter] = [exactRows("accounts", state.accountId), exactRows("public_profiles", state.profileId), exactRows("works", state.workId), exactRows("work_images", state.imageId)];
-  if (accountRows.length || profileRows.length || workRows.length || imageRowsAfter.length) fail("cleanup:public_rows_remain");
+  const [accountRows, profileRows, workRows, imageRowsAfter, operationRows, publicationDerivativeRows, derivativeJobRows, derivativeRows] = [exactRows("accounts", state.accountId), exactRows("public_profiles", state.profileId), exactRows("works", state.workId), exactRows("work_images", state.imageId), productionSql(`select id from public.work_publication_operations where work_id='${state.workId}'::uuid`, "verify_publication_operations"), productionSql(`select work_image_id from public.work_publication_derivatives where work_image_id='${state.imageId}'::uuid`, "verify_publication_derivatives"), productionSql(`select id from private.work_image_derivative_jobs where work_image_id='${state.imageId}'::uuid`, "verify_derivative_jobs"), productionSql(`select id from private.work_image_derivatives where work_image_id='${state.imageId}'::uuid`, "verify_derivatives")];
+  if (accountRows.length || profileRows.length || workRows.length || imageRowsAfter.length || operationRows.length || publicationDerivativeRows.length || derivativeJobRows.length || derivativeRows.length) fail("cleanup:database_rows_remain");
   const authAfter = await admin(config, `/auth/v1/admin/users/${encodeURIComponent(state.accountId)}`);
   if (authAfter.response.status !== 404) fail("cleanup:auth_user_remains");
-  process.stdout.write(`${JSON.stringify({ ok: true, dispatch: "automatic", latency_ms: automatic.latencyMs, runId: state.runId, fixture: { accountId: state.accountId, profileId: state.profileId, workId: state.workId, imageId: state.imageId, derivativeJobId: state.derivativeJobId }, outputs: { small: { bytes: small.bytes.byteLength, sha256: small.hash }, large: { bytes: large.bytes.byteLength, sha256: large.hash } }, cleanup: "complete" })}\n`);
+  process.stdout.write(`${JSON.stringify({ ok: true, dispatch: "automatic", latency_ms: automatic.latencyMs, runId: state.runId, fixture: { accountId: state.accountId, profileId: state.profileId, workId: state.workId, imageId: state.imageId, derivativeJobId: state.derivativeJobId }, revisions: { a: revisionAId, b: revisionBId }, outputs: { original: { bytes: original.bytes.byteLength }, small: { bytes: small.bytes.byteLength, sha256: small.hash }, large: { bytes: large.bytes.byteLength, sha256: large.hash } }, cleanup: "complete" })}\n`);
 } catch (error) {
   primaryError = error;
   let cleanupError = null;

@@ -38,12 +38,15 @@ export async function handleUnpublishWork(
     }
 
     const operationId = requireUuid(operation.operation_id, "operation_id");
-    const paths = asRecords(operation.images)
+    const paths = asRecords(await dependencies.rpc("service_list_work_publication_cleanup_paths", {
+      target_operation_id: operationId,
+      actor_account_id: caller.accountId,
+    }))
       .map((image) => String(image.public_object_path ?? ""))
       .filter(Boolean);
     const cleanupComplete = await dependencies.remove(PUBLIC_BUCKET, paths);
 
-    await dependencies.rpc("service_record_public_cleanup", {
+    await dependencies.rpc("service_record_derivative_public_cleanup", {
       target_operation_id: operationId,
       actor_account_id: caller.accountId,
       cleanup_complete: cleanupComplete,

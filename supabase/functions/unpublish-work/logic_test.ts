@@ -35,6 +35,7 @@ Deno.test("unpublish succeeds after complete public recall", async () => {
   const response = await handleUnpublishWork(post({ work_id: WORK_ID }), dependencies({
     rpc: async (name, body) => {
       if (name === "service_begin_work_unpublication") return running;
+      if (name === "service_list_work_publication_cleanup_paths") return running.images;
       recorded = body.cleanup_complete === true;
       return {};
     },
@@ -48,6 +49,7 @@ Deno.test("unpublish reports partial cleanup while Work remains hidden", async (
   const response = await handleUnpublishWork(post({ work_id: WORK_ID }), dependencies({
     rpc: async (name, body) => {
       if (name === "service_begin_work_unpublication") return running;
+      if (name === "service_list_work_publication_cleanup_paths") return running.images;
       recorded = body.cleanup_complete === false;
       return {};
     },
@@ -69,9 +71,8 @@ Deno.test("unpublish repeated retry is deterministic and performs no removal", a
 
 Deno.test("unpublish response does not disclose recalled paths", async () => {
   const response = await handleUnpublishWork(post({ work_id: WORK_ID }), dependencies({
-    rpc: async (name) => name === "service_begin_work_unpublication" ? running : {},
+    rpc: async (name) => name === "service_begin_work_unpublication" ? running : name === "service_list_work_publication_cleanup_paths" ? running.images : {},
   }));
   const text = await response.text();
   assert(!text.includes("owner/work") && !text.toLowerCase().includes("token"));
 });
-

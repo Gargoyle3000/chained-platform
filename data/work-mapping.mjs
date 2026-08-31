@@ -40,6 +40,16 @@ function optionalUrl(value, label) {
   }
 }
 
+export function derivativeLargePublicPath(path, imageId) {
+  const safePath = typeof path === "string" ? path.trim() : "";
+  if (!isValidWorkId(imageId)) return null;
+  const uuid = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
+  const escapedId = imageId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^${uuid}/${uuid}/${uuid}/${escapedId}/small\\.webp$`, "i").test(safePath)
+    ? safePath.replace(/small\.webp$/i, "large.webp")
+    : null;
+}
+
 function dimension(value, label) {
   const normalized = text(value);
   if (!normalized) return null;
@@ -156,7 +166,7 @@ export function mapPublicArtworkRows(workRows, profileRows, imageRows, publicUrl
   const images = (imageRows || [])
     .filter((image) => image.public_object_path)
     .map(databaseImageToClient)
-    .map((image) => Object.freeze({ ...image, privatePath: null, src: publicUrl(image.publicPath) }));
+    .map((image) => Object.freeze({ ...image, privatePath: null, src: publicUrl(derivativeLargePublicPath(image.publicPath, image.id) || image.publicPath) }));
   return Object.freeze({ ...databaseToWork(row, images), ownerProfileName: profile.display_name, ownerProfileSlug: profile.slug });
 }
 

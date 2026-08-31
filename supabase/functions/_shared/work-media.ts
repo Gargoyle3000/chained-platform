@@ -7,6 +7,7 @@ import type { SupabaseApiKey } from "./supabase-api-keys.ts";
 
 export const MAX_REQUEST_BYTES = 4096;
 export const ORIGINAL_BUCKET = "work-originals";
+export const DERIVATIVE_STAGING_BUCKET = "work-derivative-staging";
 export const PUBLIC_BUCKET = "work-public";
 
 export type TargetKind = "work" | "work_image";

@@ -59,11 +59,9 @@ export function dependencies(options: StubOptions = {}): MediaDependencies {
       return caller;
     }),
     rpc: options.rpc ?? (async () => ({})),
-    download: options.download ?? (async () => ({
-      bytes: new Uint8Array([0xff, 0xd8, 0xff, 0x00]),
-      mimeType: "image/jpeg",
-      size: 4,
-    })),
+    download: options.download ?? (async (_bucket, path) => path.endsWith(".webp")
+      ? { bytes: new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]), mimeType: "image/webp", size: 12 }
+      : { bytes: new Uint8Array([0xff, 0xd8, 0xff, 0x00]), mimeType: "image/jpeg", size: 4 }),
     upload: options.upload ?? (async () => undefined),
     remove: options.remove ?? (async () => true),
     signPrivateOriginals: options.signPrivateOriginals ?? (async (paths) => paths.map((path) => ({

@@ -1,0 +1,26 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select plan(20);
+
+select has_function('private','service_claim_work_derivative_publication','private claim helper exists');
+select has_function('private','service_record_publication_derivative_copy','private record helper exists');
+select has_function('private','service_fail_work_derivative_publication','private failure helper exists');
+select has_function('private','service_list_work_publication_cleanup_paths','private cleanup-path helper exists');
+select has_function('private','service_record_derivative_public_cleanup','private cleanup helper exists');
+select ok(not has_function_privilege('public','private.service_claim_work_derivative_publication(uuid,uuid,uuid)','EXECUTE'),'PUBLIC cannot execute private claim');
+select ok(not has_function_privilege('anon','private.service_claim_work_derivative_publication(uuid,uuid,uuid)','EXECUTE'),'anon cannot execute private claim');
+select ok(not has_function_privilege('authenticated','private.service_claim_work_derivative_publication(uuid,uuid,uuid)','EXECUTE'),'authenticated cannot execute private claim');
+select ok(has_function_privilege('service_role','private.service_claim_work_derivative_publication(uuid,uuid,uuid)','EXECUTE'),'service role can execute private claim');
+select ok(not has_function_privilege('anon','public.service_claim_work_derivative_publication(uuid,uuid,uuid)','EXECUTE'),'anon cannot execute public claim wrapper');
+select ok(not has_function_privilege('authenticated','public.service_claim_work_derivative_publication(uuid,uuid,uuid)','EXECUTE'),'authenticated cannot execute public claim wrapper');
+select ok(has_function_privilege('service_role','public.service_claim_work_derivative_publication(uuid,uuid,uuid)','EXECUTE'),'service role can execute public claim wrapper');
+select ok(not has_function_privilege('anon','public.service_record_publication_derivative_copy(uuid,uuid,private.work_image_derivative_rendition_key,uuid)','EXECUTE'),'anon cannot record a copy');
+select ok(has_function_privilege('service_role','public.service_record_publication_derivative_copy(uuid,uuid,private.work_image_derivative_rendition_key,uuid)','EXECUTE'),'service role can record a copy');
+select ok(not has_function_privilege('anon','public.service_fail_work_derivative_publication(uuid,uuid,text,boolean)','EXECUTE'),'anon cannot fail publication');
+select ok(has_function_privilege('service_role','public.service_fail_work_derivative_publication(uuid,uuid,text,boolean)','EXECUTE'),'service role can fail publication');
+select ok(not has_function_privilege('anon','public.service_list_work_publication_cleanup_paths(uuid,uuid)','EXECUTE'),'anon cannot list cleanup paths');
+select ok(has_function_privilege('service_role','public.service_list_work_publication_cleanup_paths(uuid,uuid)','EXECUTE'),'service role can list cleanup paths');
+select ok(not has_function_privilege('anon','public.service_record_derivative_public_cleanup(uuid,uuid,boolean,text)','EXECUTE'),'anon cannot record cleanup');
+select ok(has_function_privilege('service_role','public.service_record_derivative_public_cleanup(uuid,uuid,boolean,text)','EXECUTE'),'service role can record cleanup');
+select * from finish();
+rollback;

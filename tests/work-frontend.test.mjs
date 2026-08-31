@@ -7,7 +7,7 @@ import { selectWorkRepository } from "../data/work-repository.mjs";
 import { INDEXEDDB_BOUNDARY } from "../data/indexeddb-work-repository.mjs";
 import { createSupabaseWorkRepository } from "../data/supabase-work-repository.mjs";
 import { createPrivateImagePreview, createWorkMediaService, MAX_IMAGE_BYTES, MAX_PRIVATE_PREVIEW_BYTES, PRIVATE_PREVIEW_LONGEST_EDGE, UPLOAD_STAGES, validateImageFile } from "../data/work-media-service.mjs";
-import { createIdempotencyState, createObjectUrlRegistry, databaseToWork, formToDatabase, isValidWorkId, mapPublicArtworkRows, publicationReadiness, resolveManagedProfileState, WORK_COLUMNS, WORK_SELECT } from "../data/work-mapping.mjs";
+import { createIdempotencyState, createObjectUrlRegistry, databaseToWork, derivativeLargePublicPath, formToDatabase, isValidWorkId, mapPublicArtworkRows, publicationReadiness, resolveManagedProfileState, WORK_COLUMNS, WORK_SELECT } from "../data/work-mapping.mjs";
 import { sanitizeWorkError, WorkError, WORK_ERROR_CODES } from "../data/work-errors.mjs";
 
 const ID = "11111111-1111-4111-8111-111111111111";
@@ -555,6 +555,13 @@ test("public artwork mapping hides nonpublic rows and suppresses private paths",
   assert.equal(JSON.stringify(mapped).includes("secret"), false);
   assert.equal(mapped.materials, "Oil, Canvas, STUDS");
   assert.deepEqual(mapped.materialTerms, ["oil", "canvas", "studs"]);
+});
+
+test("public Work detail chooses only the strict sibling LARGE derivative", () => {
+  const derivative = `${ID}/${ID}/${ID}/${ID}/small.webp`;
+  assert.equal(derivativeLargePublicPath(derivative, ID), `${ID}/${ID}/${ID}/${ID}/large.webp`);
+  assert.equal(derivativeLargePublicPath("legacy/original.jpg", ID), null);
+  assert.equal(derivativeLargePublicPath(`owner/work/revision/other/small.webp`, ID), null);
 });
 
 test("object URLs are revoked individually and on teardown", () => {

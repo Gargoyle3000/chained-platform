@@ -28,7 +28,7 @@ function sanitizeDiagnostic(error) {
 
 try {
   fixture = await createLocalWorkIntegrationFixture({ onStage: (value) => { stage = value; } });
-  const { status, runId, ownerId, delegateId, artistId, institutionId, grantId, ownerClient, ownerRepository, delegateRepository, createRgbJpegFile, runSql } = fixture;
+  const { status, runId, ownerId, delegateId, artistId, institutionId, grantId, ownerClient, ownerRepository, delegateRepository, createRgbJpegFile, createTestWebpFile, runSql } = fixture;
 
   stage = "testing repository metadata flow";
   const profiles = await ownerRepository.listManagedProfiles();
@@ -68,6 +68,24 @@ try {
   record("anonymous private-original access is denied", !anonymousPrivate.ok);
 
   stage = "testing publication workflow";
+  const derivativeSource = createTestWebpFile();
+  const derivativePaths = ["small", "large"].map((rendition) => `${privatePath.replace(/\/original\.[^/]+$/, "")}/public-derivatives/${rendition}.webp`);
+  for (const derivativePath of derivativePaths) {
+    const derivativeUpload = await fetch(`${status.api}/storage/v1/object/work-derivative-staging/${derivativePath.split("/").map(encodeURIComponent).join("/")}`, {
+      method: "POST",
+      headers: { apikey: status.trusted, Authorization: `Bearer ${status.trusted}`, "Content-Type": "image/webp", "x-upsert": "false" },
+      body: derivativeSource
+    });
+    if (!derivativeUpload.ok) throw new Error("local_derivative_fixture_upload_failed");
+  }
+  runSql(`
+    update private.work_image_derivatives
+    set state='ready', mime_type='image/webp', file_size=${derivativeSource.size}, pixel_width=1, pixel_height=1,
+        checksum_sha256=repeat('a',64), pipeline_version='local-test', icc_profile_version='local-test', verified_at=now(), completed_at=now()
+    where work_image_id='${imageId}'::uuid
+      and source_private_object_path='${privatePath}'
+      and rendition_key in ('small','large');
+  `);
   const publishKey = randomUUID();
   const publication = await ownerRepository.media.publish(work.id, publishKey);
   record("publication succeeds", publication.status === "published");
