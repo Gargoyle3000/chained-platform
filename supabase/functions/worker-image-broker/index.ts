@@ -21,7 +21,7 @@ const dependencies = {
     if (!response.ok) throw new Error("upload_signing_failed");
     const value = await response.json() as { url?: unknown; token?: unknown };
     if (typeof value.url !== "string" || typeof value.token !== "string") throw new Error("upload_signing_failed");
-    return { url: value.url, token: value.token };
+    return { url: /^https?:\/\//i.test(value.url) ? value.url : `${apiUrl}/storage/v1/${value.url.replace(/^\/+/, "")}`, token: value.token };
   },
   async downloadStaging(path: string) {
     const response = await fetch(`${apiUrl}/storage/v1/object/authenticated/${STAGING_BUCKET}/${encodePath(path)}`, { headers: elevatedServiceHeaders(keys.secret) });
