@@ -73,26 +73,26 @@ GitHub.
 
 
 GOOGLE CLOUD RUN
-STATUS: PLANNED
+STATUS: ACTIVE
 
 PURPOSE:
-One small scale-to-zero container service is planned for trusted public-image
+One small scale-to-zero container service performs trusted public-image
 derivative processing after an original image has been verified.
 
 DATA / ACCESS:
-The planned processor will receive only the verified image original needed for
+The processor receives only the verified image original needed for
 that job and will produce:
 
 - SMALL: 960px maximum long edge, WebP quality 90
 - LARGE: 3200px maximum long edge, WebP quality 94
 
-The pipeline will use deterministic pinned-sRGB colour handling. It does not
+The pipeline uses deterministic pinned-sRGB colour handling. It does not
 need account passwords or user-to-user messages. It is not intended to receive
 arbitrary browser paths or general CHAINED credentials.
 
 WHY CHAINED USES IT:
 The measured image workload is too memory-intensive and slow for ordinary
-Supabase Edge Function processing. Cloud Run is intended to supply isolated
+Supabase Edge Function processing. Cloud Run supplies isolated
 container hosting for this one trusted worker.
 
 PORTABILITY / EXIT:
@@ -102,17 +102,17 @@ movable to another container host; only deployment, secret storage, and network
 configuration would need replacement.
 
 PRIVACY / TRANSPARENCY NOTE:
-This is planned infrastructure, not a current production processor. The exact
-production authentication and data-access model has not been built. When it is
-implemented, a public notice should describe Cloud Run as a processor/hosting
-provider for verified originals and public derivatives, and state the retention
-behavior established by the final implementation.
+Cloud Run is a current production processor. It is privately invoked, uses a
+dedicated service identity and a narrowly scoped worker secret, and processes
+only a verified original and its server-derived derivative job context. A public
+notice should describe Cloud Run as a processor/hosting provider for verified
+originals and public derivatives, and state the retention behavior established
+by the implementation.
 
 PLAN / COST:
-The intended service has zero minimum instances and one image job per request.
-No Google Cloud resource has been created as part of this register. Cost depends
-on the final region, resource size, request time, storage, and data transfer; no
-price is committed here.
+The service has zero minimum instances, a maximum of one instance, and one image
+job per request. Cost depends on the configured region, resource size, request
+time, storage, and data transfer; no price is committed here.
 
 
 SERVICES NOT CURRENTLY LISTED

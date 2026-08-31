@@ -144,7 +144,7 @@ function createPrivatePreview() {
   return new Blob([PRIVATE_PREVIEW_WEBP], { type: "image/webp" });
 }
 
-function createRgbJpegFile() {
+export function createRgbJpegFile() {
   const file = new Blob([TEST_RGB_JPEG], { type: "image/jpeg" });
   Object.defineProperty(file, "name", { value: "integration.jpg" });
   return file;

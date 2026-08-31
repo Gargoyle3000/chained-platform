@@ -2,6 +2,7 @@ design-system.html
 node_modules/
 frontend-config.local.mjs
 tests/.local/retained-derivative-fixture.json
+tests/.local/production-cloud-run-smoke.env
 
 supabase/functions/.env
 .obsidian/
