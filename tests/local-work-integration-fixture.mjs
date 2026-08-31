@@ -164,6 +164,8 @@ function sanitizeDiagnostic(error) {
     .slice(0, 240);
 }
 
+export { sanitizeDiagnostic as sanitizeLocalWorkIntegrationDiagnostic };
+
 function cleanupSqlDiagnostic(stage, result) {
   const output = [result.stderr, result.stdout].filter(Boolean).join(" ");
   const code = output.match(/\b\d{5}\b/)?.[0] || "unknown_code";
@@ -185,21 +187,43 @@ function runCleanupSql(stage, statement, diagnostics) {
   if (result.status !== 0) diagnostics.push(cleanupSqlDiagnostic(stage, result));
 }
 
-function listFixtureStorageObjects(profileIds) {
+function listFixtureStorageObjects(profileIds, workIds, workImageIds) {
   const profileList = profileIds.map((id) => `'${id}'::uuid`).join(",");
+  const workCondition = workIds.length ? ` and work.id in (${workIds.map((id) => `'${id}'::uuid`).join(",")})` : "";
+  const imageCondition = workImageIds.length ? ` and image.id in (${workImageIds.map((id) => `'${id}'::uuid`).join(",")})` : "";
   const result = spawnSync("docker", ["exec", "-i", "supabase_db_CHAINED", "psql", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", "postgres", "-q", "-t", "-A", "-F", "\t"], {
     input: `
       select 'work-originals', image.private_object_path
       from public.work_images image
       join public.works work on work.id = image.work_id
       where work.owner_profile_id in (${profileList})
+        ${workCondition}
+        ${imageCondition}
         and image.private_object_path is not null
+      union all
+      select 'work-originals', image.preview_object_path
+      from public.work_images image
+      join public.works work on work.id = image.work_id
+      where work.owner_profile_id in (${profileList})
+        ${workCondition}
+        ${imageCondition}
+        and image.preview_object_path is not null
       union all
       select 'work-public', image.public_object_path
       from public.work_images image
       join public.works work on work.id = image.work_id
       where work.owner_profile_id in (${profileList})
-        and image.public_object_path is not null;
+        ${workCondition}
+        ${imageCondition}
+        and image.public_object_path is not null
+      union all
+      select derivative.staging_bucket, derivative.staging_object_path
+      from private.work_image_derivatives derivative
+      join public.work_images image on image.id = derivative.work_image_id
+      join public.works work on work.id = image.work_id
+      where work.owner_profile_id in (${profileList})
+        ${workCondition}
+        ${imageCondition};
     `,
     encoding: "utf8",
     stdio: ["pipe", "pipe", "pipe"]
@@ -212,7 +236,7 @@ function listFixtureStorageObjects(profileIds) {
     const [bucket, path] = row.split("\t");
     if (!bucket || !path) continue;
     if (!objects.has(bucket)) objects.set(bucket, []);
-    objects.get(bucket).push(path);
+    if (!objects.get(bucket).includes(path)) objects.get(bucket).push(path);
   }
   return { objects, diagnostic: null };
 }
@@ -223,13 +247,55 @@ function storageCleanupDiagnostic(bucket, response, data) {
   return `delete-test-storage-objects:${bucket}:http:${response.status}:${code}:${sanitizeDiagnostic(message)}`;
 }
 
-async function deleteFixtureStorageObjects(resources, profileIds, diagnostics) {
+function storageListDiagnostic(bucket, response, data) {
+  const code = typeof data?.code === "string" ? data.code : "unknown_code";
+  const message = data?.message || data?.msg || data?.error || "storage_list_failed";
+  return `delete-test-storage-objects:${bucket}:list:http:${response.status}:${code}:${sanitizeDiagnostic(message)}`;
+}
+
+function addFixtureStoragePath(objects, bucket, path) {
+  if (!objects.has(bucket)) objects.set(bucket, []);
+  if (!objects.get(bucket).includes(path)) objects.get(bucket).push(path);
+}
+
+async function recoverRetainedFixtureStorageObjects(resources, objects, diagnostics) {
+  const recovery = resources.storageRecovery;
+  if (!recovery) return;
+
+  const prefix = `${recovery.ownerProfileId}/${recovery.workId}/${recovery.imageId}/`;
+  try {
+    const { response, data } = await jsonRequest(`${resources.status.api}/storage/v1/object/list/work-originals`, {
+      method: "POST",
+      headers: resources.trustedHeaders,
+      body: { prefix, limit: 10, offset: 0, sortBy: { column: "name", order: "asc" } }
+    });
+    if (!response.ok) {
+      diagnostics.push(storageListDiagnostic("work-originals", response, data));
+      return;
+    }
+    if (!Array.isArray(data)) {
+      diagnostics.push("delete-test-storage-objects:work-originals:list:unknown_code:storage_list_response_invalid");
+      return;
+    }
+    for (const entry of data) {
+      const name = typeof entry?.name === "string" ? entry.name : "";
+      if (/^(?:original\.(?:jpg|jpeg|png|webp)|preview\.webp)$/.test(name)) {
+        addFixtureStoragePath(objects, "work-originals", `${prefix}${name}`);
+      }
+    }
+  } catch (error) {
+    diagnostics.push(`delete-test-storage-objects:work-originals:list:request:unknown_code:${sanitizeDiagnostic(error)}`);
+  }
+}
+
+async function deleteFixtureStorageObjects(resources, profileIds, workIds, workImageIds, diagnostics) {
   if (!profileIds.length) return;
-  const { objects, diagnostic } = listFixtureStorageObjects(profileIds);
+  const { objects, diagnostic } = listFixtureStorageObjects(profileIds, workIds, workImageIds);
   if (diagnostic) {
     diagnostics.push(diagnostic);
     return;
   }
+  await recoverRetainedFixtureStorageObjects(resources, objects, diagnostics);
 
   for (const [bucket, paths] of objects) {
     try {
@@ -249,18 +315,26 @@ async function cleanupFixture(resources) {
   const diagnostics = [];
   const profileIds = resources.profileIds;
   const accountIds = resources.accountIds;
+  const workIds = resources.workIds || [];
+  const workImageIds = resources.workImageIds || [];
 
   if (resources.status && (profileIds.length || accountIds.length)) {
     const profileList = profileIds.map((id) => `'${id}'::uuid`).join(",");
     const accountList = accountIds.map((id) => `'${id}'::uuid`).join(",");
-    await deleteFixtureStorageObjects(resources, profileIds, diagnostics);
+    const workList = workIds.map((id) => `'${id}'::uuid`).join(",");
+    const workImageList = workImageIds.map((id) => `'${id}'::uuid`).join(",");
+    const workScope = workIds.length ? `work.id in (${workList})` : `work.owner_profile_id in (${profileList})`;
+    const workImageScope = workImageIds.length ? `image.id in (${workImageList})` : `image.work_id in (select id from public.works where owner_profile_id in (${profileList}))`;
+    const workIdScope = workIds.length ? `id in (${workList})` : `owner_profile_id in (${profileList})`;
+    await deleteFixtureStorageObjects(resources, profileIds, workIds, workImageIds, diagnostics);
     if (profileIds.length) runCleanupSql("delete-test-publication-operation-images", `
       delete from public.work_publication_operation_images
       where work_image_id in (
         select image.id
         from public.work_images image
         join public.works work on work.id = image.work_id
-        where work.owner_profile_id in (${profileList})
+        where ${workScope}
+          and (${workImageScope})
       );
     `, diagnostics);
     if (profileIds.length) runCleanupSql("delete-test-publication-derivatives", `
@@ -269,18 +343,19 @@ async function cleanupFixture(resources) {
         select image.id
         from public.work_images image
         join public.works work on work.id = image.work_id
-        where work.owner_profile_id in (${profileList})
+        where ${workScope}
+          and (${workImageScope})
       );
     `, diagnostics);
     if (profileIds.length) runCleanupSql("delete-test-work-images", `
-      delete from public.work_images where work_id in (select id from public.works where owner_profile_id in (${profileList}));
+      delete from public.work_images image where (${workImageScope});
     `, diagnostics);
     if (profileIds.length) runCleanupSql("delete-test-publication-operations", `
-      delete from public.work_publication_operations
-      where work_id in (select id from public.works where owner_profile_id in (${profileList}));
+      delete from public.work_publication_operations operation
+      where operation.work_id in (select id from public.works where ${workIdScope});
     `, diagnostics);
     if (profileIds.length) runCleanupSql("delete-test-works", `
-      delete from public.works where owner_profile_id in (${profileList});
+      delete from public.works where ${workIdScope};
     `, diagnostics);
     if (resources.grantId) runCleanupSql("delete-test-delegation-grant", `
       delete from public.profile_access_grants where id='${resources.grantId}'::uuid;
@@ -303,13 +378,35 @@ async function cleanupFixture(resources) {
     const identity = index === 0 ? "owner" : index === 1 ? "delegate" : "fixture-user";
     try {
       const { response, data } = await jsonRequest(`${resources.status.api}/auth/v1/admin/users/${id}`, { method: "DELETE", headers: resources.trustedHeaders });
-      if (!response.ok) diagnostics.push(cleanupAuthDiagnostic(identity, response, data));
+      if (!response.ok && response.status !== 404) diagnostics.push(cleanupAuthDiagnostic(identity, response, data));
     } catch (error) {
       diagnostics.push(`delete-auth-${identity}:request:unknown_code:${sanitizeDiagnostic(error)}`);
     }
   }
 
   if (diagnostics.length) throw new Error(`fixture_cleanup_failed: ${[...new Set(diagnostics)].join(";")}`);
+}
+
+export async function cleanupLocalWorkIntegrationFixture({
+  ownerProfileId,
+  delegateProfileId,
+  ownerAccountId,
+  delegateAccountId,
+  workId,
+  imageId,
+  grantId = null
+}) {
+  const status = localStatus();
+  await cleanupFixture({
+    status,
+    trustedHeaders: { apikey: status.trusted, Authorization: `Bearer ${status.trusted}` },
+    profileIds: [ownerProfileId, delegateProfileId],
+    accountIds: [ownerAccountId, delegateAccountId],
+    workIds: workId ? [workId] : [],
+    workImageIds: imageId ? [imageId] : [],
+    storageRecovery: workId && imageId ? { ownerProfileId, workId, imageId } : null,
+    grantId
+  });
 }
 
 export async function createLocalWorkIntegrationFixture({ onStage = () => {} } = {}) {
