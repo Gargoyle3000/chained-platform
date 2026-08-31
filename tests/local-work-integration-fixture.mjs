@@ -8,8 +8,8 @@ const PRIVATE_PREVIEW_WEBP = Buffer.from(
   "UklGRiIAAABXRUJQVlA4IBYAAADQAQCdASoBAAEAAUAmJaQAA3AA/vuUAAA=",
   "base64"
 );
-const TEST_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+const TEST_RGB_JPEG = Buffer.from(
+  "/9j/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCABAAGADAREAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAb/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCJF6igAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/2Q==",
   "base64"
 );
 
@@ -144,9 +144,9 @@ function createPrivatePreview() {
   return new Blob([PRIVATE_PREVIEW_WEBP], { type: "image/webp" });
 }
 
-function createPngFile() {
-  const file = new Blob([TEST_PNG], { type: "image/png" });
-  Object.defineProperty(file, "name", { value: "integration.png" });
+function createRgbJpegFile() {
+  const file = new Blob([TEST_RGB_JPEG], { type: "image/jpeg" });
+  Object.defineProperty(file, "name", { value: "integration.jpg" });
   return file;
 }
 
@@ -472,7 +472,7 @@ export async function createLocalWorkIntegrationFixture({ onStage = () => {} } =
       delegateClient,
       ownerRepository: createSupabaseWorkRepository(ownerClient, { supabaseUrl: status.api, supabaseKey: status.publishable }, { createPreview: createPrivatePreview }),
       delegateRepository: createSupabaseWorkRepository(delegateClient, { supabaseUrl: status.api, supabaseKey: status.publishable }),
-      createPngFile,
+      createRgbJpegFile,
       runSql: sql,
       cleanup: () => cleanupFixture(resources)
     };

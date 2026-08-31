@@ -28,7 +28,7 @@ function sanitizeDiagnostic(error) {
 
 try {
   fixture = await createLocalWorkIntegrationFixture({ onStage: (value) => { stage = value; } });
-  const { status, runId, ownerId, delegateId, artistId, institutionId, grantId, ownerClient, ownerRepository, delegateRepository, createPngFile, runSql } = fixture;
+  const { status, runId, ownerId, delegateId, artistId, institutionId, grantId, ownerClient, ownerRepository, delegateRepository, createRgbJpegFile, runSql } = fixture;
 
   stage = "testing repository metadata flow";
   const profiles = await ownerRepository.listManagedProfiles();
@@ -53,7 +53,7 @@ try {
   record("revoked delegation fails immediately", (await delegateRepository.getWork(work.id)) === null);
 
   stage = "testing media workflow";
-  const file = createPngFile();
+  const file = createRgbJpegFile();
   const stages = [];
   await ownerRepository.media.upload(work.id, file, true, (value) => stages.push(value));
   work = await ownerRepository.getWork(work.id);

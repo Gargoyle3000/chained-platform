@@ -101,7 +101,7 @@ try {
   }
 
   fixture = await createLocalWorkIntegrationFixture();
-  const { runId, ownerId, delegateId, artistId, institutionId, ownerRepository, createPngFile } = fixture;
+  const { runId, ownerId, delegateId, artistId, institutionId, ownerRepository, createRgbJpegFile } = fixture;
   const work = await ownerRepository.createWork({
     title: "RETAINED DERIVATIVE FIXTURE",
     year: "2026",
@@ -120,7 +120,7 @@ try {
     photoCreditName: "",
     photoCreditUrl: ""
   }, artistId);
-  await ownerRepository.media.upload(work.id, createPngFile(), true, () => {});
+  await ownerRepository.media.upload(work.id, createRgbJpegFile(), true, () => {});
   const finalizedWork = await ownerRepository.getWork(work.id);
   const imageId = finalizedWork?.images?.[0]?.id;
   if (!imageId || finalizedWork.images.length !== 1) throw new Error("retained_fixture_image_missing");
