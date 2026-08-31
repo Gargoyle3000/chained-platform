@@ -1,6 +1,6 @@
 # CHAINED — CURRENT STATE
 
-Last updated: 2026-08-27
+Last updated: 2026-08-31
 
 ## NOW
 
@@ -46,7 +46,7 @@ Current focus: pre-tester security/usability review before returning to larger p
 - Work metadata uses structured MEDIUM and one comma-separated MATERIALS field; legacy material fields are unified on read and migrated when that Work is saved.
 - Artist workspace provisioning is live: a fresh official artist invite receives a managed profile, can create a draft Work, finalize images, publish the Work, and publish the profile through Settings.
 - Production security validation is complete: anonymous and cross-account private-media access is denied without URL leakage; an existing session loses protected access immediately when its account is suspended and regains it after reactivation. The fresh artist invite → workspace → Work → images → publish → profile-publish flow is also validated.
-- Git working tree clean after API-key migration.
+- Phase 4 public image derivatives are live: verified Works publish exact WebP SMALL and LARGE renditions, SMALL serves public grid/feed contexts, LARGE serves strict Work detail paths, and legacy public paths remain compatible without a bulk backfill.
 
 ## AFTER EXPORT
 
@@ -64,8 +64,8 @@ Current focus: pre-tester security/usability review before returning to larger p
 
 ## CURRENT HANDOFF
 
-- Production is stable after the public multi-image carousel rollout.
+- Production is stable after the Phase 4 public-image derivative rollout.
 - Private preview frontend implementation is deployed and production-validated: the browser generates a fixed private WebP derivative before reservation, uploads both server-reserved objects, and finalizes them together. Production smoke covered JPEG and transparent PNG images, including full and partial alpha. Broader browser/device matrix validation remains future hardening.
 - Next technical milestone: controlled preview backfill before Portfolio `ALL IMAGES / SELECT IMAGES`.
-- Protect the authorized private-media gateway, PDF export, public-media behavior, and current Discover/Following/Profile geometry.
+- Protect the authorized private-media gateway, PDF export, Phase 4 public derivative behavior, and current Discover/Following/Profile geometry.
 - Optional drag-follow carousel animation is future polish, not an active bug.

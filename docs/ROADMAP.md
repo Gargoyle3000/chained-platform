@@ -1,6 +1,6 @@
 # CHAINED — ROADMAP
 
-Last updated: 2026-08-27
+Last updated: 2026-08-31
 
 ## POLISH
 
@@ -9,7 +9,6 @@ Last updated: 2026-08-27
 - Add Agenda `[ ALL ]` and `[ FOLLOWING ]` views.
 - Use normal prose capitalization and conjunctions for user-facing metadata values, rather than system-style uppercase conjunctions.
 - Refine Work detail so a single image prefers a fixed/non-scrolling presentation where the viewport permits it, while multiple images remain scrollable/swipeable and metadata stays accessible on smaller screens.
-- Investigate and implement public web-image optimization. Very large originals can load visibly more slowly than manually web-ready versions. Preserve originals unchanged; first inspect the existing public-media pipeline and determine a high-quality public derivative/responsive strategy without visible quality loss. Do not freeze the final derivative architecture in DECISIONS yet.
 - Investigate a possible cover-image deletion/state issue observed during testing: non-cover images appeared to delete immediately while the probable cover remained visible until `SAVE AS DRAFT`. This is an observation/hypothesis, not a confirmed root cause.
 - Improve stale soft-deleted Work UX: a locally stale save currently collapses `THIS WORK IS NOT AVAILABLE` into generic `WORK COULD NOT BE SAVED`. This does not block private-preview rollout.
 - Add an optional, compact `[?]` GUIDE / HELP layer. It should be system-oriented and context-aware (for example Work publication, Archive privacy/projects/tags, or Profile draft/published state), with a possible central GUIDE entry from Settings/navigation. No mandatory onboarding or tutorial.
@@ -28,12 +27,12 @@ Last updated: 2026-08-27
 
 Before Portfolio image selection, add one lightweight private screen-preview rendition per Work image.
 
-- Originals remain untouched in private `work-originals` and continue serving `pdf_export` and publication copies.
+- Originals remain untouched in private `work-originals` and continue serving `pdf_export`; Phase 4 publication copies use verified public derivatives.
 - A deterministic sibling object (likely `preview.webp`) serves editor/Dashboard previews and later visual selectors through the existing authorized gateway.
 - The browser contract remains `imageIds + purpose`; `preview` resolves the derivative and `pdf_export` resolves the original.
 - Prefer client-side generation while the upload File is already present; do not add a second authorization system.
 - New images become `ready` only after trusted validation of both original and preview.
-- Publish/unpublish remain unchanged; deletion removes original, preview, and any public copy.
+- Deletion removes original, preview, and any public derivative copies.
 - Existing images require a bounded controlled backfill. A temporary preview-to-original fallback may be used only during that transition and must then be removed.
 
 Preferred sequencing:
@@ -64,6 +63,7 @@ Implementation should verify the largest real preview display and HiDPI needs be
 ## COMPLETED / LIVE
 
 - Quiet multi-image Work browsing is live on Discover, Following and Public Profile only: swipe on mobile and drag/grab on desktop, with no persistent carousel chrome. Work detail remains the full image sequence; current card geometry, natural ratios, containment, and lazy secondary-image loading are preserved.
+- Phase 4 public image derivatives are live: verified new Works publish exact WebP SMALL (960px maximum long edge) and LARGE (3200px maximum long edge) renditions. SMALL serves public grid/feed contexts, LARGE serves strict Work detail paths, originals remain private, and legacy public paths continue without a bulk backfill.
 
 ## OPTIONAL LATER POLISH
 
