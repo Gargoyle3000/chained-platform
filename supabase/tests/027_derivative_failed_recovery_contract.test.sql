@@ -1,0 +1,11 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select plan(7);
+select has_function('public','service_requeue_failed_work_image_derivatives',array['uuid','integer','integer'],'recovery wrapper exists');
+select ok(not has_function_privilege('public','public.service_requeue_failed_work_image_derivatives(uuid,integer,integer)','EXECUTE'),'PUBLIC cannot recover');
+select ok(not has_function_privilege('anon','public.service_requeue_failed_work_image_derivatives(uuid,integer,integer)','EXECUTE'),'anon cannot recover');
+select ok(not has_function_privilege('authenticated','public.service_requeue_failed_work_image_derivatives(uuid,integer,integer)','EXECUTE'),'authenticated cannot recover');
+select ok(has_function_privilege('service_role','public.service_requeue_failed_work_image_derivatives(uuid,integer,integer)','EXECUTE'),'service role can recover');
+select throws_ok($$select public.service_requeue_failed_work_image_derivatives('00000000-0000-4000-8000-000000000001',0,1)$$,'22023','Trusted dimensions are invalid.','invalid dimensions reject');
+select throws_ok($$select public.service_requeue_failed_work_image_derivatives('00000000-0000-4000-8000-000000000001',1,1)$$,'42501','The verified image is unavailable.','unknown image rejects');
+select * from finish(); rollback;
