@@ -28,9 +28,10 @@ function configuration() {
   return { api: API, key: line[1] };
 }
 function sql(query) {
-  const result = spawnSync("npx.cmd", ["supabase", "db", "query", "--linked", "--output", "json", "--query", query], { encoding: "utf8", env: { ...process.env, SUPABASE_TELEMETRY_DISABLED: "1" } });
+  const command = `npx.cmd supabase db query --linked --output json "${query.replaceAll("\"", "\\\"")}"`;
+  const result = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], { encoding: "utf8", env: { ...process.env, SUPABASE_TELEMETRY_DISABLED: "1" }, windowsHide: true });
   if (result.status !== 0) fail("database_read_failed");
-  try { return JSON.parse(result.stdout); } catch { fail("database_response_invalid"); }
+  try { const value = JSON.parse(result.stdout.slice(result.stdout.indexOf("{"))); return Array.isArray(value.rows) ? value.rows : fail("database_response_invalid"); } catch { fail("database_response_invalid"); }
 }
 function targetRow(workId, imageId) {
   const rows = sql(`select wi.id::text as image_id, wi.private_object_path, wi.pixel_width, wi.pixel_height, wi.upload_status::text, wi.original_verified_at is not null as original_verified, w.visibility::text as work_visibility, j.id::text as job_id, j.state::text as job_state, j.source_private_object_path=wi.private_object_path as current_source, jsonb_agg(jsonb_build_object('key',d.rendition_key,'state',d.state,'path',d.staging_object_path) order by d.rendition_key) as derivatives from public.work_images wi join public.works w on w.id=wi.work_id join private.work_image_derivative_jobs j on j.work_image_id=wi.id and j.source_private_object_path=wi.private_object_path join private.work_image_derivatives d on d.work_image_id=wi.id and d.source_private_object_path=wi.private_object_path where wi.id='${imageId}'::uuid and wi.work_id='${workId}'::uuid group by wi.id,w.id,j.id`);
