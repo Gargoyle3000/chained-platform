@@ -12,6 +12,7 @@
 ## Project memory
 
 - At the start of relevant CHAINED tasks, read `docs/CHAINED_STATE.md` for current priorities and state, `docs/DECISIONS.md` for established product and technical decisions, and `docs/BUGS.md` for active bugs and known investigation boundaries.
+- Before concluding that required local development software is missing, read `docs/DEV_ENVIRONMENT.md` and perform the documented environment discovery.
 - At the start of planning, prioritization, or roadmap-related CHAINED tasks, also read `docs/ROADMAP.md` for planned upcoming work and sequencing.
 - Keep the memory roles distinct: `CHAINED_STATE.md` is current state and active focus, `DECISIONS.md` records established decisions, `BUGS.md` records active bugs and blockers, and `ROADMAP.md` records planned upcoming work and sequencing.
 - Documentation provides project context but never overrides what the current code does.
