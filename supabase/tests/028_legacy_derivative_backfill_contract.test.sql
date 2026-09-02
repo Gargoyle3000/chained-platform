@@ -1,0 +1,10 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select plan(6);
+select has_function('public','service_backfill_legacy_work_image_derivatives',array['uuid','integer','integer'],'legacy backfill wrapper exists');
+select ok(not has_function_privilege('public','public.service_backfill_legacy_work_image_derivatives(uuid,integer,integer)','EXECUTE'),'PUBLIC denied');
+select ok(not has_function_privilege('anon','public.service_backfill_legacy_work_image_derivatives(uuid,integer,integer)','EXECUTE'),'anon denied');
+select ok(not has_function_privilege('authenticated','public.service_backfill_legacy_work_image_derivatives(uuid,integer,integer)','EXECUTE'),'authenticated denied');
+select ok(has_function_privilege('service_role','public.service_backfill_legacy_work_image_derivatives(uuid,integer,integer)','EXECUTE'),'service role allowed');
+select throws_ok($$select public.service_backfill_legacy_work_image_derivatives('00000000-0000-4000-8000-000000000001',0,1)$$,'22023','Trusted dimensions are invalid.','invalid dimensions rejected');
+select * from finish(); rollback;
