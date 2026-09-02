@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { trustedImageDimensions } from "../supabase/functions/_shared/work-media.ts";
 import { parseBackfillArguments } from "./backfill-legacy-derivatives-options.mjs";
+import { trustedImageDimensions } from "./trusted-image-dimensions.mjs";
 const api="https://jjtobvxjmbnybbxlvnxs.supabase.co", fail=(x)=>{throw Error(x)};
 const { apply, all, work, ids } = parseBackfillArguments(process.argv.slice(2));
 const key=(readFileSync("tests/.local/production-cloud-run-smoke.env","utf8").match(/^CHAINED_PRODUCTION_SUPABASE_SECRET_KEY=(.+)$/m)||[])[1]; if(process.env.CHAINED_PRODUCTION_SMOKE!=="1"||!key) fail("production_guard_failed");
