@@ -1,9 +1,10 @@
 # CHAINED — ROADMAP
 
-Last updated: 2026-08-31
+Last updated: 2026-09-03
 
 ## POLISH
 
+- Add direct published-Work DELETE → CONFIRM DELETE from WORKS, coordinating safe unpublish, exact public cleanup and soft-delete.
 - Archive SINGLE / GRID should gain the same proven swipe interaction as Discover and Following, while preserving existing view behavior, image ratios, and layout.
 - Implement circular media-carousel navigation: last → next returns to first, and first → previous returns to last.
 - Add Agenda `[ ALL ]` and `[ FOLLOWING ]` views.
@@ -22,6 +23,12 @@ Last updated: 2026-08-31
   - Each click reveals 10 more.
   - No infinite scroll.
   - Desktop internal-scroll behavior stays unchanged.
+
+## PRESENTATIONS + AGENDA
+
+- Implement public Presentation detail pages and investigate the current Presentation 404 behavior generally; anything clickable must lead to a functioning surface or not appear clickable.
+- Complete Presentation end-to-end functionality, including Agenda/events creation, editing and public display.
+- Complete Presentation ↔ Agenda ↔ Works crosslinks and attachments; standalone Agenda entries remain supported.
 
 ## PRIVATE PREVIEW DERIVATIVES — DEPLOYED
 
@@ -63,7 +70,7 @@ Implementation should verify the largest real preview display and HiDPI needs be
 ## COMPLETED / LIVE
 
 - Quiet multi-image Work browsing is live on Discover, Following and Public Profile only: swipe on mobile and drag/grab on desktop, with no persistent carousel chrome. Work detail remains the full image sequence; current card geometry, natural ratios, containment, and lazy secondary-image loading are preserved.
-- Phase 4 public image derivatives are live: verified new Works publish exact WebP SMALL (960px maximum long edge) and LARGE (3200px maximum long edge) renditions. SMALL serves public grid/feed contexts, LARGE serves strict Work detail paths, originals remain private, and legacy public paths continue without a bulk backfill.
+- Phase 4 public image derivatives are live: verified new and backfilled active Works publish exact WebP SMALL (960px maximum long edge) and LARGE (3200px maximum long edge) renditions. SMALL serves public grid/feed contexts, LARGE serves strict Work detail paths, originals remain private, and legacy public paths remain compatible. The active legacy migration is complete.
 
 ## OPTIONAL LATER POLISH
 
@@ -83,3 +90,22 @@ Implementation should verify the largest real preview display and HiDPI needs be
 - Add Publications as a separate documented object with representative images and external links, not hosted PDFs.
 - Extend Projects with ordered Work sets and export/select/share workflows, plus tier limits; keep Tags freeform and filter-oriented.
 - Add human-reviewed profile claim flows and Artist-controlled APPEARS IN visibility controls.
+
+## ADMIN / SECURITY / OPERATIONS
+
+- Add an admin surface with 2FA for administrative access.
+- Provide a permanent privacy-friendly error/incident view without sensitive content, secrets or tokens.
+- Remove temporary early-tester analytics when that phase ends.
+- Complete final RLS, Storage, Auth and security audit before broader rollout, including appropriate rate-limit and abuse-protection review.
+
+## PRODUCT LANGUAGE
+
+- Run a sitewide product-language audit: inventory live copy page by page, distinguish functional system language from public/artist-facing language, remove prototype/deployment/make-it-work wording and generic startup/community phrasing, and preserve deliberate CHAINED terminology.
+
+## URL HANDLING
+
+- Normalize URL fields safely so inputs such as `www.example.com` become `https://www.example.com`; audit URL fields sitewide.
+
+## MOBILE / RESPONSIVE POLISH
+
+- Preserve existing mobile/tablet/browser work and refine Dashboard/Works top spacing, public-profile WEBSITE/SOCIAL/EMAIL spacing, Discover GRID, header/logo/navigation/session-action rhythm and known responsive geometry without changing image aspect ratios. Discover SINGLE remains the reference layout.

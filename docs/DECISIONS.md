@@ -238,3 +238,22 @@ Last updated: 2026-08-27
 \- APPEARS IN connects a Work to meaningful PRESENTATION, CURATED or PUBLICATION context; it is discovery, not a count/status/popularity metric. An Artist may hide an individual APPEARS IN entry on their own Work/Profile representation, but this does not erase the legitimate source context and is not an automatic CV dump.
 \- FOLLOW exists only to construct personal Following and Agenda. There are no follower counts, following counts, public follower graph or follow notifications. Unfollow happens from the encountered account/profile. Follow is not a social-status mechanic.
 
+\## Product completeness and roadmap
+
+\- CHAINED is not pursued as a deliberately thin MVP or social/product shell. Work is prioritized by product value, coherence, current gaps and technical dependency. The roadmap is a priority map, not a fixed development calendar.
+
+\## Published Work deletion
+
+\- From WORKS, DELETE remains directly available for a published Work. The interaction is `[ DELETE ]` followed in the same action position by `[ CONFIRM DELETE ]`; the second activation performs deletion. The backend coordinates unpublish, exact public cleanup and Work soft-delete, and must not leave a half-deleted state when cleanup or unpublish fails. Do not automate this through frontend clicks on existing actions.
+
+\## Observability
+
+\- Temporary tester/session analytics may be used during early usability testing and should be removed or disabled when that phase ends. A permanent privacy-friendly admin error view is desired with error type, route/action, timestamp, frequency and safely available affected-user count; it must not store sensitive content, secrets or tokens.
+
+\## Archive PDF export
+
+\- Archive should eventually provide a separate export from public Portfolio export. Users should be able to select a subset through Projects, Tags and useful filters such as medium, dimensions or availability, then export/share it for galleries, exhibitions, applications or other external use.
+
+\## Video
+
+\- Vimeo-first remains the near-term video direction. Native video upload/hosting is intentionally deferred until infrastructure and revenue justify it; it is not a v1 requirement.

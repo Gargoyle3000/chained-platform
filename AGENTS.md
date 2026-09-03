@@ -94,7 +94,7 @@ Before making changes:
    - which files are likely involved;
    - the main risk;
    - how you will validate the change.
-3. Wait for explicit confirmation before editing, unless the user explicitly asks for immediate execution.
+3. For a properly scoped, authorized task, proceed through inspection, narrow implementation, relevant tests, diff review, and result. Do not stop after inspection merely to ask for confirmation when implementation is already authorized. Stop when inspection reveals materially different risk or scope, a genuine unresolved product/architecture decision, missing information that cannot be resolved by inspection, an unauthorized production mutation/deploy/migration/commit/push, or risk to unrelated or sensitive state.
 
 During implementation:
 
@@ -134,11 +134,11 @@ During implementation:
 
 ## AI/Codex working method
 
-- ChatGPT is the orchestrator and reviewer; Codex is the default executing repository agent. For code work, ChatGPT should provide one complete, copy-paste-ready Codex task rather than requiring the user to relay loose PowerShell commands.
+- ChatGPT is the orchestrator and reviewer; Codex is the default executing repository agent. For code work, ChatGPT should provide one complete, copy-paste-ready Codex task rather than requiring the user to relay loose PowerShell commands. Avoid making the human act as a terminal when the agent can execute the work itself.
 - For meaningful work, Codex reads `AGENTS.md` and relevant project docs, inspects the current code and working patterns, then reports repository facts, affected files/locations, risks, hypotheses, and the proposed approach before changing anything. Larger or risky tasks start inspection-only and proceed to implementation after review; small, explicit, well-bounded tasks may be implemented directly when authorized.
 - Keep changes within scope, run focused validation, inspect the diff, and run `git diff --check`. Commit, push, deploy, reset, and revert only on explicit instruction.
 - Model choice has two dimensions: family (`LUNA`, `TERRA`, `SOL`) and reasoning (`LIGHT`, `MEDIUM`, `HIGH`). Always name the combination (for example, `LUNA LIGHT` or `SOL HIGH`), never only “Codex High” or “Medium”. Choose the lightest reliable combination: `LUNA LIGHT` for tiny clear local/documentation tasks; `LUNA/TERRA MEDIUM` for normal focused implementation and debugging; `TERRA HIGH` / `SOL MEDIUM` for complex interaction or important backend/frontend work; and `SOL HIGH` only when repository-wide architecture, security, RLS/Storage/Auth, or difficult debugging genuinely benefits from it. These are guidelines; scale back after heavy work when possible.
-- Model selection also considers credits and execution speed. Start broad repository audits and inventories with `TERRA`, usually `TERRA MEDIUM`; do not default to `SOL`. Mark only an uncertain subproblem `ESCALATE TO SOL`, and use SOL selectively for complex implementations, architecture, difficult regressions, or deep Auth/RLS/Storage/Edge interactions. Use `LUNA LIGHT` for low-risk documentation, copy, simple local inspection, and similar tasks.
+- Model selection also considers credits and execution speed. Use `TERRA MEDIUM` as the default for substantive repository work. Prefer `LUNA LIGHT` for documentation, inventory, tiny/local changes, and simple Git work. Use heavier TERRA/SOL modes only when task complexity genuinely requires escalation; `SOL` is not a default and should normally be selected only after harder architecture/security reasoning is identified.
 - At each new relevant CHAINED session, read `AGENTS.md` and the relevant project memory, use its decisions and handoff as the starting context, avoid asking the user to reconstruct documented context, and check repository state before technical work.
 - At session end, after validation, update only the relevant `CHAINED_STATE.md`, `DECISIONS.md`, `BUGS.md`, or `ROADMAP.md` when the task actually changes current state, decisions, bugs, priorities, or handoff. Keep the handoff sufficient for the next chat, without turning project memory into a changelog.
 - Whenever a production external service is added, materially changed, or removed, update `docs/EXTERNAL_SERVICES.txt`.

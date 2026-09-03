@@ -1,10 +1,10 @@
 # CHAINED — CURRENT STATE
 
-Last updated: 2026-08-31
+Last updated: 2026-09-03
 
 ## NOW
 
-Current focus: pre-tester security/usability review before returning to larger product work.
+Current focus: the image-derivative migration is closed; complete and polish core product surfaces before broader rollout. The roadmap is a priority map, not a fixed calendar.
 
 ### Auth UX rollout
 
@@ -46,7 +46,11 @@ Current focus: pre-tester security/usability review before returning to larger p
 - Work metadata uses structured MEDIUM and one comma-separated MATERIALS field; legacy material fields are unified on read and migrated when that Work is saved.
 - Artist workspace provisioning is live: a fresh official artist invite receives a managed profile, can create a draft Work, finalize images, publish the Work, and publish the profile through Settings.
 - Production security validation is complete: anonymous and cross-account private-media access is denied without URL leakage; an existing session loses protected access immediately when its account is suspended and regains it after reactivation. The fresh artist invite → workspace → Work → images → publish → profile-publish flow is also validated.
-- Phase 4 public image derivatives are live: verified Works publish exact WebP SMALL and LARGE renditions, SMALL serves public grid/feed contexts, LARGE serves strict Work detail paths, and legacy public paths remain compatible without a bulk backfill.
+- Phase 4 public image derivatives are live: verified Works publish exact WebP SMALL and LARGE renditions, SMALL serves public grid/feed contexts, LARGE serves strict Work detail paths, originals remain private, and legacy public paths remain compatible.
+- Strict publication requires current-source READY SMALL and LARGE derivatives. Public visitors do not receive `work-originals` or `work-derivative-staging` objects.
+- The shared VP8 parser's width/height endian bug is fixed and covered by regression tests. Trusted terminal-failed current-source derivative recovery exists without fabricating READY state or bypassing broker validation.
+- The controlled legacy migration is complete: 35/35 backfill-created jobs reached READY, zero active eligible legacy images remain without a lifecycle, and one image under a soft-deleted Work remains intentionally excluded. Existing published Works retained their audited visibility, revisions and public-media state; HEDO MAXXING II was successfully republished through the strict lifecycle.
+- Active old and new Works now use the same derivative publication contract. The temporary production smoke environment/key still exists pending cleanup and revocation.
 
 ## AFTER EXPORT
 
@@ -66,6 +70,6 @@ Current focus: pre-tester security/usability review before returning to larger p
 
 - Production is stable after the Phase 4 public-image derivative rollout.
 - Private preview frontend implementation is deployed and production-validated: the browser generates a fixed private WebP derivative before reservation, uploads both server-reserved objects, and finalizes them together. Production smoke covered JPEG and transparent PNG images, including full and partial alpha. Broader browser/device matrix validation remains future hardening.
-- Next technical milestone: controlled preview backfill before Portfolio `ALL IMAGES / SELECT IMAGES`.
+- Controlled private-preview backfill remains open where still needed before Portfolio `ALL IMAGES / SELECT IMAGES`; it is separate from the completed public-derivative legacy migration.
 - Protect the authorized private-media gateway, PDF export, Phase 4 public derivative behavior, and current Discover/Following/Profile geometry.
 - Optional drag-follow carousel animation is future polish, not an active bug.
