@@ -44,6 +44,80 @@ Deno.test("unpublish succeeds after complete public recall", async () => {
   assert(response.status === 200 && body.cleanup_status === "succeeded" && recorded);
 });
 
+Deno.test("published delete completes public cleanup before trusted soft deletion", async () => {
+  const calls: string[] = [];
+  const response = await handleUnpublishWork(post({ work_id: WORK_ID, delete_after_unpublish: true }), dependencies({
+    rpc: async (name) => {
+      calls.push(name);
+      if (name === "service_begin_work_unpublication") return running;
+      if (name === "service_list_work_publication_cleanup_paths") return running.images;
+      return {};
+    },
+  }));
+  const body = await responseJson(response);
+  assert(response.status === 200 && body.status === "deleted" && body.deleted === true);
+  assert(calls.join(",") === "service_begin_work_unpublication,service_list_work_publication_cleanup_paths,service_record_derivative_public_cleanup,service_soft_delete_unpublished_work");
+});
+
+Deno.test("published delete remains hidden but is not soft-deleted when public cleanup is pending", async () => {
+  const calls: string[] = [];
+  const response = await handleUnpublishWork(post({ work_id: WORK_ID, delete_after_unpublish: true }), dependencies({
+    rpc: async (name) => {
+      calls.push(name);
+      if (name === "service_begin_work_unpublication") return running;
+      if (name === "service_list_work_publication_cleanup_paths") return running.images;
+      return {};
+    },
+    remove: async () => false,
+  }));
+  const body = await responseJson(response);
+  assert(response.status === 200 && body.status === "draft" && body.cleanup_status === "cleanup_pending" && body.deleted === false);
+  assert(!calls.includes("service_soft_delete_unpublished_work"));
+});
+
+Deno.test("published delete retry resumes the existing cleanup-pending operation", async () => {
+  const calls: string[] = [];
+  let removedPaths: string[] = [];
+  const response = await handleUnpublishWork(post({ work_id: WORK_ID, delete_after_unpublish: true }), dependencies({
+    rpc: async (name) => {
+      calls.push(name);
+      if (name === "service_begin_work_unpublication") return { ...running, status: "cleanup_pending", idempotent: true };
+      if (name === "service_list_work_publication_cleanup_paths") return running.images;
+      return {};
+    },
+    remove: async (_bucket, paths) => { removedPaths = paths; return true; },
+  }));
+  const body = await responseJson(response);
+  assert(body.status === "deleted" && body.deleted === true && body.idempotent === true);
+  assert(JSON.stringify(removedPaths) === JSON.stringify(["owner/work/revision/image.jpg"]));
+  assert(calls.join(",") === "service_begin_work_unpublication,service_list_work_publication_cleanup_paths,service_record_derivative_public_cleanup,service_soft_delete_unpublished_work");
+});
+
+Deno.test("published delete retry finishes an already hidden Work without repeating public removal", async () => {
+  const calls: string[] = [];
+  let removed = false;
+  const response = await handleUnpublishWork(post({ work_id: WORK_ID, delete_after_unpublish: true }), dependencies({
+    rpc: async (name) => { calls.push(name); return { status: "already_hidden", idempotent: true, images: [] }; },
+    remove: async () => { removed = true; return true; },
+  }));
+  const body = await responseJson(response);
+  assert(body.status === "deleted" && body.idempotent === true && !removed);
+  assert(calls.join(",") === "service_begin_work_unpublication,service_soft_delete_unpublished_work");
+});
+
+Deno.test("published delete exposes no cleanup detail if final soft deletion fails", async () => {
+  const response = await handleUnpublishWork(post({ work_id: WORK_ID, delete_after_unpublish: true }), dependencies({
+    rpc: async (name) => {
+      if (name === "service_begin_work_unpublication") return running;
+      if (name === "service_list_work_publication_cleanup_paths") return running.images;
+      if (name === "service_soft_delete_unpublished_work") throw new Error("final deletion failed");
+      return {};
+    },
+  }));
+  const text = await response.text();
+  assert(response.status === 500 && !text.includes("owner/work") && !text.includes("final deletion failed"));
+});
+
 Deno.test("unpublish reports partial cleanup while Work remains hidden", async () => {
   let recorded = false;
   const response = await handleUnpublishWork(post({ work_id: WORK_ID }), dependencies({
@@ -75,4 +149,9 @@ Deno.test("unpublish response does not disclose recalled paths", async () => {
   }));
   const text = await response.text();
   assert(!text.includes("owner/work") && !text.toLowerCase().includes("token"));
+});
+
+Deno.test("published delete rejects a non-boolean delete flag", async () => {
+  const response = await handleUnpublishWork(post({ work_id: WORK_ID, delete_after_unpublish: "true" }), dependencies());
+  assert(response.status === 400);
 });

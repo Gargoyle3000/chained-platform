@@ -28,6 +28,7 @@ Current focus: the image-derivative migration is closed; complete and polish cor
 - Portfolio Export uses immediate disabled `EXPORTING…` progress and final `PORTFOLIO READY` status.
 - Management language uses concise `WORKS`, `PRESENTATIONS`, and `AGENDA` headings.
 - Public multi-image carousel is live and manually validated on Discover, Following and Public Profile; Work detail remains a vertical full-image sequence.
+- Published Works can be removed directly from WORKS through `[ DELETE ]` → `[ CONFIRM DELETE ]`; the backend unpublishes, recalls exact public derivatives, and soft-deletes only after cleanup succeeds. A cleanup-pending retry resumes the same lifecycle.
 
 ## DONE — IMPORTANT INFRASTRUCTURE
 

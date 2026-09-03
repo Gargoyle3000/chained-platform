@@ -77,14 +77,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     const cancel = createTextAction("CANCEL", `Cancel deletion of ${work.title || "untitled work"}`);
     container.className = "dashboard-delete-confirmation";
     container.hidden = true;
-    prompt.textContent = work.visibility === "published" ? "UNPUBLISH THIS WORK BEFORE DELETING IT." : "DELETE THIS WORK?";
+    prompt.textContent = "DELETE THIS WORK?";
     actions.className = "dashboard-delete-actions";
-    confirm.disabled = work.visibility === "published";
     cancel.addEventListener("click", () => { container.hidden = true; cancel.closest("article")?.querySelector(".dashboard-delete-trigger")?.focus(); });
     confirm.addEventListener("click", async () => {
       confirm.disabled = true;
-      try { await repository.deleteWork(work.id); await reload(); }
-      catch { setError("THIS WORK COULD NOT BE DELETED"); confirm.disabled = false; }
+      try { await repository.deleteWork(work.id, { published: work.visibility === "published", idempotencyKey: crypto.randomUUID() }); await reload(); }
+      catch {
+        try { await reload(); }
+        catch {}
+        setError("THIS WORK COULD NOT BE DELETED");
+        confirm.disabled = false;
+      }
     });
     actions.append(confirm, cancel);
     container.append(prompt, actions);

@@ -12,6 +12,10 @@ function requireResult(error, data, fallback) {
   return data;
 }
 
+// Contract from private.soft_delete_work: this is the sole browser-visible
+// state that may resume the trusted unpublish cleanup lifecycle.
+const CLEANUP_RESUME_REQUIRED = "PDC01";
+
 async function anonymousRest(config, table, query) {
   const response = await fetch(`${config.supabaseUrl}/rest/v1/${table}?${query}`, {
     headers: { apikey: config.supabaseKey, Accept: "application/json" },
@@ -75,8 +79,11 @@ export function createSupabaseWorkRepository(client, config, mediaDependencies) 
       if (error) throw sanitizeWorkError(error, "IMAGE ORDER COULD NOT BE SAVED");
       return listImages(workId);
     },
-    async deleteWork(id) {
-      const { data, error } = await client.rpc("soft_delete_work", { target_work_id: requireId(id) });
+    async deleteWork(id, { published = false, idempotencyKey } = {}) {
+      const workId = requireId(id);
+      if (published) return media.deletePublishedWork(workId, idempotencyKey);
+      const { data, error } = await client.rpc("soft_delete_work", { target_work_id: workId });
+      if (String(error?.code || "") === CLEANUP_RESUME_REQUIRED) return media.deletePublishedWork(workId, idempotencyKey);
       requireResult(error, data, "WORK COULD NOT BE DELETED");
     },
     async getPublishedWork(id) {

@@ -35,6 +35,67 @@ test("adapter selection is explicit in prototype and local modes", () => {
   assert.equal(selectWorkRepository({ mode: FRONTEND_MODES.SUPABASE, client, config: {} }, store).mode, "supabase");
 });
 
+test("draft deletion keeps the browser RPC while published deletion uses the trusted cleanup lifecycle", async () => {
+  const calls = [];
+  const client = {
+    rpc: async (name, body) => { calls.push({ kind: "rpc", name, body }); return { data: true, error: null }; },
+    functions: { invoke: async (name, { body }) => { calls.push({ kind: "function", name, body }); return { data: { ok: true, status: "deleted" }, error: null }; } },
+    storage: { from: () => ({ getPublicUrl: () => ({ data: {} }) }) }
+  };
+  const repository = createSupabaseWorkRepository(client, {});
+  await repository.deleteWork(ID);
+  await repository.deleteWork(ID, { published: true, idempotencyKey: IMAGE_TWO });
+  assert.deepEqual(calls, [
+    { kind: "rpc", name: "soft_delete_work", body: { target_work_id: ID } },
+    { kind: "function", name: "unpublish-work", body: { work_id: ID, idempotency_key: IMAGE_TWO, delete_after_unpublish: true } }
+  ]);
+});
+
+test("a hidden Work with a resumable cleanup contract resumes the trusted deletion lifecycle", async () => {
+  const calls = [];
+  const client = {
+    rpc: async (name, body) => {
+      calls.push({ kind: "rpc", name, body });
+      return { data: null, error: { code: "PDC01" } };
+    },
+    functions: { invoke: async (name, { body }) => { calls.push({ kind: "function", name, body }); return { data: { ok: true, status: "deleted" }, error: null }; } },
+    storage: { from: () => ({ getPublicUrl: () => ({ data: {} }) }) }
+  };
+  await createSupabaseWorkRepository(client, {}).deleteWork(ID, { idempotencyKey: IMAGE_TWO });
+  assert.deepEqual(calls, [
+    { kind: "rpc", name: "soft_delete_work", body: { target_work_id: ID } },
+    { kind: "function", name: "unpublish-work", body: { work_id: ID, idempotency_key: IMAGE_TWO, delete_after_unpublish: true } }
+  ]);
+});
+
+test("pending and running publication operations do not invoke the trusted deletion lifecycle", async () => {
+  for (const operationState of ["pending", "running"]) {
+    const calls = [];
+    const client = {
+      rpc: async (name, body) => {
+        calls.push({ kind: "rpc", name, body });
+        return { data: null, error: { code: "55000", message: `${operationState} operation` } };
+      },
+      functions: { invoke: async (name, { body }) => { calls.push({ kind: "function", name, body }); return { data: { ok: true, status: "deleted" }, error: null }; } },
+      storage: { from: () => ({ getPublicUrl: () => ({ data: {} }) }) }
+    };
+    await assert.rejects(
+      createSupabaseWorkRepository(client, {}).deleteWork(ID, { idempotencyKey: IMAGE_TWO }),
+      (error) => error instanceof WorkError && error.code === WORK_ERROR_CODES.UNAVAILABLE
+    );
+    assert.deepEqual(calls, [{ kind: "rpc", name: "soft_delete_work", body: { target_work_id: ID } }]);
+  }
+});
+
+test("Works confirmation allows a published Work to use the same delete action", async () => {
+  const source = await readFile(new URL("../dashboard-works.js", import.meta.url), "utf8");
+  assert.match(source, /prompt\.textContent = "DELETE THIS WORK\?"/);
+  assert.match(source, /repository\.deleteWork\(work\.id, \{ published: work\.visibility === "published", idempotencyKey: crypto\.randomUUID\(\) \}\)/);
+  assert.match(source, /catch \{\s*try \{ await reload\(\); \}\s*catch \{\}\s*setError\("THIS WORK COULD NOT BE DELETED"\);/s);
+  assert.doesNotMatch(source, /UNPUBLISH THIS WORK BEFORE DELETING IT/);
+  assert.doesNotMatch(source, /confirm\.disabled = work\.visibility === "published"/);
+});
+
 test("IndexedDB preservation boundary retains the legacy database and store", () => {
   assert.deepEqual(INDEXEDDB_BOUNDARY, { databaseName: "chained-works", version: 1, objectStoreName: "works", migrationMarker: null });
 });

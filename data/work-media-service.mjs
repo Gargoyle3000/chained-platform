@@ -320,6 +320,11 @@ export function createWorkMediaService(client, config = {}, {
     finalize: (id) => invoke(client, "finalize-work-image-upload", { work_image_id: id }),
     publish: (id, key) => invoke(client, "publish-work", { work_id: id, idempotency_key: key }),
     unpublish: (id, key) => invoke(client, "unpublish-work", { work_id: id, idempotency_key: key }),
+    async deletePublishedWork(id, key) {
+      const result = await invoke(client, "unpublish-work", { work_id: id, idempotency_key: key, delete_after_unpublish: true });
+      if (result.status !== "deleted") throw new WorkError(WORK_ERROR_CODES.UNAVAILABLE, "WORK HIDDEN · PUBLIC REMOVAL IN PROGRESS");
+      return result;
+    },
     deleteImage: deleteReservedImage,
     mapImage: databaseImageToClient
   });

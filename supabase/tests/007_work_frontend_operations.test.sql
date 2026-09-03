@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(29);
+select plan(32);
 
 insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at) values
 ('00000000-0000-0000-0000-000000000000','71000000-0000-4000-8000-000000000001','authenticated','authenticated','frontend-one@example.test',now(),now()),
@@ -34,7 +34,10 @@ insert into public.works (id,owner_profile_id,created_by_account_id,updated_by_a
 ('75000000-0000-4000-8000-000000000002','72000000-0000-4000-8000-000000000002','71000000-0000-4000-8000-000000000002','71000000-0000-4000-8000-000000000002','OTHER DRAFT',2026,'2026','single-work','draft',null),
 ('75000000-0000-4000-8000-000000000003','72000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','PUBLISHED',2026,'2026','single-work','published',now()),
 ('75000000-0000-4000-8000-000000000004','72000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','DELETE ME',2026,'2026','single-work','draft',null),
-('75000000-0000-4000-8000-000000000005','72000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','BUSY',2026,'2026','single-work','draft',null);
+('75000000-0000-4000-8000-000000000005','72000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','BUSY',2026,'2026','single-work','draft',null),
+('75000000-0000-4000-8000-000000000006','72000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','PENDING',2026,'2026','single-work','draft',null),
+('75000000-0000-4000-8000-000000000007','72000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','RESUME CLEANUP',2026,'2026','single-work','draft',null),
+('75000000-0000-4000-8000-000000000008','72000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','OTHER CLEANUP',2026,'2026','single-work','draft',null);
 
 insert into public.work_images (id,work_id,private_object_path,public_object_path,original_filename,mime_type,file_size,sort_order,is_cover,uploaded_by_account_id,updated_by_account_id,upload_status,original_verified_at) values
 ('76000000-0000-4000-8000-000000000001','75000000-0000-4000-8000-000000000001','72000000-0000-4000-8000-000000000001/75000000-0000-4000-8000-000000000001/76000000-0000-4000-8000-000000000001/original.jpg',null,'one.jpg','image/jpeg',4,0,true,'71000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','ready',now()),
@@ -42,8 +45,12 @@ insert into public.work_images (id,work_id,private_object_path,public_object_pat
 ('76000000-0000-4000-8000-000000000003','75000000-0000-4000-8000-000000000002','72000000-0000-4000-8000-000000000002/75000000-0000-4000-8000-000000000002/76000000-0000-4000-8000-000000000003/original.jpg',null,'other.jpg','image/jpeg',4,0,true,'71000000-0000-4000-8000-000000000002','71000000-0000-4000-8000-000000000002','ready',now()),
 ('76000000-0000-4000-8000-000000000004','75000000-0000-4000-8000-000000000003','72000000-0000-4000-8000-000000000001/75000000-0000-4000-8000-000000000003/76000000-0000-4000-8000-000000000004/original.jpg','72000000-0000-4000-8000-000000000001/75000000-0000-4000-8000-000000000003/revision/76000000-0000-4000-8000-000000000004.jpg','published.jpg','image/jpeg',4,0,true,'71000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','ready',now());
 
-insert into public.work_publication_operations (id,work_id,operation_kind,status,actor_account_id,started_at)
-values ('77000000-0000-4000-8000-000000000001','75000000-0000-4000-8000-000000000005','public_cleanup','running','71000000-0000-4000-8000-000000000001',now());
+insert into public.work_publication_operations (id,work_id,operation_kind,status,publication_revision,actor_account_id,started_at,cleanup_required)
+values
+('77000000-0000-4000-8000-000000000001','75000000-0000-4000-8000-000000000005','public_cleanup','running',null,'71000000-0000-4000-8000-000000000001',now(),false),
+('77000000-0000-4000-8000-000000000002','75000000-0000-4000-8000-000000000006','publish','pending','78000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001',null,false),
+('77000000-0000-4000-8000-000000000003','75000000-0000-4000-8000-000000000007','unpublish','cleanup_pending',null,'71000000-0000-4000-8000-000000000001',now(),true),
+('77000000-0000-4000-8000-000000000004','75000000-0000-4000-8000-000000000008','public_cleanup','cleanup_pending',null,'71000000-0000-4000-8000-000000000001',now(),true);
 
 select has_function('public','list_manageable_artist_profiles',array[]::text[],'manageable-profile RPC exists');
 select has_function('public','list_managed_work_images',array['uuid'],'managed-image RPC exists');
@@ -100,7 +107,10 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select throws_ok($$select public.soft_delete_work('75000000-0000-4000-8000-000000000003')$$,'42501',null,'published Work must be unpublished before deletion');
-select throws_ok($$select public.soft_delete_work('75000000-0000-4000-8000-000000000005')$$,'55000',null,'active publication operation blocks soft deletion');
+select throws_ok($$select public.soft_delete_work('75000000-0000-4000-8000-000000000005')$$,'55000',null,'running operation blocks direct soft deletion');
+select throws_ok($$select public.soft_delete_work('75000000-0000-4000-8000-000000000006')$$,'55000',null,'pending operation blocks direct soft deletion');
+select throws_ok($$select public.soft_delete_work('75000000-0000-4000-8000-000000000007')$$,'PDC01','The Work public cleanup must be resumed before deletion.','cleanup-pending unpublication exposes the exact resume contract');
+select throws_ok($$select public.soft_delete_work('75000000-0000-4000-8000-000000000008')$$,'55000',null,'non-unpublication cleanup-pending blocks direct soft deletion');
 select lives_ok($$select public.soft_delete_work('75000000-0000-4000-8000-000000000004')$$,'authorised owner can soft-delete a draft');
 reset role;
 select ok((select deleted_at is not null and purge_after=deleted_at+interval '30 days' from public.works where id='75000000-0000-4000-8000-000000000004'),'wrapper preserves trusted soft-delete history and deadline');
