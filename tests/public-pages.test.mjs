@@ -8,6 +8,7 @@ import {
 } from "../data/discover-ordering.mjs";
 import {
   createPublicArtworkLink,
+  createPublicPresentationLink,
   createPublicProfileLink,
   DISCOVER_PROFILE_SELECT,
   DISCOVER_WORK_SELECT,
@@ -175,6 +176,8 @@ test("profile and artwork links use stable safe public routes", () => {
   assert.equal(createPublicProfileLink("../peer"), null);
   assert.equal(createPublicArtworkLink(IDS.workA1), `artwork.html?id=${IDS.workA1}`);
   assert.equal(createPublicArtworkLink("not-an-id"), null);
+  assert.equal(createPublicPresentationLink(IDS.workA1), `presentation.html?id=${IDS.workA1}`);
+  assert.equal(createPublicPresentationLink("not-an-id"), null);
 });
 
 test("Discover mapping excludes drafts, deleted Works, and missing public covers", () => {

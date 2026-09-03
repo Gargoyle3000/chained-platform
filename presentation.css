@@ -1,0 +1,75 @@
+body.presentation-page {
+  min-height: 100svh;
+}
+
+.presentation-detail {
+  width: min(calc(100% - (2 * var(--page-gutter))), 760px);
+  margin-left: var(--page-gutter);
+  min-height: calc(100svh - var(--header-height));
+  padding-top: calc(var(--header-height) + 54px);
+  padding-bottom: 120px;
+}
+
+.presentation-detail h1 {
+  margin: 0 0 24px;
+
+  font-size: clamp(32px, 4.6vw, 68px);
+  line-height: .92;
+  font-weight: 400;
+  letter-spacing: -.055em;
+}
+
+.presentation-detail p {
+  margin: 0 0 8px;
+
+  font-size: var(--font-meta);
+  line-height: 1.45;
+}
+
+.presentation-artist,
+.presentation-external {
+  color: var(--accent);
+}
+
+.presentation-artist {
+  display: inline-block;
+  margin-top: 20px;
+
+  font-size: var(--font-meta);
+}
+
+.presentation-type,
+.presentation-date,
+.presentation-location {
+  text-transform: uppercase;
+}
+
+.presentation-description {
+  max-width: 68ch;
+  margin-top: 28px !important;
+  white-space: pre-line;
+}
+
+.presentation-external {
+  display: inline-block;
+  margin-top: 22px;
+  font-size: var(--font-meta);
+}
+
+.presentation-back {
+  display: block;
+  width: max-content;
+  margin-top: 48px;
+}
+
+.presentation-state {
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .presentation-detail {
+    width: calc(100% - (2 * var(--page-gutter)));
+    padding-top: calc(var(--header-height) + 22px);
+    padding-bottom: 80px;
+  }
+}

@@ -100,6 +100,10 @@ export function isValidPublicWorkId(value) {
   return typeof value === "string" && UUID_PATTERN.test(value);
 }
 
+export function isValidPublicPresentationId(value) {
+  return typeof value === "string" && UUID_PATTERN.test(value);
+}
+
 export function createPublicProfileLink(slug) {
   return isValidProfileSlug(slug)
     ? `profile.html?slug=${encodeURIComponent(slug)}`
@@ -109,6 +113,12 @@ export function createPublicProfileLink(slug) {
 export function createPublicArtworkLink(workId) {
   return isValidPublicWorkId(workId)
     ? `artwork.html?id=${encodeURIComponent(workId)}`
+    : null;
+}
+
+export function createPublicPresentationLink(presentationId) {
+  return isValidPublicPresentationId(presentationId)
+    ? `presentation.html?id=${encodeURIComponent(presentationId)}`
     : null;
 }
 

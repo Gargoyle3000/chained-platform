@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 
 import { createDiscoverRepository } from "../data/discover-repository.mjs";
 import { createPublicProfileRepository } from "../data/public-profile-repository.mjs";
+import { createPublicPresentationRepository } from "../data/public-presentation-repository.mjs";
 import { createSupabaseWorkRepository } from "../data/supabase-work-repository.mjs";
 
 const root = resolve(import.meta.dirname, "..");
@@ -273,6 +274,10 @@ try {
   const workIds = Array.from({ length: 10 }, () => randomUUID());
   const imageIds = Array.from({ length: 9 }, () => randomUUID());
   const revisionIds = Array.from({ length: 9 }, () => randomUUID());
+  const presentationId = randomUUID();
+  const privatePresentationId = randomUUID();
+  const unsafePresentationId = randomUUID();
+  const minimalPresentationId = randomUUID();
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
 
   const visibleWorks = [
@@ -317,6 +322,19 @@ try {
     insert into public.work_images (id,work_id,private_object_path,public_object_path,original_filename,mime_type,file_size,pixel_width,pixel_height,sort_order,is_cover,upload_status,original_verified_at) values ${imageSql};
     insert into public.work_images (id,work_id,private_object_path,public_object_path,original_filename,mime_type,file_size,pixel_width,pixel_height,sort_order,is_cover,upload_status,original_verified_at) values
       ('${missingCoverWork.image}'::uuid,'${missingCoverWork.work}'::uuid,'${missingPrivatePath}',null,'test.png','image/png',${png.length},1,1,0,true,'ready',now());
+    insert into public.profile_activities (id,owner_profile_id,title,activity_type,venue_name,city,country,start_date,end_date,description,show_in_presentations,visibility,published_at) values
+      ('${presentationId}'::uuid,'${profileIds[0]}'::uuid,'PUBLIC PRESENTATION','group-exhibition','TEST VENUE','TEST CITY','NL','2026-08-09','2026-08-10','PUBLIC PRESENTATION DESCRIPTION',true,'published','2026-08-09T00:00:00Z'),
+      ('${privatePresentationId}'::uuid,'${profileIds[0]}'::uuid,'PRIVATE PRESENTATION','group-exhibition','TEST VENUE','TEST CITY','NL','2026-08-11',null,'PRIVATE PRESENTATION DESCRIPTION',true,'draft',null),
+      ('${unsafePresentationId}'::uuid,'${profileIds[0]}'::uuid,'UNSAFE URL PRESENTATION','group-exhibition','TEST VENUE','TEST CITY','NL','2026-08-12',null,null,true,'published','2026-08-12T00:00:00Z'),
+      ('${minimalPresentationId}'::uuid,'${profileIds[0]}'::uuid,'MINIMAL PRESENTATION','group-exhibition','TEST VENUE','TEST CITY','NL','2026-08-13',null,null,true,'published','2026-08-13T00:00:00Z');
+
+    update public.profile_activities
+       set external_url = 'https://example.test/presentation'
+     where id = '${presentationId}'::uuid;
+
+    update public.profile_activities
+       set external_url = 'javascript:alert(1)'
+     where id = '${unsafePresentationId}'::uuid;
   `);
 
   stage = "creating generated local Storage fixtures";
@@ -352,6 +370,11 @@ try {
   record("dynamic profile lists only that artist's published Works", profileResult.works.length === 3 && profileResult.works.every((entry) => entry.artistSlug === slugs[0]));
   record("profile Work order uses year then update then ID", profileResult.works.map((entry) => entry.id).join(",") === workIds.slice(0, 3).join(","));
   record("unpublished profile is unavailable", (await publicProfileRepository.getProfile(slugs[5])).kind === "unavailable");
+
+  const presentationRepository = createPublicPresentationRepository(config);
+  const publicPresentation = await presentationRepository.getPresentation(presentationId);
+  record("published Presentation opens through its public ID repository", publicPresentation.kind === "available" && publicPresentation.presentation.id === presentationId && publicPresentation.profile.slug === slugs[0]);
+  record("draft Presentation remains unavailable", (await presentationRepository.getPresentation(privatePresentationId)).kind === "unavailable");
 
   const artworkRepository = createSupabaseWorkRepository(client, config);
   record("published Work opens through the artwork repository", Boolean(await artworkRepository.getPublishedWork(workIds[0])));
@@ -409,12 +432,47 @@ try {
   await navigate(`profile.html?slug=${encodeURIComponent(slugs[0])}`, "document.querySelectorAll('.profile-work').length === 3");
   const browserProfileState = await evaluate(`(() => ({
     count: document.querySelectorAll('.profile-work').length,
-    unsupported: document.body.innerText.includes('PRESENTATIONS') || document.body.innerText.includes('PRESS'),
+    presentationHref: document.querySelector('#profile-presentations-link:not([hidden])')?.getAttribute('href') || '',
+    pressHidden: document.querySelector('#profile-press-link')?.hidden === true,
     links: [...document.querySelectorAll('.profile-image-link')].every((link) => link.getAttribute('href').startsWith('artwork.html?id=')),
     uncropped: [...document.querySelectorAll('.profile-image-link img')].every((image) => getComputedStyle(image).objectFit === 'contain')
   }))()`);
-  record("browser profile shows only implemented WORKS", browserProfileState.count === 3 && !browserProfileState.unsupported);
+  record("browser profile exposes its implemented Presentations route", browserProfileState.count === 3 && browserProfileState.presentationHref === `profile-presentations.html?slug=${encodeURIComponent(slugs[0])}` && browserProfileState.pressHidden);
   record("browser profile Work links and images are safe", browserProfileState.links && browserProfileState.uncropped);
+
+  stage = "rendering the public Presentations route in local mode";
+  await navigate(`profile-presentations.html?slug=${encodeURIComponent(slugs[0])}`, "document.querySelector('.profile-presentation h2 a')");
+  record("Presentation list emits the canonical detail route", await evaluate(`document.querySelector('.profile-presentation[data-presentation-id="${presentationId}"] h2 a')?.getAttribute('href') === 'presentation.html?id=${presentationId}'`));
+  record("Presentation list remains an overview without context or external links", await evaluate("document.querySelectorAll('.profile-presentation-description, .profile-presentation-external').length === 0"));
+
+  stage = "rendering the public Presentation deep link in local mode";
+  await navigate(`presentation.html?id=${encodeURIComponent(presentationId)}`, "document.querySelector('.presentation-detail h1')?.textContent === 'PUBLIC PRESENTATION'");
+  const browserPresentationState = await evaluate(`(() => ({
+    title: document.querySelector('.presentation-detail h1')?.textContent,
+    artistHref: document.querySelector('.presentation-artist')?.getAttribute('href'),
+    backHref: document.querySelector('.presentation-back')?.getAttribute('href'),
+    description: document.querySelector('.presentation-description')?.textContent,
+    externalHref: document.querySelector('.presentation-external')?.getAttribute('href'),
+    externalRel: document.querySelector('.presentation-external')?.getAttribute('rel')
+  }))()`);
+  record("Presentation deep link renders the matching public record", browserPresentationState.title === "PUBLIC PRESENTATION"
+    && browserPresentationState.artistHref === `profile.html?slug=${slugs[0]}`
+    && browserPresentationState.backHref === `profile-presentations.html?slug=${slugs[0]}`
+    && browserPresentationState.description === "PUBLIC PRESENTATION DESCRIPTION"
+    && browserPresentationState.externalHref === "https://example.test/presentation"
+    && browserPresentationState.externalRel === "noopener noreferrer");
+
+  stage = "rendering a Presentation with an unsafe external URL in local mode";
+  await navigate(`presentation.html?id=${encodeURIComponent(unsafePresentationId)}`, "document.querySelector('.presentation-detail h1')?.textContent === 'UNSAFE URL PRESENTATION'");
+  record("unsafe Presentation URLs do not render clickable links", await evaluate("document.querySelector('.presentation-external') === null"));
+
+  stage = "rendering a Presentation with no optional context in local mode";
+  await navigate(`presentation.html?id=${encodeURIComponent(minimalPresentationId)}`, "document.querySelector('.presentation-detail h1')?.textContent === 'MINIMAL PRESENTATION'");
+  record("absent optional Presentation context does not render placeholders", await evaluate("document.querySelector('.presentation-description, .presentation-external') === null"));
+
+  stage = "rendering an unavailable Presentation deep link in local mode";
+  await navigate(`presentation.html?id=${encodeURIComponent(privatePresentationId)}`, "document.querySelector('.presentation-detail h1')?.textContent === 'PRESENTATION NOT AVAILABLE'");
+  record("private Presentation deep link does not render public data", await evaluate("document.querySelector('.presentation-detail h1')?.textContent === 'PRESENTATION NOT AVAILABLE'"));
 
   stage = "rendering the artwork route in local mode";
   await navigate(`artwork.html?id=${encodeURIComponent(workIds[0])}`, "document.querySelector('.artwork-artist')?.getAttribute('href')?.startsWith('profile.html?slug=')");
@@ -450,6 +508,19 @@ try {
       })()`);
       record(`responsive ${pageLabel} ${width}`, !layout.overflow && layout.contentTop >= layout.headerBottom - 1 && layout.focusable);
     }
+
+    stage = `checking responsive Presentation detail at ${width}`;
+    await navigate(`presentation.html?id=${encodeURIComponent(presentationId)}`, "document.querySelector('.presentation-detail h1')?.textContent === 'PUBLIC PRESENTATION'");
+    const presentationLayout = await evaluate(`(() => {
+      const header = document.querySelector('.site-header')?.getBoundingClientRect();
+      const title = document.querySelector('.presentation-detail h1')?.getBoundingClientRect();
+      return {
+        overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        titleTop: title?.top || 0,
+        headerBottom: header?.bottom || 0
+      };
+    })()`);
+    record(`responsive Presentation detail ${width}`, !presentationLayout.overflow && presentationLayout.titleTop >= presentationLayout.headerBottom - 1);
   }
 
   process.stdout.write(JSON.stringify({ ok: true, assertions: outcomes.length }));
@@ -473,6 +544,9 @@ try {
         .join(",");
 
       runSql(`
+        delete from public.profile_activities
+        where owner_profile_id in (${profileList});
+
         delete from public.work_images
         where work_id in (
           select id

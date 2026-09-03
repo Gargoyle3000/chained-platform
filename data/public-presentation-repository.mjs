@@ -2,6 +2,7 @@ import { FRONTEND_MODES } from "../auth/config.mjs";
 import { getFrontendRuntime } from "../auth/supabase-client.mjs";
 import { requestPublicRows } from "./public-data-request.mjs";
 import {
+  isValidPublicPresentationId,
   isValidProfileSlug,
   mapPublishedArtistProfile,
   PUBLIC_PROFILE_SELECT
@@ -82,6 +83,64 @@ export function createPublicPresentationRepository(
 ) {
   return Object.freeze({
     mode: FRONTEND_MODES.SUPABASE,
+
+    async getPresentation(id) {
+      if (!isValidPublicPresentationId(id)) {
+        return Object.freeze({ kind: "unavailable" });
+      }
+
+      const presentationQuery = new URLSearchParams({
+        select: PUBLIC_PRESENTATION_SELECT,
+        id: `eq.${id}`,
+        visibility: "eq.published",
+        show_in_presentations: "eq.true",
+        published_at: "not.is.null",
+        limit: "1"
+      });
+      const rows = await request(
+        config,
+        "profile_activities",
+        presentationQuery
+      );
+      const presentationRow = rows[0];
+
+      if (!presentationRow) {
+        return Object.freeze({ kind: "unavailable" });
+      }
+
+      const profileQuery = new URLSearchParams({
+        select: PUBLIC_PROFILE_SELECT,
+        id: `eq.${presentationRow.owner_profile_id}`,
+        profile_type: "eq.artist",
+        publication_status: "eq.published",
+        limit: "1"
+      });
+      const profiles = await request(
+        config,
+        "public_profiles",
+        profileQuery
+      );
+      const profileRow = profiles[0];
+      const profile = mapPublishedArtistProfile(profileRow);
+
+      if (
+        !profileRow ||
+        !profile ||
+        profile.showPresentations !== true ||
+        !isPublishedPresentation(
+          presentationRow,
+          profileRow.id
+        )
+      ) {
+        return Object.freeze({ kind: "unavailable" });
+      }
+
+      return Object.freeze({
+        kind: "available",
+        profile: Object.freeze({ ...profile, id: profileRow.id }),
+        presentation: mapPresentation(presentationRow)
+      });
+    },
 
     async getProfilePresentations(slug) {
       if (!isValidProfileSlug(slug)) {

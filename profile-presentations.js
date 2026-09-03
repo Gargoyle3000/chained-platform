@@ -6,6 +6,7 @@ import {
 } from "./data/public-presentation-repository.mjs";
 import { createFollowService } from "./data/follow-service.mjs";
 import {
+  createPublicPresentationLink,
   createPublicProfileLink,
   isValidProfileSlug
 } from "./data/public-work-mapping.mjs";
@@ -78,12 +79,6 @@ function formatDateRange(startDate, endDate) {
   return `${start} — ${end}`;
 }
 
-function createPresentationLink(id) {
-  return /^[0-9a-f-]{36}$/i.test(String(id || ""))
-    ? `presentation.html?id=${encodeURIComponent(id)}`
-    : null;
-}
-
 function createState(message, isError = false) {
   const state = document.createElement("p");
 
@@ -115,7 +110,7 @@ function createPresentationArticle(presentation) {
   const metadata = document.createElement("div");
   const heading = document.createElement("h2");
   const detailLink =
-    createPresentationLink(presentation.id);
+    createPublicPresentationLink(presentation.id);
 
   article.className = "profile-presentation";
   article.dataset.presentationId = presentation.id;
@@ -160,30 +155,6 @@ function createPresentationArticle(presentation) {
     location,
     "profile-presentation-location"
   );
-
-  if (presentation.description) {
-    appendLine(
-      metadata,
-      presentation.description,
-      "profile-presentation-description"
-    );
-  }
-
-  if (presentation.externalUrl) {
-    const externalLink =
-      document.createElement("a");
-
-    externalLink.className =
-      "profile-presentation-external";
-    externalLink.href =
-      presentation.externalUrl;
-    externalLink.target = "_blank";
-    externalLink.rel = "noreferrer";
-    externalLink.textContent =
-      "EXTERNAL LINK ↗";
-
-    metadata.append(externalLink);
-  }
 
   article.append(metadata);
 
