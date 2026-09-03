@@ -29,6 +29,7 @@ Current focus: the image-derivative migration is closed; complete and polish cor
 - Management language uses concise `WORKS`, `PRESENTATIONS`, and `AGENDA` headings.
 - Public multi-image carousel is live and manually validated on Discover, Following and Public Profile; Work detail remains a vertical full-image sequence.
 - Published Works can be removed directly from WORKS through `[ DELETE ]` → `[ CONFIRM DELETE ]`; the backend unpublishes, recalls exact public derivatives, and soft-deletes only after cleanup succeeds. A cleanup-pending retry resumes the same lifecycle.
+- Public Presentation v1 is live: profile lists use canonical Presentation detail links, and public detail pages show core metadata with optional description and validated external URL. Presentation media and Work links are not yet modeled.
 
 ## DONE — IMPORTANT INFRASTRUCTURE
 
