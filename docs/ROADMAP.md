@@ -26,7 +26,7 @@ Last updated: 2026-09-04
 
 ## PRESENTATIONS + AGENDA
 
-- Public Presentation v1 list/detail routing is live. The Presentation v2 backend trust layer is also live; build its repositories, Dashboard requests and management UI next, without treating participant, Work association or program data as public rendering until those surfaces are implemented.
+- Public Presentation v1 list/detail routing, the Presentation v2 backend trust layer, and Dashboard REQUESTS are live. Dashboard shows authorized co-operator invitations and pending Work proposals through server-side summary feeds and decisions. Build the Presentation management UI next, without treating participant, Work association or program data as public rendering until those surfaces are implemented.
 - Complete Presentation end-to-end functionality, including Agenda/events creation, editing and public display.
 - Complete Presentation ↔ Agenda ↔ Works crosslinks and attachments; standalone Agenda entries remain supported.
 

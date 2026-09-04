@@ -30,7 +30,7 @@ Current focus: the image-derivative migration is closed; complete and polish cor
 - Public multi-image carousel is live and manually validated on Discover, Following and Public Profile; Work detail remains a vertical full-image sequence.
 - Published Works can be removed directly from WORKS through `[ DELETE ]` → `[ CONFIRM DELETE ]`; the backend unpublishes, recalls exact public derivatives, and soft-deletes only after cleanup succeeds. A cleanup-pending retry resumes the same lifecycle.
 - Public Presentation v1 is live: profile lists use canonical Presentation detail links, and public detail pages show core metadata with optional description and validated external URL. Presentation media and Work links are not yet modeled.
-- Presentation v2 trust layer is live: strict public Presentation visibility, participant/Work/co-operator/program relations, scoped request/invitation summaries and Work-proposal approval exist server-side. Dashboard requests, management UI, and public v2 participants/Works/program rendering are not implemented yet.
+- Presentation v2 trust layer and Dashboard REQUESTS are live: strict public Presentation visibility, participant/Work/co-operator/program relations, and scoped request/invitation summaries exist server-side. Authorized recipients can accept or decline co-operator invitations and pending Work proposals from Dashboard. Presentation management UI and public v2 participants/Works/program rendering are not implemented yet.
 
 ## DONE — IMPORTANT INFRASTRUCTURE
 
