@@ -5,6 +5,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     await import("./data/work-repository.mjs");
   const { getPresentationRepository } =
     await import("./data/presentation-repository.mjs");
+  const { decideDashboardRequest, loadDashboardRequests } =
+    await import("./data/dashboard-requests.mjs");
   const { renderDashboardAccountIdentity } =
     await import("./data/dashboard-context.mjs");
 
@@ -33,8 +35,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const errorElement = document.querySelector(
     "#dashboard-overview-error"
   );
+  const requestsSection = document.querySelector(
+    "#dashboard-requests-section"
+  );
+  const requestsList = document.querySelector(
+    "#dashboard-requests-list"
+  );
+  const requestsError = document.querySelector(
+    "#dashboard-requests-error"
+  );
 
   const activeObjectUrls = new Set();
+  const requestActionInFlight = new Set();
   let repository = null;
 
   function releaseObjectUrls() {
@@ -48,6 +60,127 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     errorElement.textContent = message;
     errorElement.hidden = !message;
+  }
+
+  function setRequestsError(message = "") {
+    if (!requestsError) return;
+
+    requestsError.textContent = message;
+    requestsError.hidden = !message;
+  }
+
+  function createRequestAction(label, onClick) {
+    const action = document.createElement("button");
+
+    action.type = "button";
+    action.className = "text-action dashboard-request-action";
+    action.textContent = label;
+    action.addEventListener("click", () => onClick(action));
+
+    return action;
+  }
+
+  function createRequestRow(request, onDecision) {
+    const row = document.createElement("article");
+    const summary = document.createElement("p");
+    const actions = document.createElement("div");
+
+    row.className = "dashboard-request-row";
+    summary.textContent = request.kind === "work"
+      ? `${request.presentationTitle || "A PRESENTATION"} REQUESTS ${
+        request.workTitle || "A WORK"
+      }`
+      : `${request.presentationHostDisplayName || "THE PRESENTATION HOST"} INVITED YOU TO CO-OPERATE ON ${
+        request.presentationTitle || "A PRESENTATION"
+      }`;
+    actions.className = "dashboard-request-actions";
+    actions.append(
+      createRequestAction("ACCEPT", (action) =>
+        onDecision(request, "accept", action)
+      ),
+      createRequestAction("DECLINE", (action) =>
+        onDecision(request, "decline", action)
+      )
+    );
+    row.append(summary, actions);
+
+    return row;
+  }
+
+  function renderRequests(requests, onDecision) {
+    if (!requestsSection || !requestsList) return;
+
+    const empty = document.createElement("p");
+    empty.className = "dashboard-request-empty";
+    empty.textContent = "NO REQUESTS";
+
+    requestsSection.hidden = false;
+    requestsList.replaceChildren(
+      ...(requests.length
+        ? requests.map((request) => createRequestRow(request, onDecision))
+        : [empty])
+    );
+  }
+
+  async function loadRequests() {
+    try {
+      const selected = await getPresentationRepository();
+      const presentationRepository = selected.repository;
+
+      await presentationRepository.initialise();
+      const requests =
+        presentationRepository.mode === "supabase"
+          ? await loadDashboardRequests(presentationRepository)
+          : [];
+
+      setRequestsError();
+      renderRequests(requests, decideRequest);
+    } catch (error) {
+      console.error("Could not load Dashboard requests.", error);
+      setRequestsError("REQUESTS ARE CURRENTLY UNAVAILABLE");
+      if (requestsSection && requestsList) {
+        requestsSection.hidden = false;
+        requestsList.replaceChildren();
+      }
+    }
+  }
+
+  async function decideRequest(request, decision, action) {
+    const requestId = request?.kind === "work"
+      ? request.associationId
+      : request?.invitationId;
+    const requestKey = requestId ? `${request.kind}:${requestId}` : "";
+
+    if (!requestId || requestActionInFlight.has(requestKey)) return;
+
+    requestActionInFlight.add(requestKey);
+    const actions = action.closest(".dashboard-request-actions")
+      ?.querySelectorAll("button") || [];
+    actions.forEach((button) => {
+      button.disabled = true;
+    });
+    setRequestsError();
+
+    try {
+      const selected = await getPresentationRepository();
+      const presentationRepository = selected.repository;
+
+      await presentationRepository.initialise();
+      const requests = await decideDashboardRequest(
+        presentationRepository,
+        request,
+        decision
+      );
+      renderRequests(requests, decideRequest);
+    } catch (error) {
+      console.error("Could not decide Dashboard request.", error);
+      setRequestsError("REQUEST COULD NOT BE UPDATED");
+      actions.forEach((button) => {
+        button.disabled = false;
+      });
+    } finally {
+      requestActionInFlight.delete(requestKey);
+    }
   }
 
   function initialiseRecentScrollIndicators() {
@@ -628,6 +761,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             "ARTIST PROFILE SETUP REQUIRED",
             false
           );
+          await loadRequests();
           return;
         }
 
@@ -642,6 +776,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       setError();
       updateSummary(works);
       await loadPresentationSummary(managedProfileIds);
+      await loadRequests();
       await renderRecentWorks(works);
     } catch (error) {
       console.error(
@@ -664,6 +799,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         "WORKS UNAVAILABLE",
         false
       );
+      renderRequests([], decideRequest);
       setError("WORKS ARE CURRENTLY UNAVAILABLE");
     }
   }

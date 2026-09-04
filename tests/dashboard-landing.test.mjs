@@ -82,3 +82,21 @@ test("prototype fallback copy stays product-facing", async () => {
   assert.doesNotMatch(copy, /REQUIRES THE LOCAL DATABASE/);
   assert.doesNotMatch(copy, /CLEANUP PENDING/);
 });
+
+test("Dashboard requests use only safe server summaries and preserve both action types", async () => {
+  const [page, script] = await Promise.all([
+    readFile(new URL("../dashboard.html", import.meta.url), "utf8"),
+    readFile(new URL("../dashboard-overview.js", import.meta.url), "utf8")
+  ]);
+
+  assert.match(page, /id="dashboard-requests-section"/);
+  assert.match(page, /<h2>INCOMING REQUESTS<\/h2>/);
+  assert.match(script, /loadDashboardRequests\(presentationRepository\)/);
+  assert.match(script, /decideDashboardRequest\(/);
+  assert.match(script, /request\.kind === "work"/);
+  assert.match(script, /requestActionInFlight/);
+  assert.match(script, /NO REQUESTS/);
+  assert.doesNotMatch(script, /listWorkPresentationRequestSummaries\(/);
+  assert.doesNotMatch(script, /get_work_presentation_request_summaries/);
+  assert.doesNotMatch(script, /get_work_presentation_requests/);
+});

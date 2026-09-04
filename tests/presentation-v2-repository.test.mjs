@@ -1,0 +1,326 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { createSupabasePresentationRepository } from "../data/presentation-repository.mjs";
+
+const IDS = Object.freeze({
+  presentation: "11111111-1111-4111-8111-111111111111",
+  participant: "22222222-2222-4222-8222-222222222222",
+  work: "33333333-3333-4333-8333-333333333333",
+  association: "44444444-4444-4444-8444-444444444444",
+  invitation: "55555555-5555-4555-8555-555555555555",
+  account: "66666666-6666-4666-8666-666666666666",
+  profile: "77777777-7777-4777-8777-777777777777",
+  occurrence: "88888888-8888-4888-8888-888888888888"
+});
+
+function createClient({ rpcRows = {}, tables = {} } = {}) {
+  const calls = [];
+
+  function query(table) {
+    const result = { data: tables[table] || [], error: null };
+    const builder = {
+      select() { return builder; },
+      eq() { return builder; },
+      in() { return builder; },
+      order() { return builder; },
+      insert(payload) {
+        calls.push({ insert: [table, payload] });
+        return builder;
+      },
+      update(payload) {
+        calls.push({ update: [table, payload] });
+        return builder;
+      },
+      single() { return Promise.resolve(result); },
+      maybeSingle() { return Promise.resolve(result); },
+      then(resolve) { return Promise.resolve(result).then(resolve); }
+    };
+
+    return builder;
+  }
+
+  return {
+    calls,
+    from(table) {
+      calls.push({ from: table });
+      return query(table);
+    },
+    async rpc(name, args) {
+      calls.push({ rpc: [name, args] });
+      const value = rpcRows[name];
+      return {
+        data: typeof value === "function" ? value(args) : value ?? true,
+        error: null
+      };
+    }
+  };
+}
+
+test("Presentation v2 participant adapters use the bounded participant RPCs", async () => {
+  const client = createClient({
+    rpcRows: {
+      get_managed_presentation_participants: [{
+        id: IDS.participant,
+        presentation_id: IDS.presentation,
+        linked_profile_id: IDS.profile,
+        display_name: "Manuel Klappe",
+        position: 2,
+        is_visible: true
+      }]
+    }
+  });
+  const repository = createSupabasePresentationRepository(client);
+
+  assert.deepEqual(await repository.listManagedParticipants(IDS.presentation), [{
+    id: IDS.participant,
+    presentationId: IDS.presentation,
+    linkedProfileId: IDS.profile,
+    displayName: "Manuel Klappe",
+    position: 2,
+    isVisible: true,
+    createdAt: null,
+    updatedAt: null
+  }]);
+  assert.equal(
+    (await repository.getManagedParticipant(IDS.presentation, IDS.participant))?.id,
+    IDS.participant
+  );
+  await repository.createParticipant(IDS.presentation, {
+    displayName: "  Peer Vink  ",
+    linkedProfileId: IDS.profile
+  });
+  await repository.updateParticipant(IDS.participant, {
+    displayName: "Peer Vink",
+    isVisible: false
+  });
+  await repository.removeParticipant(IDS.participant);
+  await repository.reorderParticipants(IDS.presentation, [IDS.participant]);
+
+  assert.deepEqual(client.calls.filter((call) => call.rpc), [
+    { rpc: ["get_managed_presentation_participants", { target_presentation_id: IDS.presentation }] },
+    { rpc: ["get_managed_presentation_participants", { target_presentation_id: IDS.presentation }] },
+    { rpc: ["create_presentation_participant", {
+      target_presentation_id: IDS.presentation,
+      participant_display_name: "Peer Vink",
+      target_linked_profile_id: IDS.profile
+    }] },
+    { rpc: ["update_presentation_participant", {
+      target_participant_id: IDS.participant,
+      participant_display_name: "Peer Vink",
+      target_linked_profile_id: null,
+      participant_is_visible: false
+    }] },
+    { rpc: ["remove_presentation_participant", { target_participant_id: IDS.participant }] },
+    { rpc: ["reorder_presentation_participants", {
+      target_presentation_id: IDS.presentation,
+      ordered_participant_ids: [IDS.participant]
+    }] }
+  ]);
+});
+
+test("Presentation Work associations preserve backend statuses and decision contract", async () => {
+  const client = createClient({
+    rpcRows: {
+      get_managed_presentation_works: [{
+        id: IDS.association,
+        presentation_id: IDS.presentation,
+        work_id: IDS.work,
+        position: 0,
+        is_visible: true,
+        status: "pending"
+      }],
+      get_work_presentation_request_summaries: [{
+        association_id: IDS.association,
+        presentation_id: IDS.presentation,
+        presentation_title: "Gothic Summer",
+        presentation_host_display_name: "Peer Vink",
+        work_id: IDS.work,
+        work_title: "Hedo Maxxing II",
+        request_status: "pending",
+        requested_at: "2026-09-04T10:00:00Z"
+      }, { malformed: true }],
+      get_my_presentation_work_request_summaries: [{
+        association_id: IDS.association,
+        presentation_id: IDS.presentation,
+        presentation_title: "Gothic Summer",
+        presentation_host_display_name: "Peer Vink",
+        work_id: IDS.work,
+        work_title: "Hedo Maxxing II",
+        request_status: "pending",
+        requested_at: "2026-09-04T10:00:00Z"
+      }, {
+        association_id: IDS.participant,
+        presentation_id: IDS.presentation,
+        presentation_title: "Second Presentation",
+        presentation_host_display_name: "Peer Vink",
+        work_id: IDS.profile,
+        work_title: "Second Work",
+        request_status: "pending",
+        requested_at: "2026-09-04T11:00:00Z"
+      }, { malformed: true }]
+    }
+  });
+  const repository = createSupabasePresentationRepository(client);
+
+  assert.equal((await repository.listManagedPresentationWorks(IDS.presentation))[0].status, "pending");
+  const summaries = await repository.listWorkPresentationRequestSummaries(IDS.work);
+  assert.equal(summaries.length, 1);
+  assert.deepEqual(summaries[0], {
+    associationId: IDS.association,
+    presentationId: IDS.presentation,
+    presentationTitle: "Gothic Summer",
+    presentationHostDisplayName: "Peer Vink",
+    workId: IDS.work,
+    workTitle: "Hedo Maxxing II",
+    status: "pending",
+    requestedAt: "2026-09-04T10:00:00Z"
+  });
+  const dashboardSummaries =
+    await repository.listMyPresentationWorkRequestSummaries();
+  assert.equal(dashboardSummaries.length, 2);
+  assert.deepEqual(
+    dashboardSummaries.map((summary) => summary.associationId),
+    [IDS.association, IDS.participant]
+  );
+  await repository.proposePresentationWork(IDS.presentation, IDS.work);
+  await repository.decidePresentationWork(IDS.association, "accepted");
+  await repository.decidePresentationWork(IDS.association, "rejected");
+  await repository.setPresentationWorkVisibility(IDS.association, false);
+  await repository.removePresentationWork(IDS.association);
+  await repository.reorderPresentationWorks(IDS.presentation, [IDS.association]);
+  await assert.rejects(
+    () => repository.decidePresentationWork(IDS.association, "pending"),
+    /WORK PROPOSAL COULD NOT BE DECIDED/
+  );
+
+  assert.deepEqual(client.calls.filter((call) => call.rpc).slice(-6), [
+    { rpc: ["propose_presentation_work", {
+      target_presentation_id: IDS.presentation,
+      target_work_id: IDS.work
+    }] },
+    { rpc: ["decide_presentation_work", {
+      target_association_id: IDS.association,
+      target_decision: "accepted"
+    }] },
+    { rpc: ["decide_presentation_work", {
+      target_association_id: IDS.association,
+      target_decision: "rejected"
+    }] },
+    { rpc: ["set_presentation_work_visibility", {
+      target_association_id: IDS.association,
+      target_is_visible: false
+    }] },
+    { rpc: ["remove_presentation_work", { target_association_id: IDS.association }] },
+    { rpc: ["reorder_presentation_works", {
+      target_presentation_id: IDS.presentation,
+      ordered_association_ids: [IDS.association]
+    }] }
+  ]);
+});
+
+test("co-operator summaries are safe, pending state is preserved, and decisions stay RPC-bound", async () => {
+  const client = createClient({
+    tables: {
+      presentation_cooperators: [{
+        id: IDS.invitation,
+        presentation_id: IDS.presentation,
+        invited_account_id: IDS.account,
+        invited_profile_id: IDS.profile,
+        status: "accepted",
+        invited_at: "2026-09-04T10:00:00Z"
+      }]
+    },
+    rpcRows: {
+      get_presentation_cooperator_invitation_summaries: [{
+        invitation_id: IDS.invitation,
+        presentation_id: IDS.presentation,
+        presentation_title: "Gothic Summer",
+        presentation_host_display_name: "Peer Vink",
+        invitation_status: "pending",
+        invited_at: "2026-09-04T10:00:00Z"
+      }, { invitation_id: "not-a-uuid" }]
+    }
+  });
+  const repository = createSupabasePresentationRepository(client);
+
+  assert.equal((await repository.listPresentationCooperators(IDS.presentation))[0].status, "accepted");
+  const incoming = await repository.listIncomingCooperatorInvitations();
+  assert.equal(incoming.length, 1);
+  assert.equal(incoming[0].status, "pending");
+  await repository.invitePresentationCooperator(IDS.presentation, IDS.account, IDS.profile);
+  await repository.acceptPresentationCooperator(IDS.invitation);
+  await repository.declinePresentationCooperator(IDS.invitation);
+  await repository.revokePresentationCooperator(IDS.invitation);
+
+  assert.deepEqual(client.calls.filter((call) => call.rpc).slice(-4), [
+    { rpc: ["invite_presentation_cooperator", {
+      target_presentation_id: IDS.presentation,
+      target_account_id: IDS.account,
+      target_profile_id: IDS.profile
+    }] },
+    { rpc: ["accept_presentation_cooperator", { target_invitation_id: IDS.invitation }] },
+    { rpc: ["decline_presentation_cooperator", { target_invitation_id: IDS.invitation }] },
+    { rpc: ["revoke_presentation_cooperator", { target_invitation_id: IDS.invitation }] }
+  ]);
+});
+
+test("Presentation program adapter uses the scoped visibility RPC and maps historical occurrences", async () => {
+  const client = createClient({
+    tables: {
+      activity_occurrences: [{
+        id: IDS.occurrence,
+        activity_id: IDS.presentation,
+        occurrence_type: "opening",
+        title_override: "Opening",
+        show_in_agenda: false,
+        show_in_presentation: true,
+        visibility: "published"
+      }]
+    }
+  });
+  const repository = createSupabasePresentationRepository(client);
+
+  const occurrences = await repository.listPresentationProgramOccurrences(IDS.presentation);
+  assert.deepEqual(occurrences[0], {
+    id: IDS.occurrence,
+    ownerProfileId: null,
+    presentationId: IDS.presentation,
+    occurrenceType: "opening",
+    titleOverride: "Opening",
+    startDate: "",
+    endDate: "",
+    startTime: "",
+    endTime: "",
+    timeZone: "",
+    venueNameOverride: "",
+    cityOverride: "",
+    showInAgenda: false,
+    showInPresentation: true,
+    visibility: "published",
+    publishedAt: null,
+    createdAt: null,
+    updatedAt: null
+  });
+  await repository.setPresentationProgramVisibility(IDS.occurrence, false);
+
+  assert.deepEqual(client.calls.filter((call) => call.rpc), [{
+    rpc: ["set_presentation_occurrence_visibility", {
+      target_occurrence_id: IDS.occurrence,
+      target_show_in_presentation: false
+    }]
+  }]);
+});
+
+test("empty safe summary responses remain empty", async () => {
+  const repository = createSupabasePresentationRepository(createClient({
+    rpcRows: {
+      get_presentation_cooperator_invitation_summaries: [],
+      get_work_presentation_request_summaries: [],
+      get_my_presentation_work_request_summaries: []
+    }
+  }));
+
+  assert.deepEqual(await repository.listIncomingCooperatorInvitations(), []);
+  assert.deepEqual(await repository.listWorkPresentationRequestSummaries(IDS.work), []);
+  assert.deepEqual(await repository.listMyPresentationWorkRequestSummaries(), []);
+});

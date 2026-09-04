@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(130);
+select plan(139);
 
 -- Accounts
 
@@ -103,7 +103,9 @@ select col_default_is('public','activity_occurrences','show_in_presentation','fa
 select has_function('public','get_public_activity_source_contexts',array['uuid[]'],'safe public activity-source projection exists');
 select has_function('public','set_presentation_occurrence_visibility',array['uuid','boolean'],'Presentation-only program visibility RPC exists');
 select has_function('public','get_work_presentation_request_summaries',array['uuid'],'Work request summary projection exists');
+select has_function('public','get_my_presentation_work_request_summaries',array[]::text[],'Dashboard Work request summary projection exists');
 select has_function('public','get_presentation_cooperator_invitation_summaries',array[]::text[],'co-operator invitation summary projection exists');
+select ok(not has_function_privilege('anon','public.get_my_presentation_work_request_summaries()','EXECUTE'),'anonymous cannot execute Dashboard Work request summaries');
 select ok((select relrowsecurity and relforcerowsecurity from pg_class where oid='public.presentation_works'::regclass),'Work association RLS is forced');
 select is_empty($$select grantee from information_schema.role_table_grants where table_schema='public' and table_name='presentation_works' and privilege_type in ('INSERT','UPDATE','DELETE') and grantee in ('anon','authenticated')$$,'association tables have no direct client writes');
 
@@ -191,6 +193,7 @@ reset role; set local role anon;
 select set_config('request.jwt.claims','{"role":"anon"}',true);
 select is_empty($$select id from public.presentation_works where work_id in ('a1400000-0000-4000-8000-000000000002','a1400000-0000-4000-8000-000000000003','a1400000-0000-4000-8000-000000000006')$$,'pending Work proposals are never public');
 select throws_ok($$select * from public.get_work_presentation_request_summaries('a1400000-0000-4000-8000-000000000008')$$,'42501',null,'anonymous cannot call Work request summaries');
+select throws_ok($$select * from public.get_my_presentation_work_request_summaries()$$,'42501',null,'anonymous cannot call Dashboard Work request summaries');
 select throws_ok($$select * from public.get_presentation_cooperator_invitation_summaries()$$,'42501',null,'anonymous cannot call invitation summaries');
 
 reset role; set local role authenticated;
@@ -215,6 +218,8 @@ select ok(position('description' in lower(pg_get_function_result('public.get_wor
 select lives_ok($$select public.decide_presentation_work((select id from public.presentation_works where work_id='a1400000-0000-4000-8000-000000000002'),'accepted')$$,'Work owner accepts proposal');
 select lives_ok($$select public.decide_presentation_work((select id from public.presentation_works where work_id='a1400000-0000-4000-8000-000000000003'),'rejected')$$,'Work owner rejects proposal');
 select results_eq($$select requested_by_account_id from public.get_work_presentation_requests('a1400000-0000-4000-8000-000000000002')$$,$$values ('a1100000-0000-4000-8000-000000000001'::uuid)$$,'Work manager can inspect proposal audit metadata');
+select results_eq($$select presentation_title,presentation_host_display_name,work_id,work_title,request_status from public.get_my_presentation_work_request_summaries() order by work_id$$,$$values ('DRAFT PRESENTATION'::varchar,'P2 HOST'::varchar,'a1400000-0000-4000-8000-000000000008'::uuid,'PRIVATE REQUEST WORK'::varchar,'pending'::public.presentation_work_status)$$,'Work manager sees one pending private Presentation request in the Dashboard feed');
+select ok(position('description' in lower(pg_get_function_result('public.get_my_presentation_work_request_summaries()'::regprocedure)))=0 and position('external_url' in lower(pg_get_function_result('public.get_my_presentation_work_request_summaries()'::regprocedure)))=0 and position('requested_by' in lower(pg_get_function_result('public.get_my_presentation_work_request_summaries()'::regprocedure)))=0,'Dashboard Work request feed projects no extra private Presentation or audit fields');
 
 -- A rejected foreign proposal reuses its association while immutable audit events retain history.
 
@@ -223,6 +228,7 @@ select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-00000000
 select lives_ok($$select public.propose_presentation_work('a1300000-0000-4000-8000-000000000001','a1400000-0000-4000-8000-000000000003')$$,'host can re-propose a rejected foreign Work');
 select results_eq($$select count(*) from public.presentation_works where presentation_id='a1300000-0000-4000-8000-000000000001' and work_id='a1400000-0000-4000-8000-000000000003'$$,$$values (1::bigint)$$,'re-proposal reuses the same association row');
 select results_eq($$select status,decided_by_account_id,decided_at from public.get_managed_presentation_works('a1300000-0000-4000-8000-000000000001') where work_id='a1400000-0000-4000-8000-000000000003'$$,$$values ('pending'::public.presentation_work_status,null::uuid,null::timestamptz)$$,'re-proposal resets decision state to pending');
+select is_empty($$select association_id from public.get_my_presentation_work_request_summaries()$$,'Presentation manager receives no pending requests for another artist Work');
 reset role;
 select results_eq($$select count(*) from public.audit_events where action='presentation.work_proposed' and metadata->>'work_id'='a1400000-0000-4000-8000-000000000003'$$,$$values (2::bigint)$$,'both proposal attempts remain in immutable audit history');
 select results_eq($$select count(*) from public.audit_events where action='presentation.work_decided' and result='rejected' and metadata->>'work_id'='a1400000-0000-4000-8000-000000000003'$$,$$values (1::bigint)$$,'the rejected decision remains in immutable audit history');
@@ -231,9 +237,15 @@ select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-00000000
 select throws_ok($$select public.decide_presentation_work((select id from public.presentation_works where work_id='a1400000-0000-4000-8000-000000000003'),'accepted')$$,'42501',null,'host still cannot decide a re-proposed foreign Work');
 
 reset role; set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000002","role":"authenticated"}',true);
+select results_eq($$select presentation_title,work_id,request_status from public.get_my_presentation_work_request_summaries() order by work_id$$,$$values ('PUBLIC PRESENTATION'::varchar,'a1400000-0000-4000-8000-000000000003'::uuid,'pending'::public.presentation_work_status),('DRAFT PRESENTATION'::varchar,'a1400000-0000-4000-8000-000000000008'::uuid,'pending'::public.presentation_work_status)$$,'Work manager receives multiple pending proposals in one Dashboard call while terminal requests are excluded');
+select results_eq($$select work_id,request_status from public.get_work_presentation_request_summaries('a1400000-0000-4000-8000-000000000003')$$,$$values ('a1400000-0000-4000-8000-000000000003'::uuid,'pending'::public.presentation_work_status)$$,'existing per-Work request summary remains available');
+
+reset role; set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000005","role":"authenticated"}',true);
 select throws_ok($$select requested_by_account_id from public.presentation_works where work_id='a1400000-0000-4000-8000-000000000002'$$,'42501',null,'unrelated authenticated account cannot read proposal actor identifiers');
 select is_empty($$select association_id from public.get_work_presentation_request_summaries('a1400000-0000-4000-8000-000000000008')$$,'unrelated account cannot read Work request summaries');
+select is_empty($$select association_id from public.get_my_presentation_work_request_summaries()$$,'unrelated account receives no Dashboard Work request summaries');
 
 -- Public child boundaries and private linked-profile projection.
 
