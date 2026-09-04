@@ -25,18 +25,6 @@ const OCCURRENCE_SELECT = [
   "updated_at"
 ].join(",");
 
-const ACTIVITY_SELECT = [
-  "id",
-  "owner_profile_id",
-  "title",
-  "activity_type",
-  "venue_name",
-  "city",
-  "country",
-  "visibility",
-  "published_at"
-].join(",");
-
 const PROFILE_SELECT = [
   "id",
   "slug",
@@ -54,6 +42,10 @@ function cleanText(value) {
 
 function inFilter(ids) {
   return `in.(${ids.join(",")})`;
+}
+
+function uuidArrayParameter(ids) {
+  return `{${ids.join(",")}}`;
 }
 
 function localToday() {
@@ -90,9 +82,9 @@ function isPublicOccurrence(row, today) {
 function isPublicActivity(row, ownerProfileId) {
   return Boolean(
     row &&
+    UUID_PATTERN.test(String(row.id || "")) &&
     row.owner_profile_id === ownerProfileId &&
-    row.visibility === "published" &&
-    row.published_at
+    cleanText(row.title)
   );
 }
 
@@ -202,20 +194,22 @@ async function resolveActivities(
   if (!ids.length) return new Map();
 
   const query = new URLSearchParams({
-    select: ACTIVITY_SELECT,
-    id: inFilter(ids)
+    target_activity_ids: uuidArrayParameter(ids)
   });
 
   const activityRows = await request(
     config,
-    "profile_activities",
+    "rpc/get_public_activity_source_contexts",
     query
   );
 
   return new Map(
     activityRows.map((row) => [
-      row.id,
-      mapActivity(row)
+      row.activity_id,
+      mapActivity({
+        ...row,
+        id: row.activity_id
+      })
     ])
   );
 }
@@ -301,9 +295,7 @@ async function mapPublicAgendaRows(
             activity && {
               ...activity,
               owner_profile_id:
-                activity.ownerProfileId,
-              visibility: "published",
-              published_at: true
+                activity.ownerProfileId
             },
             row.owner_profile_id
           )

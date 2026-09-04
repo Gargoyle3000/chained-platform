@@ -39,22 +39,6 @@ const ENTRY_SELECT = [
   "created_at"
 ].join(",");
 
-const ACTIVITY_SELECT = [
-  "id",
-  "owner_profile_id",
-  "title",
-  "activity_type",
-  "venue_name",
-  "city",
-  "country",
-  "start_date",
-  "end_date",
-  "external_url",
-  "visibility",
-  "published_at",
-  "deleted_at"
-].join(",");
-
 function cleanText(value) {
   return typeof value === "string"
     ? value.trim()
@@ -63,6 +47,10 @@ function cleanText(value) {
 
 function inFilter(ids) {
   return `in.(${ids.join(",")})`;
+}
+
+function uuidArrayParameter(ids) {
+  return `{${ids.join(",")}}`;
 }
 
 function yearScore(value) {
@@ -116,9 +104,7 @@ function isPublicActivity(row, ownerProfileId) {
     row &&
     UUID_PATTERN.test(String(row.id || "")) &&
     row.owner_profile_id === ownerProfileId &&
-    row.visibility === "published" &&
-    row.published_at &&
-    !row.deleted_at
+    cleanText(row.title)
   );
 }
 
@@ -357,23 +343,24 @@ export function createPublicCvRepository(
       if (activityIds.length) {
         const activityQuery =
           new URLSearchParams({
-            select: ACTIVITY_SELECT,
-            id: inFilter(activityIds)
+            target_activity_ids:
+              uuidArrayParameter(activityIds)
           });
 
         const activityRows =
           await request(
             config,
-            "profile_activities",
+            "rpc/get_public_activity_source_contexts",
             activityQuery
           );
 
         activityRows
+          .map((row) => ({
+            ...row,
+            id: row.activity_id
+          }))
           .filter((row) =>
-            isPublicActivity(
-              row,
-              profileRow.id
-            )
+            isPublicActivity(row, profileRow.id)
           )
           .forEach((row) => {
             activityMap.set(

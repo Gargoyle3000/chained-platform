@@ -26,7 +26,7 @@ Last updated: 2026-09-03
 
 ## PRESENTATIONS + AGENDA
 
-- Implement public Presentation detail pages and investigate the current Presentation 404 behavior generally; anything clickable must lead to a functioning surface or not appear clickable.
+- Public Presentation v1 list/detail routing is live. The Presentation v2 backend trust layer is also live; build its repositories, Dashboard requests and management UI next, without treating participant, Work association or program data as public rendering until those surfaces are implemented.
 - Complete Presentation end-to-end functionality, including Agenda/events creation, editing and public display.
 - Complete Presentation ↔ Agenda ↔ Works crosslinks and attachments; standalone Agenda entries remain supported.
 
