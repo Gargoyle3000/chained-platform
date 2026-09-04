@@ -38,11 +38,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   const cooperatorsSection = document.querySelector("#presentation-cooperators-section");
   const cooperatorsList = document.querySelector("#presentation-cooperators-list");
   const cooperatorInviteForm = document.querySelector("#presentation-cooperator-invite");
-  const cooperatorSearchInput = cooperatorInviteForm?.elements.namedItem("cooperator-profile-search");
+  const participantNameInput = participantAddForm?.querySelector('[name="participant-name"]');
+  const participantAddButton = participantAddForm?.querySelector('button[type="button"]');
+  const cooperatorSearchInput = cooperatorInviteForm?.querySelector('[name="cooperator-profile-search"]');
   const cooperatorSearchResults = document.querySelector("#presentation-cooperator-results");
   const programSection = document.querySelector("#presentation-program-section");
   const programList = document.querySelector("#presentation-program-list");
   const programAddForm = document.querySelector("#presentation-program-add");
+  const programTitleInput = programAddForm?.querySelector('[name="program-title"]');
+  const programDateInput = programAddForm?.querySelector('[name="program-date"]');
+  const programStartTimeInput = programAddForm?.querySelector('[name="program-start-time"]');
+  const programTypeInput = programAddForm?.querySelector('[name="program-type"]');
+  const programVisibleInput = programAddForm?.querySelector('[name="program-visible"]');
+  const programAddButton = programAddForm?.querySelector('button[type="button"]');
 
   let repository;
   let currentPresentationId = null;
@@ -252,6 +260,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     element.hidden = true;
   }
 
+  function triggerContextActionOnEnter(input, button) {
+    input?.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      button?.click();
+    });
+  }
+
   function attachProfileSearch(input, results, onSelect) {
     let requestVersion = 0;
 
@@ -388,21 +404,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     }) : [emptyContext("NO PROGRAM")]));
   }
 
-  participantAddForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const name = participantAddForm.elements.namedItem("participant-name").value.trim();
+  participantAddButton?.addEventListener("click", async () => {
+    const name = participantNameInput.value.trim();
     if (!name) return;
-    try { await repository.createParticipant(currentPresentationId, { displayName: name }); participantAddForm.reset(); await refreshContext(); } catch { setError("PARTICIPANT COULD NOT BE SAVED"); }
+    try { await repository.createParticipant(currentPresentationId, { displayName: name }); participantNameInput.value = ""; await refreshContext(); } catch { setError("PARTICIPANT COULD NOT BE SAVED"); }
   });
+  triggerContextActionOnEnter(participantNameInput, participantAddButton);
 
   if (cooperatorSearchInput && cooperatorSearchResults && cooperatorInviteForm) {
     let selectedCooperatorProfile = null;
-    const inviteButton = cooperatorInviteForm.querySelector('button[type="submit"]');
+    const inviteButton = cooperatorInviteForm.querySelector('button[type="button"]');
 
     cooperatorSearchInput.addEventListener("input", () => {
       selectedCooperatorProfile = null;
       inviteButton.disabled = true;
     });
+    triggerContextActionOnEnter(cooperatorSearchInput, inviteButton);
 
     attachProfileSearch(cooperatorSearchInput, cooperatorSearchResults, async (profile) => {
       selectedCooperatorProfile = profile;
@@ -411,8 +428,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       inviteButton.disabled = false;
     });
 
-    cooperatorInviteForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
+    inviteButton.addEventListener("click", async () => {
       if (!selectedCooperatorProfile || inviteButton.disabled) return;
       inviteButton.disabled = true;
       try {
@@ -421,7 +437,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           selectedCooperatorProfile.id
         );
         selectedCooperatorProfile = null;
-        cooperatorInviteForm.reset();
+        cooperatorSearchInput.value = "";
         await refreshContext();
       } catch {
         inviteButton.disabled = false;
@@ -430,18 +446,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  programAddForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const title = programAddForm.elements.namedItem("program-title").value.trim();
+  programAddButton?.addEventListener("click", async () => {
+    const title = programTitleInput.value.trim();
     if (!title) return;
     try {
-      const saved = await repository.createPresentationProgramOccurrence({ titleOverride: title, startDate: programAddForm.elements.namedItem("program-date").value, startTime: programAddForm.elements.namedItem("program-start-time").value, occurrenceType: programAddForm.elements.namedItem("program-type").value, showInPresentation: programAddForm.elements.namedItem("program-visible").checked }, currentPresentation.ownerProfileId, currentPresentationId);
-      if (programAddForm.elements.namedItem("program-visible").checked) {
+      const saved = await repository.createPresentationProgramOccurrence({ titleOverride: title, startDate: programDateInput.value, startTime: programStartTimeInput.value, occurrenceType: programTypeInput.value, showInPresentation: programVisibleInput.checked }, currentPresentation.ownerProfileId, currentPresentationId);
+      if (programVisibleInput.checked) {
         await repository.setPresentationProgramVisibility(saved.id, true);
       }
-      programAddForm.reset(); await refreshContext();
+      programAddForm.querySelectorAll("input").forEach((input) => { input.value = ""; });
+      programVisibleInput.checked = true;
+      await refreshContext();
     } catch { setError("PROGRAM ITEM COULD NOT BE SAVED"); }
   });
+  [programTitleInput, programDateInput, programStartTimeInput, programTypeInput]
+    .forEach((input) => triggerContextActionOnEnter(input, programAddButton));
 
   function createDeleteConfirmation() {
     const confirmation = document.createElement("div");

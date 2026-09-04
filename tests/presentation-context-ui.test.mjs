@@ -14,6 +14,13 @@ test("Presentation editor wires profile-only context management without a client
     "presentation-program-section"
   ]) assert.match(page, new RegExp(`id=\\"${id}\\"`));
 
+  assert.equal((page.match(/<form\b/gi) || []).length, 1);
+  assert.match(page, /<div class="presentation-context-add" id="presentation-participant-add">/);
+  assert.match(page, /<div class="presentation-context-add" id="presentation-cooperator-invite">/);
+  assert.match(page, /<div class="presentation-context-add" id="presentation-program-add">/);
+  assert.match(page, /name="show-in-presentations"/);
+  assert.match(page, /name="include-in-cv"/);
+
   assert.match(script, /listManagedParticipants\(currentPresentationId\)/);
   assert.match(script, /createParticipant\(currentPresentationId/);
   assert.match(script, /updateParticipant\(/);
@@ -35,6 +42,11 @@ test("Presentation editor wires profile-only context management without a client
   assert.match(script, /createPresentationProgramOccurrence\(/);
   assert.match(script, /setPresentationProgramVisibility\(/);
   assert.match(script, /deletePresentationProgramOccurrence\(/);
+  assert.match(script, /participantAddButton\?\.addEventListener\("click"/);
+  assert.match(script, /inviteButton\.addEventListener\("click"/);
+  assert.match(script, /programAddButton\?\.addEventListener\("click"/);
+  assert.match(script, /triggerContextActionOnEnter/);
+  assert.doesNotMatch(script, /participantAddForm\.elements|cooperatorInviteForm\.elements|programAddForm\.elements/);
   assert.match(page, /id="presentation-cooperator-invite"/);
   assert.match(page, /id="presentation-cooperator-results"/);
   assert.doesNotMatch(script, /listPresentationCooperators\(|invitePresentationCooperator\(|invitedAccountId|accountId|from\("accounts"\)/);
