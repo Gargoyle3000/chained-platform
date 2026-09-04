@@ -40,7 +40,8 @@ values
   ('a1200000-0000-4000-8000-000000000003','artist','p2-cooperator','P2 COOPERATOR','published',now(),'claimed','a1100000-0000-4000-8000-000000000003',now(),'a1100000-0000-4000-8000-000000000003',true),
   ('a1200000-0000-4000-8000-000000000004','artist','p2-unrelated','P2 UNRELATED','published',now(),'claimed','a1100000-0000-4000-8000-000000000005',now(),'a1100000-0000-4000-8000-000000000005',true),
   ('a1200000-0000-4000-8000-000000000005','artist','p2-hidden-host','P2 HIDDEN HOST','published',now(),'claimed','a1100000-0000-4000-8000-000000000001',now(),'a1100000-0000-4000-8000-000000000001',false),
-  ('a1200000-0000-4000-8000-000000000006','artist','p2-private-link','P2 PRIVATE LINK','draft',null,'claimed','a1100000-0000-4000-8000-000000000004',now(),'a1100000-0000-4000-8000-000000000004',true);
+  ('a1200000-0000-4000-8000-000000000006','artist','p2-private-link','P2 PRIVATE LINK','draft',null,'claimed','a1100000-0000-4000-8000-000000000004',now(),'a1100000-0000-4000-8000-000000000004',true),
+  ('a1200000-0000-4000-8000-000000000007','artist','p2-pending','P2 PENDING','published',now(),'claimed','a1100000-0000-4000-8000-000000000004',now(),'a1100000-0000-4000-8000-000000000004',true);
 
 insert into public.profile_members (profile_id, account_id, membership_level)
 values
@@ -50,7 +51,8 @@ values
   ('a1200000-0000-4000-8000-000000000003','a1100000-0000-4000-8000-000000000003','owner'),
   ('a1200000-0000-4000-8000-000000000004','a1100000-0000-4000-8000-000000000005','owner'),
   ('a1200000-0000-4000-8000-000000000005','a1100000-0000-4000-8000-000000000001','owner'),
-  ('a1200000-0000-4000-8000-000000000006','a1100000-0000-4000-8000-000000000004','owner');
+  ('a1200000-0000-4000-8000-000000000006','a1100000-0000-4000-8000-000000000004','owner'),
+  ('a1200000-0000-4000-8000-000000000007','a1100000-0000-4000-8000-000000000004','owner');
 
 -- Presentations
 
@@ -125,15 +127,29 @@ select is_empty($$select id from public.profile_activities where id='a1300000-00
 reset role; set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select lives_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','HISTORICAL ARTIST','a1200000-0000-4000-8000-000000000002')$$,'owner creates linked participant');
-select lives_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','PRIVATE HISTORICAL NAME','a1200000-0000-4000-8000-000000000006')$$,'owner can preserve a historical name linked to a private profile');
+select throws_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','PRIVATE HISTORICAL NAME','a1200000-0000-4000-8000-000000000006')$$,'22023',null,'private profile cannot be linked as a participant');
 select lives_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','EXTERNAL ARTIST',null)$$,'external participant needs no CHAINED account');
 select lives_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000003','PRIVATE REQUEST ARTIST','a1200000-0000-4000-8000-000000000002')$$,'owner links the Work artist to a draft Presentation');
 select lives_ok($$select public.update_presentation_participant((select id from public.get_managed_presentation_participants('a1300000-0000-4000-8000-000000000001') where display_name='EXTERNAL ARTIST'),'EXTERNAL ARTIST','a1200000-0000-4000-8000-000000000003',true)$$,'owner can link an existing profile later');
 select results_eq($$select display_name from public.get_managed_presentation_participants('a1300000-0000-4000-8000-000000000001') where linked_profile_id='a1200000-0000-4000-8000-000000000003'$$,$$values ('EXTERNAL ARTIST'::varchar)$$,'later profile linkage preserves historical display name');
-select results_eq($$select linked_profile_id from public.get_managed_presentation_participants('a1300000-0000-4000-8000-000000000001') where display_name='PRIVATE HISTORICAL NAME'$$,$$values ('a1200000-0000-4000-8000-000000000006'::uuid)$$,'Presentation manager can resolve the private linked profile internally');
-select lives_ok($$select public.invite_presentation_cooperator('a1300000-0000-4000-8000-000000000001','a1100000-0000-4000-8000-000000000003','a1200000-0000-4000-8000-000000000003')$$,'Presentation owner invites co-operator');
-select lives_ok($$select public.invite_presentation_cooperator('a1300000-0000-4000-8000-000000000001','a1100000-0000-4000-8000-000000000004',null)$$,'Presentation owner creates pending invitation');
-select lives_ok($$select public.invite_presentation_cooperator('a1300000-0000-4000-8000-000000000003','a1100000-0000-4000-8000-000000000004',null)$$,'Presentation owner creates a private-context invitation');
+select is_empty($$select linked_profile_id from public.get_managed_presentation_participants('a1300000-0000-4000-8000-000000000001') where display_name='PRIVATE HISTORICAL NAME'$$,'rejected private participant linkage creates no row');
+select lives_ok($$select public.invite_presentation_cooperator_by_profile('a1300000-0000-4000-8000-000000000001','a1200000-0000-4000-8000-000000000003')$$,'Presentation owner invites co-operator by profile');
+select lives_ok($$select public.invite_presentation_cooperator_by_profile('a1300000-0000-4000-8000-000000000001','a1200000-0000-4000-8000-000000000007')$$,'Presentation owner creates pending invitation by profile');
+select lives_ok($$select public.invite_presentation_cooperator_by_profile('a1300000-0000-4000-8000-000000000003','a1200000-0000-4000-8000-000000000007')$$,'Presentation owner creates a private-context invitation by profile');
+
+reset role;
+update public.presentation_cooperators
+   set id = 'a1600000-0000-4000-8000-000000000001'
+ where presentation_id = 'a1300000-0000-4000-8000-000000000001'
+   and invited_profile_id = 'a1200000-0000-4000-8000-000000000003';
+update public.presentation_cooperators
+   set id = 'a1600000-0000-4000-8000-000000000002'
+ where presentation_id = 'a1300000-0000-4000-8000-000000000001'
+   and invited_profile_id = 'a1200000-0000-4000-8000-000000000007';
+update public.presentation_cooperators
+   set id = 'a1600000-0000-4000-8000-000000000003'
+ where presentation_id = 'a1300000-0000-4000-8000-000000000003'
+   and invited_profile_id = 'a1200000-0000-4000-8000-000000000007';
 
 -- Editor can manage participants but cannot manage co-operators.
 
@@ -141,7 +157,7 @@ reset role; set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000006","role":"authenticated"}',true);
 select lives_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','EDITOR PARTICIPANT',null)$$,'profile editor manages participants');
 select lives_ok($$select public.reorder_presentation_participants('a1300000-0000-4000-8000-000000000001',(select array_agg(id order by position desc,id) from public.get_managed_presentation_participants('a1300000-0000-4000-8000-000000000001')))$$,'profile editor can reorder the complete participant set');
-select throws_ok($$select public.invite_presentation_cooperator('a1300000-0000-4000-8000-000000000001','a1100000-0000-4000-8000-000000000005',null)$$,'42501',null,'profile editor cannot manage co-operators');
+select throws_ok($$select public.invite_presentation_cooperator_by_profile('a1300000-0000-4000-8000-000000000001','a1200000-0000-4000-8000-000000000004')$$,'42501',null,'profile editor cannot manage co-operators');
 
 -- Pending co-operator and unrelated account have no management rights.
 
@@ -151,12 +167,12 @@ select throws_ok($$select public.create_presentation_participant('a1300000-0000-
 select results_eq($$update public.profile_activities set description='PENDING FAILURE' where id='a1300000-0000-4000-8000-000000000001' returning id$$,$$select null::uuid where false$$,'pending co-operator cannot edit Presentation');
 select results_eq($$select presentation_title,presentation_host_display_name,invitation_status from public.get_presentation_cooperator_invitation_summaries() where presentation_id='a1300000-0000-4000-8000-000000000003'$$,$$values ('DRAFT PRESENTATION'::varchar,'P2 HOST'::varchar,'pending'::public.presentation_cooperator_status)$$,'invitee receives minimal private Presentation context');
 select ok(position('description' in lower(pg_get_function_result('public.get_presentation_cooperator_invitation_summaries()'::regprocedure)))=0 and position('external_url' in lower(pg_get_function_result('public.get_presentation_cooperator_invitation_summaries()'::regprocedure)))=0,'invitation summary projects no private Presentation content');
-select lives_ok($$select public.decline_presentation_cooperator((select id from public.presentation_cooperators where presentation_id='a1300000-0000-4000-8000-000000000001' and invited_account_id='a1100000-0000-4000-8000-000000000004'))$$,'invitee can decline a pending invitation');
-select results_eq($$select status from public.presentation_cooperators where presentation_id='a1300000-0000-4000-8000-000000000001' and invited_account_id='a1100000-0000-4000-8000-000000000004'$$,$$values ('declined'::public.presentation_cooperator_status)$$,'declined invitation records terminal status');
+select lives_ok($$select public.decline_presentation_cooperator('a1600000-0000-4000-8000-000000000002')$$,'invitee can decline a pending invitation');
+select results_eq($$select invitation_status from public.get_presentation_cooperator_invitation_summaries() where invitation_id='a1600000-0000-4000-8000-000000000002'$$,$$values ('declined'::public.presentation_cooperator_status)$$,'declined invitation records terminal status');
 
 reset role; set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000005","role":"authenticated"}',true);
-select throws_ok($$select public.accept_presentation_cooperator((select id from public.presentation_cooperators where presentation_id='a1300000-0000-4000-8000-000000000001' and invited_account_id='a1100000-0000-4000-8000-000000000003'))$$,'42501',null,'another account cannot accept an invitation');
+select throws_ok($$select public.accept_presentation_cooperator('a1600000-0000-4000-8000-000000000001')$$,'42501',null,'another account cannot accept an invitation');
 select throws_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','UNRELATED FAILURE',null)$$,'42501',null,'unrelated account cannot manage participants');
 select throws_ok($$select linked_profile_id from public.presentation_participants where presentation_id='a1300000-0000-4000-8000-000000000001'$$,'42501',null,'unrelated authenticated account cannot read raw linked profile identifiers');
 select is_empty($$select invitation_id from public.get_presentation_cooperator_invitation_summaries()$$,'unrelated account cannot read invitation summaries');
@@ -165,12 +181,12 @@ select is_empty($$select invitation_id from public.get_presentation_cooperator_i
 
 reset role; set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000003","role":"authenticated"}',true);
-select lives_ok($$select public.accept_presentation_cooperator((select id from public.presentation_cooperators where presentation_id='a1300000-0000-4000-8000-000000000001' and invited_account_id='a1100000-0000-4000-8000-000000000003'))$$,'invitee accepts invitation');
+select lives_ok($$select public.accept_presentation_cooperator('a1600000-0000-4000-8000-000000000001')$$,'invitee accepts invitation');
 select results_eq($$update public.profile_activities set description='COOPERATOR CONTEXT' where id='a1300000-0000-4000-8000-000000000001' returning id$$,$$values ('a1300000-0000-4000-8000-000000000001'::uuid)$$,'accepted co-operator edits Presentation context');
 select lives_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','COOPERATOR PARTICIPANT',null)$$,'accepted co-operator manages participants');
 select results_eq($$update public.works set title='ILLEGAL WORK EDIT' where id='a1400000-0000-4000-8000-000000000002' returning id$$,$$select null::uuid where false$$,'Presentation role grants no Work edit authority');
 select throws_ok($$select public.soft_delete_work('a1400000-0000-4000-8000-000000000002')$$,'42501',null,'Presentation role grants no Work deletion authority');
-select throws_ok($$select public.invite_presentation_cooperator('a1300000-0000-4000-8000-000000000001','a1100000-0000-4000-8000-000000000005',null)$$,'42501',null,'accepted co-operator cannot manage co-operators');
+select throws_ok($$select public.invite_presentation_cooperator_by_profile('a1300000-0000-4000-8000-000000000001','a1200000-0000-4000-8000-000000000004')$$,'42501',null,'accepted co-operator cannot manage co-operators');
 select throws_ok($$select public.soft_delete_profile_activity('a1300000-0000-4000-8000-000000000001')$$,'42501',null,'accepted co-operator cannot perform owner deletion');
 select lives_ok($$select public.propose_presentation_work('a1300000-0000-4000-8000-000000000001','a1400000-0000-4000-8000-000000000006')$$,'accepted co-operator proposes linked participant Work');
 select results_eq($$select status from public.get_managed_presentation_works('a1300000-0000-4000-8000-000000000001') where work_id='a1400000-0000-4000-8000-000000000006'$$,$$values ('pending'::public.presentation_work_status)$$,'co-operator foreign proposal remains pending');
@@ -254,7 +270,7 @@ select set_config('request.jwt.claims','{"role":"anon"}',true);
 select results_eq($$select display_name from public.presentation_participants where presentation_id='a1300000-0000-4000-8000-000000000001' and display_name='HISTORICAL ARTIST'$$,$$values ('HISTORICAL ARTIST'::varchar)$$,'visible participant of public parent is public');
 select throws_ok($$select linked_profile_id from public.presentation_participants where presentation_id='a1300000-0000-4000-8000-000000000001'$$,'42501',null,'anonymous cannot read raw linked profile identifiers');
 select results_eq($$select linked_profile_id from public.get_public_presentation_participants('a1300000-0000-4000-8000-000000000001') where display_name='HISTORICAL ARTIST'$$,$$values ('a1200000-0000-4000-8000-000000000002'::uuid)$$,'safe projection exposes a public linked profile');
-select results_eq($$select display_name, linked_profile_id from public.get_public_presentation_participants('a1300000-0000-4000-8000-000000000001') where display_name='PRIVATE HISTORICAL NAME'$$,$$values ('PRIVATE HISTORICAL NAME'::varchar,null::uuid)$$,'safe projection keeps historical name without leaking private profile');
+select is_empty($$select display_name, linked_profile_id from public.get_public_presentation_participants('a1300000-0000-4000-8000-000000000001') where display_name='PRIVATE HISTORICAL NAME'$$,'rejected private participant linkage is not public');
 select results_eq($$select work_id from public.presentation_works where presentation_id='a1300000-0000-4000-8000-000000000001' order by work_id$$,$$values ('a1400000-0000-4000-8000-000000000001'::uuid),('a1400000-0000-4000-8000-000000000002'::uuid)$$,'anonymous sees only accepted public Works');
 select is_empty($$select id from public.presentation_works where work_id='a1400000-0000-4000-8000-000000000003'$$,'rejected Work proposal is never public');
 
@@ -317,7 +333,7 @@ select results_eq($$update public.activity_occurrences set show_in_agenda=true w
 
 reset role; set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000001","role":"authenticated"}',true);
-select lives_ok($$select public.revoke_presentation_cooperator((select id from public.presentation_cooperators where presentation_id='a1300000-0000-4000-8000-000000000001' and invited_account_id='a1100000-0000-4000-8000-000000000003'))$$,'owner revokes accepted co-operator');
+select lives_ok($$select public.revoke_presentation_cooperator('a1600000-0000-4000-8000-000000000001')$$,'owner revokes accepted co-operator');
 
 reset role; set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000003","role":"authenticated"}',true);

@@ -287,6 +287,20 @@
    PROFILE VISIBILITY
    ========================================================= */
 
+.presentation-context-list { display:grid; gap:18px; }
+.presentation-context-row { display:grid; grid-template-columns:minmax(0,1fr) max-content; gap:14px 20px; align-items:end; padding:2px 0; }
+.presentation-context-row .work-form-field { margin:0; }
+.presentation-context-actions { display:flex; flex-wrap:wrap; gap:12px; padding-bottom:2px; }
+.presentation-context-add { display:grid; grid-template-columns:minmax(0,1fr) max-content; gap:18px; align-items:end; margin-top:18px; }
+.presentation-context-add .work-visibility-options { margin:0; }
+.presentation-linked-profile { grid-column:1; margin:0; font-size:12px; }
+.presentation-profile-linker { grid-column:1 / -1; display:grid; gap:8px; }
+.presentation-profile-linker .work-form-field { margin:0; }
+.presentation-profile-results { display:grid; justify-items:start; gap:8px; }
+.presentation-profile-result { text-align:left; }
+.presentation-context-add .presentation-profile-results { grid-column:1 / -1; }
+@media (max-width:700px) { .presentation-context-row,.presentation-context-add { grid-template-columns:1fr; } .presentation-context-actions { padding-bottom:0; } .presentation-linked-profile,.presentation-profile-linker,.presentation-context-add .presentation-profile-results { grid-column:auto; } }
+
 .dashboard-visibility-list {
   border-top: 1px solid var(--black);
 }

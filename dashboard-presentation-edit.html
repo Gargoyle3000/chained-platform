@@ -215,6 +215,38 @@
 
         </section>
 
+        <section class="work-form-section presentation-context-section" id="presentation-participants-section" hidden>
+          <header class="work-form-section-header"><p>04</p><div><h3>PARTICIPANTS</h3><p>PEOPLE INCLUDED IN THIS PRESENTATION</p></div></header>
+          <div class="presentation-context-list" id="presentation-participants-list"></div>
+          <form class="presentation-context-add" id="presentation-participant-add">
+            <label class="work-form-field"><span>NAME</span><input name="participant-name" maxlength="300" placeholder="PARTICIPANT NAME"></label>
+            <button class="text-action" type="submit">[ ADD PARTICIPANT ]</button>
+          </form>
+        </section>
+
+        <section class="work-form-section presentation-context-section" id="presentation-cooperators-section" hidden>
+          <header class="work-form-section-header"><p>05</p><div><h3>CO-OPERATORS</h3><p>SHARED PRESENTATION CONTEXT</p></div></header>
+          <div class="presentation-context-list" id="presentation-cooperators-list"></div>
+          <form class="presentation-context-add" id="presentation-cooperator-invite">
+            <label class="work-form-field"><span>CHAINED ARTIST</span><input name="cooperator-profile-search" maxlength="100" placeholder="SEARCH ARTIST PROFILE" autocomplete="off"></label>
+            <button class="text-action" type="submit" disabled>[ INVITE CO-OPERATOR ]</button>
+            <div class="presentation-profile-results" id="presentation-cooperator-results" hidden></div>
+          </form>
+        </section>
+
+        <section class="work-form-section presentation-context-section" id="presentation-program-section" hidden>
+          <header class="work-form-section-header"><p>06</p><div><h3>PROGRAM</h3><p>PRESENTATION-SPECIFIC MOMENTS</p></div></header>
+          <div class="presentation-context-list" id="presentation-program-list"></div>
+          <form class="presentation-context-add" id="presentation-program-add">
+            <label class="work-form-field"><span>TITLE</span><input name="program-title" maxlength="300" placeholder="PROGRAM TITLE"></label>
+            <label class="work-form-field"><span>DATE</span><input name="program-date" type="date"></label>
+            <label class="work-form-field"><span>START TIME</span><input name="program-start-time" type="time"></label>
+            <label class="work-form-field"><span>TYPE</span><input name="program-type" maxlength="80" placeholder="OPENING"></label>
+            <label class="work-visibility-options"><input name="program-visible" type="checkbox" checked><span>SHOW IN PRESENTATION</span></label>
+            <button class="text-action" type="submit">[ ADD PROGRAM ITEM ]</button>
+          </form>
+        </section>
+
 
         <section class="work-form-section">
 
@@ -329,7 +361,7 @@
         <section class="work-form-section">
 
           <header class="work-form-section-header">
-            <p>04</p>
+            <p>07</p>
 
             <div>
               <h3>PLACEMENT</h3>

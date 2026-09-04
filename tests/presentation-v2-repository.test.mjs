@@ -118,6 +118,41 @@ test("Presentation v2 participant adapters use the bounded participant RPCs", as
   ]);
 });
 
+test("Presentation identity adapters search and mutate only profile identifiers", async () => {
+  const client = createClient({
+    rpcRows: {
+      search_presentation_artist_profiles: [{
+        profile_id: IDS.profile,
+        display_name: "Manuel Klappe",
+        slug: "manuel-klappe"
+      }]
+    }
+  });
+  const repository = createSupabasePresentationRepository(client);
+
+  assert.deepEqual(await repository.searchPresentationArtistProfiles("ma"), []);
+  assert.deepEqual(await repository.searchPresentationArtistProfiles("man"), [{
+    id: IDS.profile,
+    displayName: "Manuel Klappe",
+    slug: "manuel-klappe"
+  }]);
+  await repository.setPresentationParticipantProfile(IDS.participant, IDS.profile);
+  await repository.setPresentationParticipantProfile(IDS.participant, null);
+
+  assert.deepEqual(client.calls.filter((call) => call.rpc), [
+    { rpc: ["search_presentation_artist_profiles", { search_query: "man" }] },
+    { rpc: ["set_presentation_participant_profile", {
+      target_participant_id: IDS.participant,
+      target_profile_id: IDS.profile
+    }] },
+    { rpc: ["set_presentation_participant_profile", {
+      target_participant_id: IDS.participant,
+      target_profile_id: null
+    }] }
+  ]);
+  assert.doesNotMatch(JSON.stringify(client.calls), /account_id|invited_account/);
+});
+
 test("Presentation Work associations preserve backend statuses and decision contract", async () => {
   const client = createClient({
     rpcRows: {
@@ -218,19 +253,18 @@ test("Presentation Work associations preserve backend statuses and decision cont
   ]);
 });
 
-test("co-operator summaries are safe, pending state is preserved, and decisions stay RPC-bound", async () => {
+test("co-operator summaries and invitations remain profile-based and RPC-bound", async () => {
   const client = createClient({
-    tables: {
-      presentation_cooperators: [{
-        id: IDS.invitation,
-        presentation_id: IDS.presentation,
-        invited_account_id: IDS.account,
-        invited_profile_id: IDS.profile,
-        status: "accepted",
-        invited_at: "2026-09-04T10:00:00Z"
-      }]
-    },
     rpcRows: {
+      get_managed_presentation_cooperator_summaries: [{
+        cooperator_id: IDS.invitation,
+        presentation_id: IDS.presentation,
+        profile_id: IDS.profile,
+        profile_display_name: "Manuel Klappe",
+        profile_slug: "manuel-klappe",
+        cooperator_status: "accepted",
+        invited_at: "2026-09-04T10:00:00Z"
+      }],
       get_presentation_cooperator_invitation_summaries: [{
         invitation_id: IDS.invitation,
         presentation_id: IDS.presentation,
@@ -243,19 +277,29 @@ test("co-operator summaries are safe, pending state is preserved, and decisions 
   });
   const repository = createSupabasePresentationRepository(client);
 
-  assert.equal((await repository.listPresentationCooperators(IDS.presentation))[0].status, "accepted");
+  assert.deepEqual(
+    await repository.listManagedPresentationCooperatorSummaries(IDS.presentation),
+    [{
+      id: IDS.invitation,
+      presentationId: IDS.presentation,
+      profileId: IDS.profile,
+      profileDisplayName: "Manuel Klappe",
+      profileSlug: "manuel-klappe",
+      status: "accepted",
+      invitedAt: "2026-09-04T10:00:00Z"
+    }]
+  );
   const incoming = await repository.listIncomingCooperatorInvitations();
   assert.equal(incoming.length, 1);
   assert.equal(incoming[0].status, "pending");
-  await repository.invitePresentationCooperator(IDS.presentation, IDS.account, IDS.profile);
+  await repository.invitePresentationCooperatorByProfile(IDS.presentation, IDS.profile);
   await repository.acceptPresentationCooperator(IDS.invitation);
   await repository.declinePresentationCooperator(IDS.invitation);
   await repository.revokePresentationCooperator(IDS.invitation);
 
   assert.deepEqual(client.calls.filter((call) => call.rpc).slice(-4), [
-    { rpc: ["invite_presentation_cooperator", {
+    { rpc: ["invite_presentation_cooperator_by_profile", {
       target_presentation_id: IDS.presentation,
-      target_account_id: IDS.account,
       target_profile_id: IDS.profile
     }] },
     { rpc: ["accept_presentation_cooperator", { target_invitation_id: IDS.invitation }] },

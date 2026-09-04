@@ -32,12 +32,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelector("#presentation-add-agenda");
   const saveButton =
     document.querySelector(".presentation-form-save");
+  const participantsSection = document.querySelector("#presentation-participants-section");
+  const participantsList = document.querySelector("#presentation-participants-list");
+  const participantAddForm = document.querySelector("#presentation-participant-add");
+  const cooperatorsSection = document.querySelector("#presentation-cooperators-section");
+  const cooperatorsList = document.querySelector("#presentation-cooperators-list");
+  const cooperatorInviteForm = document.querySelector("#presentation-cooperator-invite");
+  const cooperatorSearchInput = cooperatorInviteForm?.elements.namedItem("cooperator-profile-search");
+  const cooperatorSearchResults = document.querySelector("#presentation-cooperator-results");
+  const programSection = document.querySelector("#presentation-program-section");
+  const programList = document.querySelector("#presentation-program-list");
+  const programAddForm = document.querySelector("#presentation-program-add");
 
   let repository;
   let currentPresentationId = null;
   let expectedUpdatedAt = null;
   let currentVisibility = "draft";
   let managedProfiles = [];
+  let currentPresentation = null;
+  let isOwnerManager = false;
 
   function field(name) {
     return form.elements.namedItem(name);
@@ -206,6 +219,229 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     ownerField.hidden = profiles.length <= 1;
   }
+
+  function emptyContext(text) {
+    const item = document.createElement("p");
+    item.className = "dashboard-empty-state";
+    item.textContent = text;
+    return item;
+  }
+
+  function action(label, handler) {
+    const button = document.createElement("button");
+    let busy = false;
+    button.type = "button";
+    button.className = "text-action";
+    button.textContent = `[ ${label} ]`;
+    button.addEventListener("click", async () => {
+      if (busy) return;
+      busy = true;
+      button.disabled = true;
+      try {
+        await handler();
+      } finally {
+        busy = false;
+        button.disabled = false;
+      }
+    });
+    return button;
+  }
+
+  function clearProfileResults(element) {
+    element.replaceChildren();
+    element.hidden = true;
+  }
+
+  function attachProfileSearch(input, results, onSelect) {
+    let requestVersion = 0;
+
+    input.addEventListener("input", async () => {
+      const query = input.value.trim();
+      const version = ++requestVersion;
+      clearProfileResults(results);
+
+      if (query.length < 3) return;
+
+      try {
+        const profiles = await repository.searchPresentationArtistProfiles(query);
+        if (version !== requestVersion) return;
+
+        results.replaceChildren(...(profiles.length ? profiles.map((profile) => {
+          const select = action(
+            `${profile.displayName || profile.slug} · ${profile.slug}`,
+            async () => onSelect(profile)
+          );
+          select.classList.add("presentation-profile-result");
+          return select;
+        }) : [emptyContext("NO ARTIST PROFILES")]));
+        results.hidden = false;
+      } catch {
+        if (version !== requestVersion) return;
+        setError("ARTIST PROFILE SEARCH IS CURRENTLY UNAVAILABLE");
+      }
+    });
+  }
+
+  function createParticipantProfileLinker(participant) {
+    const linker = document.createElement("div");
+    const search = document.createElement("input");
+    const results = document.createElement("div");
+    const label = document.createElement("label");
+
+    linker.className = "presentation-profile-linker";
+    label.className = "work-form-field";
+    label.textContent = "LINK CHAINED ARTIST";
+    search.type = "search";
+    search.maxLength = 100;
+    search.placeholder = "SEARCH ARTIST PROFILE";
+    search.autocomplete = "off";
+    label.append(search);
+    results.className = "presentation-profile-results";
+    results.hidden = true;
+    linker.append(label, results);
+
+    attachProfileSearch(search, results, async (profile) => {
+      try {
+        await repository.setPresentationParticipantProfile(participant.id, profile.id);
+        await refreshContext();
+      } catch {
+        setError("PARTICIPANT PROFILE COULD NOT BE SAVED");
+      }
+    });
+
+    return linker;
+  }
+
+  async function refreshContext() {
+    if (!currentPresentationId) return;
+    const [participants, cooperators, program] = await Promise.all([
+      repository.listManagedParticipants(currentPresentationId),
+      repository.listManagedPresentationCooperatorSummaries(currentPresentationId),
+      repository.listPresentationProgramOccurrences(currentPresentationId)
+    ]);
+    participantsSection.hidden = false;
+    cooperatorsSection.hidden = false;
+    programSection.hidden = false;
+    participantsList.replaceChildren(...(participants.length ? participants.map((participant, index) => {
+      const row = document.createElement("div");
+      const name = document.createElement("input");
+      const visible = document.createElement("input");
+      const controls = document.createElement("div");
+      row.className = "presentation-context-row";
+      name.value = participant.displayName;
+      name.maxLength = 300;
+      visible.type = "checkbox";
+      visible.checked = participant.isVisible;
+      controls.className = "presentation-context-actions";
+      controls.append(
+        action("SAVE", async () => { try { await repository.updateParticipant(participant.id, { displayName: name.value, linkedProfileId: participant.linkedProfileId, isVisible: visible.checked }); await refreshContext(); } catch { setError("PARTICIPANT COULD NOT BE SAVED"); } }),
+        action("UP", async () => { if (index) { const ids = participants.map((item) => item.id); [ids[index - 1], ids[index]] = [ids[index], ids[index - 1]]; await repository.reorderParticipants(currentPresentationId, ids); await refreshContext(); } }),
+        action("DOWN", async () => { if (index < participants.length - 1) { const ids = participants.map((item) => item.id); [ids[index + 1], ids[index]] = [ids[index], ids[index + 1]]; await repository.reorderParticipants(currentPresentationId, ids); await refreshContext(); } }),
+        action("REMOVE", async () => { if (window.confirm("REMOVE THIS PARTICIPANT?")) { await repository.removeParticipant(participant.id); await refreshContext(); } })
+      );
+      if (participant.linkedProfileId) {
+        const linked = document.createElement("p");
+        linked.className = "presentation-linked-profile";
+        linked.textContent = "CHAINED ARTIST LINKED";
+        controls.append(action("UNLINK", async () => { try { await repository.setPresentationParticipantProfile(participant.id, null); await refreshContext(); } catch { setError("PARTICIPANT PROFILE COULD NOT BE SAVED"); } }));
+        row.append(name, visible, linked, controls);
+      } else {
+        const linkProfile = action("LINK PROFILE", async () => {
+          linkProfile.replaceWith(createParticipantProfileLinker(participant));
+        });
+        controls.append(linkProfile);
+        row.append(name, visible, controls);
+      }
+      return row;
+    }) : [emptyContext("NO PARTICIPANTS")]));
+    const activeCooperators = cooperators.filter((item) => item.status === "pending" || item.status === "accepted");
+    cooperatorsList.replaceChildren(...(activeCooperators.length ? activeCooperators.map((cooperator) => {
+      const row = document.createElement("div");
+      const text = document.createElement("p");
+      const controls = document.createElement("div");
+      row.className = "presentation-context-row";
+      text.textContent = `${cooperator.profileDisplayName || "CHAINED ARTIST"} · ${cooperator.status.toUpperCase()}`;
+      controls.className = "presentation-context-actions";
+      if (isOwnerManager) controls.append(action("REVOKE", async () => { if (window.confirm("REVOKE THIS CO-OPERATOR?")) { try { await repository.revokePresentationCooperator(cooperator.id); await refreshContext(); } catch { setError("CO-OPERATOR COULD NOT BE REVOKED"); } } }));
+      row.append(text, controls);
+      return row;
+    }) : [emptyContext("NO CO-OPERATORS")]));
+    cooperatorInviteForm.hidden = !isOwnerManager;
+    const orderedProgram = [...program].sort((a, b) => `${a.startDate || ""}${a.startTime || ""}`.localeCompare(`${b.startDate || ""}${b.startTime || ""}`));
+    programList.replaceChildren(...(orderedProgram.length ? orderedProgram.map((item) => {
+      const row = document.createElement("div");
+      const title = document.createElement("input");
+      const visible = document.createElement("input");
+      const controls = document.createElement("div");
+      row.className = "presentation-context-row";
+      title.value = item.titleOverride || "";
+      title.maxLength = 300;
+      title.setAttribute("aria-label", [item.startDate, item.occurrenceType, item.startTime].filter(Boolean).join(" · ") || "PROGRAM ITEM");
+      visible.type = "checkbox"; visible.checked = item.showInPresentation; visible.setAttribute("aria-label", "SHOW IN PRESENTATION");
+      controls.className = "presentation-context-actions";
+      controls.append(
+        action("SAVE", async () => { await repository.updatePresentationProgramOccurrence({ ...item, titleOverride: title.value }, item.updatedAt); await repository.setPresentationProgramVisibility(item.id, visible.checked); await refreshContext(); }),
+        action("REMOVE", async () => { if (window.confirm("REMOVE THIS PROGRAM ITEM?")) { await repository.deletePresentationProgramOccurrence(item.id); await refreshContext(); } })
+      );
+      row.append(title, visible, controls);
+      return row;
+    }) : [emptyContext("NO PROGRAM")]));
+  }
+
+  participantAddForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const name = participantAddForm.elements.namedItem("participant-name").value.trim();
+    if (!name) return;
+    try { await repository.createParticipant(currentPresentationId, { displayName: name }); participantAddForm.reset(); await refreshContext(); } catch { setError("PARTICIPANT COULD NOT BE SAVED"); }
+  });
+
+  if (cooperatorSearchInput && cooperatorSearchResults && cooperatorInviteForm) {
+    let selectedCooperatorProfile = null;
+    const inviteButton = cooperatorInviteForm.querySelector('button[type="submit"]');
+
+    cooperatorSearchInput.addEventListener("input", () => {
+      selectedCooperatorProfile = null;
+      inviteButton.disabled = true;
+    });
+
+    attachProfileSearch(cooperatorSearchInput, cooperatorSearchResults, async (profile) => {
+      selectedCooperatorProfile = profile;
+      cooperatorSearchInput.value = profile.displayName || profile.slug;
+      clearProfileResults(cooperatorSearchResults);
+      inviteButton.disabled = false;
+    });
+
+    cooperatorInviteForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!selectedCooperatorProfile || inviteButton.disabled) return;
+      inviteButton.disabled = true;
+      try {
+        await repository.invitePresentationCooperatorByProfile(
+          currentPresentationId,
+          selectedCooperatorProfile.id
+        );
+        selectedCooperatorProfile = null;
+        cooperatorInviteForm.reset();
+        await refreshContext();
+      } catch {
+        inviteButton.disabled = false;
+        setError("CO-OPERATOR COULD NOT BE INVITED");
+      }
+    });
+  }
+
+  programAddForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const title = programAddForm.elements.namedItem("program-title").value.trim();
+    if (!title) return;
+    try {
+      const saved = await repository.createPresentationProgramOccurrence({ titleOverride: title, startDate: programAddForm.elements.namedItem("program-date").value, startTime: programAddForm.elements.namedItem("program-start-time").value, occurrenceType: programAddForm.elements.namedItem("program-type").value, showInPresentation: programAddForm.elements.namedItem("program-visible").checked }, currentPresentation.ownerProfileId, currentPresentationId);
+      if (programAddForm.elements.namedItem("program-visible").checked) {
+        await repository.setPresentationProgramVisibility(saved.id, true);
+      }
+      programAddForm.reset(); await refreshContext();
+    } catch { setError("PROGRAM ITEM COULD NOT BE SAVED"); }
+  });
 
   function createDeleteConfirmation() {
     const confirmation = document.createElement("div");
@@ -439,16 +675,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     renderDashboardAccountIdentity(managedProfiles);
 
-    if (!managedProfiles.length) {
+    const requestedId =
+      new URLSearchParams(window.location.search).get("id");
+
+    if (!managedProfiles.length && !requestedId) {
       setFormDisabled(true);
       setError("ARTIST PROFILE SETUP REQUIRED");
       return;
     }
 
-    populateOwnerProfiles(managedProfiles);
-
-    const requestedId =
-      new URLSearchParams(window.location.search).get("id");
+    if (managedProfiles.length) populateOwnerProfiles(managedProfiles);
 
     if (!requestedId) {
       ownerSelect.value = managedProfiles[0].id;
@@ -466,13 +702,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     currentPresentationId = presentation.id;
+    currentPresentation = presentation;
+    isOwnerManager = managedProfiles.some(
+      (profile) => profile.id === presentation.ownerProfileId
+    );
     expectedUpdatedAt = presentation.updatedAt;
     currentVisibility = presentation.visibility;
 
-    ownerSelect.value = presentation.ownerProfileId;
+    if (managedProfiles.length) ownerSelect.value = presentation.ownerProfileId;
 
     populateForm(presentation);
     updateEditorState(presentation);
+    await refreshContext();
   } catch (error) {
     renderDashboardAccountIdentity([], "error");
     setFormDisabled(true);

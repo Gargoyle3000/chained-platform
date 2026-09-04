@@ -182,28 +182,33 @@ function databaseToPresentationWork(row) {
   });
 }
 
-function databaseToCooperator(row) {
+function databaseToManagedCooperatorSummary(row) {
   if (
-    !optionalId(row?.id) ||
+    !optionalId(row?.cooperator_id) ||
     !optionalId(row?.presentation_id) ||
-    !optionalId(row?.invited_account_id) ||
-    !PRESENTATION_COOPERATOR_STATUSES.has(row.status)
+    !PRESENTATION_COOPERATOR_STATUSES.has(row.cooperator_status)
   ) {
     return null;
   }
 
   return Object.freeze({
-    id: row.id,
+    id: row.cooperator_id,
     presentationId: row.presentation_id,
-    invitedAccountId: row.invited_account_id,
-    invitedProfileId: optionalId(row.invited_profile_id),
-    role: row.role || "co_operator",
-    status: row.status,
-    invitedAt: row.invited_at || null,
-    respondedAt: row.responded_at || null,
-    revokedAt: row.revoked_at || null,
-    createdAt: row.created_at || null,
-    updatedAt: row.updated_at || null
+    profileId: optionalId(row.profile_id),
+    profileDisplayName: String(row.profile_display_name || "").trim(),
+    profileSlug: String(row.profile_slug || "").trim(),
+    status: row.cooperator_status,
+    invitedAt: row.invited_at || null
+  });
+}
+
+function databaseToPresentationArtistProfile(row) {
+  if (!optionalId(row?.profile_id)) return null;
+
+  return Object.freeze({
+    id: row.profile_id,
+    displayName: String(row.display_name || "").trim(),
+    slug: String(row.slug || "").trim()
   });
 }
 
@@ -330,8 +335,17 @@ function createUnavailableRepository() {
     async listManagedPresentationWorks() {
       return [];
     },
-    async listPresentationCooperators() {
+    async searchPresentationArtistProfiles() {
       return [];
+    },
+    async setPresentationParticipantProfile() {
+      throw new Error("PRESENTATION PARTICIPANTS ARE CURRENTLY UNAVAILABLE");
+    },
+    async listManagedPresentationCooperatorSummaries() {
+      return [];
+    },
+    async invitePresentationCooperatorByProfile() {
+      throw new Error("PRESENTATION CO-OPERATORS ARE CURRENTLY UNAVAILABLE");
     },
     async listIncomingCooperatorInvitations() {
       return [];
@@ -627,6 +641,38 @@ export function createSupabasePresentationRepository(client) {
       );
     },
 
+    async searchPresentationArtistProfiles(query) {
+      const normalizedQuery = String(query ?? "").trim();
+
+      if (normalizedQuery.length < 3) return [];
+
+      const data = await callRpc(
+        client,
+        "search_presentation_artist_profiles",
+        { search_query: normalizedQuery },
+        "ARTIST PROFILE SEARCH IS UNAVAILABLE"
+      );
+
+      return mapRows(data, databaseToPresentationArtistProfile);
+    },
+
+    async setPresentationParticipantProfile(participantId, profileId = null) {
+      return callRpc(
+        client,
+        "set_presentation_participant_profile",
+        {
+          target_participant_id: requireId(
+            participantId,
+            "PARTICIPANT PROFILE COULD NOT BE SAVED"
+          ),
+          target_profile_id: profileId
+            ? requireId(profileId, "PARTICIPANT PROFILE COULD NOT BE SAVED")
+            : null
+        },
+        "PARTICIPANT PROFILE COULD NOT BE SAVED"
+      );
+    },
+
     async listManagedPresentationWorks(presentationId) {
       const data = await callRpc(
         client,
@@ -728,30 +774,27 @@ export function createSupabasePresentationRepository(client) {
       return mapRows(data, databaseToWorkRequestSummary);
     },
 
-    async listPresentationCooperators(presentationId) {
-      const { data, error } = await client
-        .from("presentation_cooperators")
-        .select("id,presentation_id,invited_account_id,invited_profile_id,role,status,invited_at,responded_at,revoked_at,created_at,updated_at")
-        .eq("presentation_id", requireId(presentationId))
-        .order("invited_at", { ascending: false })
-        .order("id", { ascending: true });
-
-      return mapRows(
-        requireResult(error, data, "PRESENTATION CO-OPERATORS ARE UNAVAILABLE"),
-        databaseToCooperator
+    async listManagedPresentationCooperatorSummaries(presentationId) {
+      const data = await callRpc(
+        client,
+        "get_managed_presentation_cooperator_summaries",
+        { target_presentation_id: requireId(presentationId) },
+        "PRESENTATION CO-OPERATORS ARE UNAVAILABLE"
       );
+
+      return mapRows(data, databaseToManagedCooperatorSummary);
     },
 
-    async invitePresentationCooperator(presentationId, accountId, profileId = null) {
+    async invitePresentationCooperatorByProfile(presentationId, profileId) {
       return callRpc(
         client,
-        "invite_presentation_cooperator",
+        "invite_presentation_cooperator_by_profile",
         {
           target_presentation_id: requireId(presentationId),
-          target_account_id: requireId(accountId, "CO-OPERATOR COULD NOT BE INVITED"),
-          target_profile_id: profileId
-            ? requireId(profileId, "CO-OPERATOR COULD NOT BE INVITED")
-            : null
+          target_profile_id: requireId(
+            profileId,
+            "CO-OPERATOR COULD NOT BE INVITED"
+          )
         },
         "CO-OPERATOR COULD NOT BE INVITED"
       );
