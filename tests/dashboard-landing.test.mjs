@@ -90,7 +90,8 @@ test("Dashboard requests use only safe server summaries and preserve both action
   ]);
 
   assert.match(page, /id="dashboard-requests-section"/);
-  assert.match(page, /<h2>INCOMING REQUESTS<\/h2>/);
+  assert.match(page, /dashboard-summary-item dashboard-requests-section/);
+  assert.match(page, /<p class="dashboard-label">REQUESTS<\/p>/);
   assert.match(script, /loadDashboardRequests\(presentationRepository\)/);
   assert.match(script, /decideDashboardRequest\(/);
   assert.match(script, /request\.kind === "work"/);
