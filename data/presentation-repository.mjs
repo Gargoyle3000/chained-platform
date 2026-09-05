@@ -59,6 +59,13 @@ const PRESENTATION_COOPERATOR_STATUSES = new Set([
   "revoked"
 ]);
 
+const PRESENTATION_PARTICIPATION_STATUSES = new Set([
+  "pending",
+  "accepted",
+  "declined",
+  "revoked"
+]);
+
 const PRESENTATION_MANAGEMENT_ROLES = new Set([
   "owner",
   "cooperator"
@@ -254,6 +261,28 @@ function databaseToWorkRequestSummary(row) {
   });
 }
 
+function databaseToParticipationRequestSummary(row) {
+  if (
+    !optionalId(row?.consent_id) ||
+    !optionalId(row?.presentation_id) ||
+    !PRESENTATION_PARTICIPATION_STATUSES.has(row.consent_status)
+  ) {
+    return null;
+  }
+
+  return Object.freeze({
+    consentId: row.consent_id,
+    presentationId: row.presentation_id,
+    presentationTitle: String(row.presentation_title || "").trim(),
+    presentationHostDisplayName: String(
+      row.presentation_host_display_name || ""
+    ).trim(),
+    participantDisplayName: String(row.participant_display_name || "").trim(),
+    status: row.consent_status,
+    requestedAt: row.requested_at || null
+  });
+}
+
 function databaseToCooperatorInvitationSummary(row) {
   if (
     !optionalId(row?.invitation_id) ||
@@ -384,6 +413,15 @@ function createUnavailableRepository() {
     },
     async listMyPresentationWorkRequestSummaries() {
       return [];
+    },
+    async listMyPresentationParticipationRequestSummaries() {
+      return [];
+    },
+    async acceptPresentationParticipation() {
+      throw new Error("PARTICIPATION REQUESTS ARE CURRENTLY UNAVAILABLE");
+    },
+    async declinePresentationParticipation() {
+      throw new Error("PARTICIPATION REQUESTS ARE CURRENTLY UNAVAILABLE");
     },
     async listPresentationProgramOccurrences() {
       return [];
@@ -793,6 +831,35 @@ export function createSupabasePresentationRepository(client) {
       );
 
       return mapRows(data, databaseToWorkRequestSummary);
+    },
+
+    async listMyPresentationParticipationRequestSummaries() {
+      const data = await callRpc(
+        client,
+        "get_my_presentation_participation_request_summaries",
+        {},
+        "PARTICIPATION REQUESTS ARE UNAVAILABLE"
+      );
+
+      return mapRows(data, databaseToParticipationRequestSummary);
+    },
+
+    async acceptPresentationParticipation(consentId) {
+      return callRpc(
+        client,
+        "accept_presentation_participation",
+        { target_consent_id: requireId(consentId) },
+        "PARTICIPATION REQUEST COULD NOT BE ACCEPTED"
+      );
+    },
+
+    async declinePresentationParticipation(consentId) {
+      return callRpc(
+        client,
+        "decline_presentation_participation",
+        { target_consent_id: requireId(consentId) },
+        "PARTICIPATION REQUEST COULD NOT BE DECLINED"
+      );
     },
 
     async listManagedPresentationCooperatorSummaries(presentationId) {

@@ -90,9 +90,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       ? `${request.presentationTitle || "A PRESENTATION"} REQUESTS ${
         request.workTitle || "A WORK"
       }`
-      : `${request.presentationHostDisplayName || "THE PRESENTATION HOST"} INVITED YOU TO CO-OPERATE ON ${
-        request.presentationTitle || "A PRESENTATION"
-      }`;
+      : request.kind === "participation"
+        ? `PARTICIPATION · ${request.presentationTitle || "A PRESENTATION"} · HOSTED BY ${
+          request.presentationHostDisplayName || "THE PRESENTATION HOST"
+        }`
+        : `${request.presentationHostDisplayName || "THE PRESENTATION HOST"} INVITED YOU TO CO-OPERATE ON ${
+          request.presentationTitle || "A PRESENTATION"
+        }`;
     actions.className = "dashboard-request-actions";
     actions.append(
       createRequestAction("ACCEPT", (action) =>
@@ -148,7 +152,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function decideRequest(request, decision, action) {
     const requestId = request?.kind === "work"
       ? request.associationId
-      : request?.invitationId;
+      : request?.kind === "participation"
+        ? request.consentId
+        : request?.invitationId;
     const requestKey = requestId ? `${request.kind}:${requestId}` : "";
 
     if (!requestId || requestActionInFlight.has(requestKey)) return;

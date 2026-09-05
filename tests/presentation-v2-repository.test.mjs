@@ -8,6 +8,7 @@ const IDS = Object.freeze({
   work: "33333333-3333-4333-8333-333333333333",
   association: "44444444-4444-4444-8444-444444444444",
   invitation: "55555555-5555-4555-8555-555555555555",
+  consent: "56565656-5656-4565-8565-565656565656",
   account: "66666666-6666-4666-8666-666666666666",
   profile: "77777777-7777-4777-8777-777777777777",
   occurrence: "88888888-8888-4888-8888-888888888888"
@@ -383,6 +384,54 @@ test("co-operator summaries and invitations remain profile-based and RPC-bound",
   ]);
 });
 
+test("participation request summaries and decisions use only the safe consent RPC contract", async () => {
+  const client = createClient({
+    rpcRows: {
+      get_my_presentation_participation_request_summaries: [{
+        consent_id: IDS.consent,
+        presentation_id: IDS.presentation,
+        presentation_title: "Gothic Summer",
+        presentation_host_display_name: "Peer Vink",
+        participant_display_name: "Manuel Klappe",
+        consent_status: "pending",
+        requested_at: "2026-09-05T10:00:00Z",
+        requested_by_account_id: IDS.account
+      }, { consent_id: "not-a-uuid" }]
+    }
+  });
+  const repository = createSupabasePresentationRepository(client);
+
+  assert.deepEqual(
+    await repository.listMyPresentationParticipationRequestSummaries(),
+    [{
+      consentId: IDS.consent,
+      presentationId: IDS.presentation,
+      presentationTitle: "Gothic Summer",
+      presentationHostDisplayName: "Peer Vink",
+      participantDisplayName: "Manuel Klappe",
+      status: "pending",
+      requestedAt: "2026-09-05T10:00:00Z"
+    }]
+  );
+  await repository.acceptPresentationParticipation(IDS.consent);
+  await repository.declinePresentationParticipation(IDS.consent);
+
+  assert.deepEqual(client.calls.filter((call) => call.rpc), [
+    { rpc: ["get_my_presentation_participation_request_summaries", {}] },
+    { rpc: ["accept_presentation_participation", {
+      target_consent_id: IDS.consent
+    }] },
+    { rpc: ["decline_presentation_participation", {
+      target_consent_id: IDS.consent
+    }] }
+  ]);
+  assert.equal(
+    JSON.stringify(await repository.listMyPresentationParticipationRequestSummaries())
+      .includes("requested_by_account_id"),
+    false
+  );
+});
+
 test("Presentation program adapter uses the scoped visibility RPC and maps historical occurrences", async () => {
   const client = createClient({
     tables: {
@@ -435,11 +484,13 @@ test("empty safe summary responses remain empty", async () => {
     rpcRows: {
       get_presentation_cooperator_invitation_summaries: [],
       get_work_presentation_request_summaries: [],
-      get_my_presentation_work_request_summaries: []
+      get_my_presentation_work_request_summaries: [],
+      get_my_presentation_participation_request_summaries: []
     }
   }));
 
   assert.deepEqual(await repository.listIncomingCooperatorInvitations(), []);
   assert.deepEqual(await repository.listWorkPresentationRequestSummaries(IDS.work), []);
   assert.deepEqual(await repository.listMyPresentationWorkRequestSummaries(), []);
+  assert.deepEqual(await repository.listMyPresentationParticipationRequestSummaries(), []);
 });

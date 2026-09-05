@@ -125,3 +125,31 @@ test("the detail page is a direct canonical deep-link route", async () => {
   assert.match(script, /search\)\.get\("id"\)/);
   assert.match(script, /repository\.getPresentation\(id\)/);
 });
+
+test("profile Presentation history uses the canonical safe summary RPC for owned and accepted participation rows", async () => {
+  const requests = [];
+  const participatingPresentation = presentation({
+    owner_profile_id: "33333333-3333-4333-8333-333333333333"
+  });
+  const repository = createPublicPresentationRepository({}, async (_config, table, query) => {
+    requests.push({ table, query });
+    if (table === "public_profiles") return [profile()];
+    if (table === "rpc/get_public_profile_presentation_summaries") {
+      return [participatingPresentation];
+    }
+    return [];
+  });
+
+  const result = await repository.getProfilePresentations("artist-one");
+
+  assert.equal(result.kind, "available");
+  assert.deepEqual(result.presentations.map((item) => item.id), [PRESENTATION_ID]);
+  const summaryRequest = requests.find((item) =>
+    item.table === "rpc/get_public_profile_presentation_summaries"
+  );
+  assert.equal(summaryRequest.query.get("target_profile_id"), PROFILE_ID);
+  assert.equal(
+    requests.some((item) => item.table === "profile_activities"),
+    false
+  );
+});

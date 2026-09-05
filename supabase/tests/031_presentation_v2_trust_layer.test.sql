@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(149);
+select plan(185);
 
 -- Accounts
 
@@ -282,6 +282,110 @@ select results_eq($$select display_name, linked_profile_slug from public.get_pub
 select ok(position('linked_profile_id' in lower(pg_get_function_result('public.get_public_presentation_participant_summaries(uuid)'::regprocedure)))=0,'safe public participant summary exposes no linked profile identifier');
 select results_eq($$select work_id from public.presentation_works where presentation_id='a1300000-0000-4000-8000-000000000001' order by work_id$$,$$values ('a1400000-0000-4000-8000-000000000001'::uuid),('a1400000-0000-4000-8000-000000000002'::uuid)$$,'anonymous sees only accepted public Works');
 select is_empty($$select id from public.presentation_works where work_id='a1400000-0000-4000-8000-000000000003'$$,'rejected Work proposal is never public');
+
+-- Participation consent is a separate cross-account relationship from the
+-- historical participant and the clickable profile link.
+
+reset role;
+select has_table('public','presentation_participation_consents','participation consent relation exists');
+select has_function('public','get_my_presentation_participation_request_summaries',array[]::text[],'Dashboard participation request summary exists');
+select ok((select relrowsecurity and relforcerowsecurity from pg_class where oid='public.presentation_participation_consents'::regclass),'participation consent RLS is forced');
+select ok(not has_function_privilege('anon','public.get_my_presentation_participation_request_summaries()','EXECUTE'),'anonymous cannot execute Dashboard participation summaries');
+
+update public.presentation_participation_consents
+   set id='a1700000-0000-4000-8000-000000000001'
+ where participant_id=(select id from public.presentation_participants where presentation_id='a1300000-0000-4000-8000-000000000001' and display_name='HISTORICAL ARTIST')
+   and linked_profile_id='a1200000-0000-4000-8000-000000000002';
+update public.presentation_participation_consents
+   set id='a1700000-0000-4000-8000-000000000002'
+ where participant_id=(select id from public.presentation_participants where presentation_id='a1300000-0000-4000-8000-000000000001' and display_name='EXTERNAL ARTIST')
+   and linked_profile_id='a1200000-0000-4000-8000-000000000003';
+
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+select lives_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','FREE TEXT ONLY',null)$$,'free-text historical participant creates no consent request');
+reset role;
+select is_empty($$select pc.id from public.presentation_participation_consents as pc join public.presentation_participants as pp on pp.id=pc.participant_id where pp.display_name='FREE TEXT ONLY'$$,'unlinked historical participant has no participation consent row');
+
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+select lives_ok($$select public.update_presentation_participant((select id from public.get_managed_presentation_participants('a1300000-0000-4000-8000-000000000001') where display_name='HISTORICAL ARTIST'),'HISTORICAL ARTIST','a1200000-0000-4000-8000-000000000002',true)$$,'ordinary participant saves keep the existing linked consent lifecycle');
+reset role;
+select results_eq($$select count(*) from public.presentation_participation_consents where id='a1700000-0000-4000-8000-000000000001'$$,$$values (1::bigint)$$,'ordinary participant saves create no duplicate consent');
+
+reset role; set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000005","role":"authenticated"}',true);
+select is_empty($$select consent_id from public.get_my_presentation_participation_request_summaries()$$,'unrelated account cannot read participation requests');
+select throws_ok($$select public.accept_presentation_participation('a1700000-0000-4000-8000-000000000001')$$,'42501',null,'unrelated account cannot accept participation consent');
+
+reset role; set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+select throws_ok($$select public.accept_presentation_participation('a1700000-0000-4000-8000-000000000001')$$,'42501',null,'Presentation owner cannot accept on the participant behalf');
+
+reset role; set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000003","role":"authenticated"}',true);
+select throws_ok($$select public.accept_presentation_participation('a1700000-0000-4000-8000-000000000001')$$,'42501',null,'co-operator cannot accept on the participant behalf');
+
+reset role; set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000002","role":"authenticated"}',true);
+select results_eq($$select presentation_id,presentation_title,presentation_host_display_name,participant_display_name,consent_status from public.get_my_presentation_participation_request_summaries() where consent_id='a1700000-0000-4000-8000-000000000001'$$,$$values ('a1300000-0000-4000-8000-000000000001'::uuid,'PUBLIC PRESENTATION'::varchar,'P2 HOST'::varchar,'HISTORICAL ARTIST'::varchar,'pending'::public.presentation_participation_status)$$,'linked Artist receives minimal pending participation context');
+select ok(position('account' in lower(pg_get_function_result('public.get_my_presentation_participation_request_summaries()'::regprocedure)))=0 and position('description' in lower(pg_get_function_result('public.get_my_presentation_participation_request_summaries()'::regprocedure)))=0,'participation request summary exposes no account or private Presentation fields');
+select lives_ok($$select public.accept_presentation_participation('a1700000-0000-4000-8000-000000000001')$$,'linked Artist accepts participation consent');
+select lives_ok($$select public.accept_presentation_participation('a1700000-0000-4000-8000-000000000001')$$,'same accepted decision is idempotent');
+select is_empty($$select consent_id from public.get_my_presentation_participation_request_summaries() where consent_id='a1700000-0000-4000-8000-000000000001'$$,'accepted participation is no longer an active request');
+select lives_ok($$select public.accept_presentation_participation((select consent_id from public.get_my_presentation_participation_request_summaries() where presentation_id='a1300000-0000-4000-8000-000000000003'))$$,'linked Artist can decide a request for a draft Presentation without making it public');
+
+reset role; set local role anon;
+select set_config('request.jwt.claims','{"role":"anon"}',true);
+select results_eq($$select title from public.get_public_profile_presentation_summaries('a1200000-0000-4000-8000-000000000001')$$,$$values ('PUBLIC PRESENTATION'::varchar)$$,'owned public Presentation remains in the host profile history');
+select results_eq($$select title from public.get_public_profile_presentation_summaries('a1200000-0000-4000-8000-000000000002')$$,$$values ('PUBLIC PRESENTATION'::varchar)$$,'accepted linked participant receives the public Presentation in profile history');
+select ok(position('owner_profile_id' in lower(pg_get_function_result('public.get_public_profile_presentation_summaries(uuid)'::regprocedure)))=0 and position('linked_profile_id' in lower(pg_get_function_result('public.get_public_profile_presentation_summaries(uuid)'::regprocedure)))=0,'public profile summary exposes no internal ownership or participant linkage identifiers');
+
+reset role;
+update public.public_profiles set show_presentations=false where id='a1200000-0000-4000-8000-000000000002';
+set local role anon;
+select set_config('request.jwt.claims','{"role":"anon"}',true);
+select is_empty($$select id from public.get_public_profile_presentation_summaries('a1200000-0000-4000-8000-000000000002')$$,'participant global Presentation preference still gates accepted history');
+
+reset role;
+update public.public_profiles set show_presentations=true where id='a1200000-0000-4000-8000-000000000002';
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+select lives_ok($$select public.update_presentation_participant((select id from public.get_managed_presentation_participants('a1300000-0000-4000-8000-000000000001') where display_name='HISTORICAL ARTIST'),'HISTORICAL ARTIST','a1200000-0000-4000-8000-000000000002',false)$$,'host can hide the linked participant without changing consent');
+reset role; set local role anon;
+select set_config('request.jwt.claims','{"role":"anon"}',true);
+select is_empty($$select id from public.get_public_profile_presentation_summaries('a1200000-0000-4000-8000-000000000002')$$,'hidden participant relation immediately removes public profile eligibility');
+
+reset role; set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+select lives_ok($$select public.update_presentation_participant((select id from public.get_managed_presentation_participants('a1300000-0000-4000-8000-000000000001') where display_name='HISTORICAL ARTIST'),'HISTORICAL ARTIST','a1200000-0000-4000-8000-000000000002',true)$$,'host restores the historical participant visibility');
+select lives_ok($$select public.set_presentation_participant_profile((select id from public.get_managed_presentation_participants('a1300000-0000-4000-8000-000000000001') where display_name='HISTORICAL ARTIST'),null)$$,'host can unlink the participant profile');
+reset role; set local role anon;
+select set_config('request.jwt.claims','{"role":"anon"}',true);
+select is_empty($$select id from public.get_public_profile_presentation_summaries('a1200000-0000-4000-8000-000000000002')$$,'unlinked participant immediately loses accepted profile-history eligibility');
+
+reset role; set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+select lives_ok($$select public.set_presentation_participant_profile((select id from public.get_managed_presentation_participants('a1300000-0000-4000-8000-000000000001') where display_name='HISTORICAL ARTIST'),'a1200000-0000-4000-8000-000000000007')$$,'relinking a participant to a different Artist creates a separate consent lifecycle');
+
+reset role; set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000004","role":"authenticated"}',true);
+select results_eq($$select presentation_title,consent_status from public.get_my_presentation_participation_request_summaries() where participant_display_name='HISTORICAL ARTIST'$$,$$values ('PUBLIC PRESENTATION'::varchar,'pending'::public.presentation_participation_status)$$,'newly linked Artist sees a new pending participation request');
+select lives_ok($$select public.decline_presentation_participation((select consent_id from public.get_my_presentation_participation_request_summaries() where participant_display_name='HISTORICAL ARTIST'))$$,'linked Artist can decline participation consent');
+select is_empty($$select consent_id from public.get_my_presentation_participation_request_summaries() where participant_display_name='HISTORICAL ARTIST'$$,'declined participation is no longer active');
+
+reset role; set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+select lives_ok($$select public.update_presentation_participant((select id from public.get_managed_presentation_participants('a1300000-0000-4000-8000-000000000001') where display_name='HISTORICAL ARTIST'),'HISTORICAL ARTIST','a1200000-0000-4000-8000-000000000007',true)$$,'ordinary save after decline does not re-request consent');
+reset role;
+select results_eq($$select status from public.presentation_participation_consents where participant_id=(select id from public.presentation_participants where presentation_id='a1300000-0000-4000-8000-000000000001' and display_name='HISTORICAL ARTIST') and linked_profile_id='a1200000-0000-4000-8000-000000000007'$$,$$values ('declined'::public.presentation_participation_status)$$,'declined consent remains terminal on ordinary participant edits');
+
+reset role; set local role anon;
+select set_config('request.jwt.claims','{"role":"anon"}',true);
+select is_empty($$select id from public.get_public_profile_presentation_summaries('a1200000-0000-4000-8000-000000000007')$$,'declined consent does not create public profile history');
+select is_empty($$select id from public.get_public_profile_presentation_summaries('a1200000-0000-4000-8000-000000000003')$$,'co-operator relationship alone does not create public profile history');
+select results_eq($$select display_name from public.get_public_presentation_participant_summaries('a1300000-0000-4000-8000-000000000001') where display_name='HISTORICAL ARTIST'$$,$$values ('HISTORICAL ARTIST'::varchar)$$,'public historical participant rendering remains independent of consent');
 
 -- Program flags are independent and historical items are eligible.
 

@@ -46,11 +46,11 @@ function cleanText(value) {
     : "";
 }
 
-function isPublishedPresentation(row, ownerProfileId) {
+function isPublishedPresentation(row, ownerProfileId = null) {
   return Boolean(
     row &&
     UUID_PATTERN.test(String(row.id || "")) &&
-    row.owner_profile_id === ownerProfileId &&
+    (!ownerProfileId || row.owner_profile_id === ownerProfileId) &&
     row.visibility === "published" &&
     row.show_in_presentations === true &&
     row.published_at &&
@@ -202,25 +202,16 @@ export function createPublicPresentationRepository(
       }
 
       const presentationQuery = new URLSearchParams({
-        select: PUBLIC_PRESENTATION_SELECT,
-        owner_profile_id: `eq.${profileRow.id}`,
-        visibility: "eq.published",
-        show_in_presentations: "eq.true",
-        published_at: "not.is.null",
-        order:
-          "start_date.desc.nullslast,published_at.desc,id.asc"
+        target_profile_id: profileRow.id
       });
-
       const rows = await request(
         config,
-        "profile_activities",
+        "rpc/get_public_profile_presentation_summaries",
         presentationQuery
       );
 
       const presentations = rows
-        .filter((row) =>
-          isPublishedPresentation(row, profileRow.id)
-        )
+        .filter((row) => isPublishedPresentation(row))
         .map(mapPresentation);
 
       const hasPublicCv =
