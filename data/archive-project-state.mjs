@@ -36,6 +36,22 @@ export function orderedProjectWorks(works, projectItems, projectId) {
     .filter(Boolean);
 }
 
+export function projectSelectWorkIds(projectItems, projectId) {
+  return [...(projectItems || [])]
+    .filter((item) => item?.projectId === projectId && typeof item.workId === "string")
+    .sort((first, second) => first.position - second.position || first.workId.localeCompare(second.workId, "en"))
+    .map((item) => item.workId);
+}
+
+export function projectChainedSelectSource(project, projectItems) {
+  if (!project?.id || typeof project.title !== "string") return null;
+  return Object.freeze({
+    source: "project",
+    title: project.title,
+    workIds: Object.freeze(projectSelectWorkIds(projectItems, project.id))
+  });
+}
+
 export function filterArchiveProjectWorks(works, searchTerm, activeTagIds, tagIdsForWork) {
   const term = String(searchTerm || "").trim().toLocaleLowerCase();
   return works.filter((work) => {

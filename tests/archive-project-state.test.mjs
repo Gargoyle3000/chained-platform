@@ -4,6 +4,8 @@ import {
   archiveProjectLocation,
   filterArchiveProjectWorks,
   orderedProjectWorks,
+  projectChainedSelectSource,
+  projectSelectWorkIds,
   resolveArchiveProjectId
 } from "../data/archive-project-state.mjs";
 
@@ -23,6 +25,23 @@ test("active Archive Project uses persisted membership order without changing me
   assert.deepEqual(orderedProjectWorks(works, items, "project-a").map((work) => work.id), ["work-a", "work-b"]);
   assert.deepEqual(orderedProjectWorks(works, items, null).map((work) => work.id), ["work-a", "work-b", "work-c"]);
   assert.equal(items.length, 3);
+});
+
+test("Project CHAINED Select source keeps the active Project title and complete persisted order", () => {
+  const project = { id: "project-a", title: "TEST SELECTION" };
+  const otherProject = { id: "project-b", title: "OTHER SELECTION" };
+  assert.deepEqual(projectSelectWorkIds(items, project.id), ["work-a", "work-b"]);
+  assert.deepEqual(projectChainedSelectSource(project, items), {
+    source: "project",
+    title: "TEST SELECTION",
+    workIds: ["work-a", "work-b"]
+  });
+  assert.deepEqual(projectChainedSelectSource(otherProject, items), {
+    source: "project",
+    title: "OTHER SELECTION",
+    workIds: ["work-a"]
+  });
+  assert.equal(projectChainedSelectSource(null, items), null);
 });
 
 test("Archive search and tags only narrow the active Project sequence", () => {

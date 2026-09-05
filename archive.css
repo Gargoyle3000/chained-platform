@@ -345,7 +345,8 @@
 }
 
 .archive-all-works-label[hidden],
-.archive-project-context[hidden] {
+.archive-project-context[hidden],
+.archive-project-context-actions [hidden] {
   display: none;
 }
 

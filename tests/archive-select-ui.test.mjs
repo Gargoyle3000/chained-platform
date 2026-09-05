@@ -4,11 +4,13 @@ import { readFile } from "node:fs/promises";
 
 const read = (file) => readFile(new URL(`../${file}`, import.meta.url), "utf8");
 
-test("Archive exposes separate full-Project and explicit filtered CHAINED Select sources", async () => {
+test("Archive renders Project SELECT from active Project state while retaining the separate filtered action", async () => {
   const [page, script] = await Promise.all([read("archive.html"), read("archive.js")]);
-  assert.match(page, /archive-select-project[^>]*>\[ CHAINED SELECT \]/);
+  assert.match(page, /archive-project-context-actions[\s\S]*archive-select-project[^>]*>\[ CHAINED SELECT \]/);
   assert.match(page, /archive-select-filter[^>]*>\[ CHAINED SELECT FILTERED \]/);
-  assert.match(script, /workIds: projectWorkIds\(project\.id\)/);
+  assert.match(script, /function renderProjects\(\)[\s\S]*projectSelectButton\.hidden = !project[\s\S]*projectChainedSelectSource\(project, projectItems\)/);
+  assert.match(script, /function selectProject\(projectId[\s\S]*renderProjects\(\);[\s\S]*renderWorks\(\);/);
+  assert.match(script, /loadArchive\(\)[\s\S]*renderTags\(\); renderProjects\(\); renderWorks\(\);/);
   assert.match(script, /workIds: visible\.map\(\(work\) => work\.id\)/);
   assert.match(script, /const narrowed = Boolean\(searchTerm \|\| activeTagIds\.size\)/);
 });

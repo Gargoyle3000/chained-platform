@@ -4,6 +4,7 @@ import {
   archiveProjectLocation,
   filterArchiveProjectWorks,
   orderedProjectWorks,
+  projectChainedSelectSource,
   resolveArchiveProjectId
 } from "./data/archive-project-state.mjs";
 import { calculateAnchoredPopoverPosition } from "./data/anchored-popover.mjs";
@@ -446,13 +447,6 @@ function selectedProjectWorks() {
   return orderedProjectWorks(works, projectItems, selectedProjectId);
 }
 
-function projectWorkIds(projectId) {
-  return projectItems
-    .filter((item) => item.projectId === projectId)
-    .sort((first, second) => first.position - second.position || first.workId.localeCompare(second.workId, "en"))
-    .map((item) => item.workId);
-}
-
 function filteredSelectTitle(searchTerm) {
   const activeTags = tags.filter((tag) => activeTagIds.has(tag.id));
   if (activeTags.length === 1 && !searchTerm) return `TAG: ${activeTags[0].name}`;
@@ -469,17 +463,8 @@ function openChainedSelect(source) {
 }
 
 function renderSelectActions(visible, searchTerm) {
-  const project = selectedProject();
   const narrowed = Boolean(searchTerm || activeTagIds.size);
-  projectSelectButton.hidden = !project;
   filterSelectButton.hidden = !narrowed;
-  if (project) {
-    projectSelectButton.onclick = () => openChainedSelect({
-      source: "project",
-      title: project.title,
-      workIds: projectWorkIds(project.id)
-    });
-  }
   if (narrowed) {
     filterSelectButton.onclick = () => openChainedSelect({
       source: "filter",
@@ -546,9 +531,13 @@ function renderProjects() {
   const project = selectedProject();
   projectContext.hidden = !project;
   allWorksLabel.hidden = Boolean(project);
+  projectSelectButton.hidden = !project;
   if (project) {
     projectTitle.textContent = project.title;
     projectEditLink.href = `archive-project.html?id=${encodeURIComponent(project.id)}`;
+    projectSelectButton.onclick = () => openChainedSelect(projectChainedSelectSource(project, projectItems));
+  } else {
+    projectSelectButton.onclick = null;
   }
   projectList.replaceChildren();
   projects.forEach((entry) => {
