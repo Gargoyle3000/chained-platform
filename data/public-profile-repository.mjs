@@ -60,19 +60,12 @@ export function createPublicProfileRepository(
     const profiles = await request(config, "public_profiles", profileQuery);
     if (!profiles[0]) return Object.freeze({ kind: "unavailable" });
 
-    const presentationQuery = new URLSearchParams({
-      select: "id",
-      owner_profile_id: `eq.${profiles[0].id}`,
-      visibility: "eq.published",
-      show_in_presentations: "eq.true",
-      published_at: "not.is.null",
-      limit: "1"
-    });
-
     const publicPresentations = await request(
       config,
-      "profile_activities",
-      presentationQuery
+      "rpc/get_public_profile_presentation_summaries",
+      new URLSearchParams({
+        target_profile_id: profiles[0].id
+      })
     );
 
     const hasPublicPresentations =

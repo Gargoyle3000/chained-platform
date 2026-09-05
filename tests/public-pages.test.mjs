@@ -358,7 +358,7 @@ test("public profiles continue stable Work and cover batches until complete", as
   let coverRequests = 0;
   const request = async (_config, table, query) => {
     if (table === "public_profiles") return [profile()];
-    if (table === "profile_activities") return [];
+    if (table === "rpc/get_public_profile_presentation_summaries") return [];
     if (table === "activity_occurrences") return [];
     if (table === "profile_press_items") return [];
     if (table === "profile_press_items") return [];
@@ -383,12 +383,68 @@ test("public profiles continue stable Work and cover batches until complete", as
   assert.equal(result.works.length, 101);
 });
 
+test("public profile Presentation availability uses the safe summary projection for accepted participant history", async () => {
+  const participantPresentationId = "99999999-9999-4999-8999-999999999992";
+  const requests = [];
+  const request = async (_config, table, query) => {
+    requests.push({ table, query });
+    if (table === "public_profiles") return [profile()];
+    if (table === "rpc/get_public_profile_presentation_summaries") {
+      return [
+        { id: participantPresentationId, owner_profile_id: IDS.profileB }
+      ];
+    }
+    if (["activity_occurrences", "cv_categories", "profile_press_items"].includes(table)) return [];
+    if (table === "works") return [];
+    throw new Error(`Unexpected public profile resource: ${table}`);
+  };
+  const client = {
+    storage: {
+      from: () => ({ getPublicUrl: (path) => ({ data: { publicUrl: publicUrl(path) } }) })
+    }
+  };
+
+  const result = await createPublicProfileRepository(client, {}, request).getProfile("artist-a");
+
+  assert.equal(result.kind, "available");
+  assert.equal(result.hasPublicPresentations, true);
+  const summaryRequest = requests.find(({ table }) => (
+    table === "rpc/get_public_profile_presentation_summaries"
+  ));
+  assert.equal(summaryRequest.query.get("target_profile_id"), IDS.profileA);
+  assert.equal(requests.some(({ table }) => table === "profile_activities"), false);
+  assert.equal(result.profile.showPresentations, true);
+});
+
+test("public profile Presentation navigation stays unavailable for an empty safe summary", async () => {
+  const requests = [];
+  const request = async (_config, table) => {
+    requests.push(table);
+    if (table === "public_profiles") return [profile()];
+    if (table === "rpc/get_public_profile_presentation_summaries") return [];
+    if (["activity_occurrences", "cv_categories", "profile_press_items"].includes(table)) return [];
+    if (table === "works") return [];
+    throw new Error(`Unexpected public profile resource: ${table}`);
+  };
+  const client = {
+    storage: {
+      from: () => ({ getPublicUrl: (path) => ({ data: { publicUrl: publicUrl(path) } }) })
+    }
+  };
+
+  const result = await createPublicProfileRepository(client, {}, request).getProfile("artist-a");
+
+  assert.equal(result.kind, "available");
+  assert.equal(result.hasPublicPresentations, false);
+  assert.equal(requests.includes("profile_activities"), false);
+});
+
 test("linked participant Work lookup reuses the bounded public profile projection", async () => {
   const queries = [];
   const request = async (_config, table, query) => {
     queries.push([table, query]);
     if (table === "public_profiles") return [profile()];
-    if (["profile_activities", "activity_occurrences", "cv_categories", "profile_press_items"].includes(table)) return [];
+    if (["rpc/get_public_profile_presentation_summaries", "activity_occurrences", "cv_categories", "profile_press_items"].includes(table)) return [];
     if (table === "works") return [work(IDS.workA1, IDS.profileA, "2026-08-01T00:00:00Z")];
     if (table === "work_images") return [cover(IDS.workA1)];
     return [];
