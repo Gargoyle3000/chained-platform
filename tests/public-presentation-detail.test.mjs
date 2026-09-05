@@ -64,6 +64,22 @@ test("a valid public Presentation resolves by its canonical ID route", async () 
   assert.equal(requests[1].query.get("id"), `eq.${PROFILE_ID}`);
 });
 
+test("public Presentation context uses narrow projections without linked profile identifiers", async () => {
+  const repository = createPublicPresentationRepository({}, async (_config, table) => {
+    if (table === "profile_activities") return [presentation()];
+    if (table === "public_profiles") return [profile()];
+    if (table === "rpc/get_public_presentation_participant_summaries") return [{ display_name: "HISTORICAL ARTIST", linked_profile_slug: "artist-one" }];
+    if (table === "rpc/get_public_presentation_program") return [{ title: "OPENING", occurrence_type: "opening", start_date: "2026-06-01" }];
+    if (table === "rpc/get_public_presentation_works") return [{ work_id: "33333333-3333-4333-8333-333333333333", title: "PUBLIC WORK", artist_slug: "artist-one", artist_display_name: "ARTIST ONE", public_object_path: "public.webp" }];
+    return [];
+  }, { storage: { from: () => ({ getPublicUrl: () => ({ data: { publicUrl: "https://example.test/public.webp" } }) }) } });
+  const result = await repository.getPresentation(PRESENTATION_ID);
+  assert.deepEqual(result.participants, [{ displayName: "HISTORICAL ARTIST", profileSlug: "artist-one" }]);
+  assert.equal(result.program[0].title, "OPENING");
+  assert.equal(result.works[0].artworkHref, "artwork.html?id=33333333-3333-4333-8333-333333333333");
+  assert.equal(JSON.stringify(result.participants).includes("linked_profile_id"), false);
+});
+
 test("missing, invalid, and non-public Presentations share the unavailable result", async () => {
   let calls = 0;
   const missing = createPublicPresentationRepository({}, async () => {

@@ -83,7 +83,7 @@ function renderUnavailable(connectionError = false) {
 }
 
 function renderPresentation(result) {
-  const { presentation, profile } = result;
+  const { presentation, profile, participants = [], program = [], works = [] } = result;
   const fragment = document.createDocumentFragment();
   const artist = document.createElement("a");
   const title = document.createElement("h1");
@@ -114,6 +114,64 @@ function renderPresentation(result) {
     external.rel = "noopener noreferrer";
     external.textContent = "EXTERNAL LINK ↗";
     fragment.append(external);
+  }
+
+  if (works.length) {
+    const section = document.createElement("section");
+    const heading = document.createElement("h2");
+    const grid = document.createElement("div");
+    section.className = "presentation-context presentation-works";
+    heading.textContent = "WORKS";
+    grid.className = "presentation-work-grid";
+    works.forEach((work) => {
+      const article = document.createElement("article");
+      const link = document.createElement("a");
+      const image = document.createElement("img");
+      const metadata = document.createElement("p");
+      link.href = work.artworkHref;
+      image.src = work.image;
+      image.alt = `${work.title} by ${work.artistName}`;
+      image.loading = "lazy";
+      link.append(image);
+      metadata.textContent = [work.title, work.yearLabel, work.workType].filter(Boolean).join(" · ");
+      article.append(link, metadata);
+      grid.append(article);
+    });
+    section.append(heading, grid);
+    fragment.append(section);
+  }
+
+  if (participants.length) {
+    const section = document.createElement("section");
+    const heading = document.createElement("h2");
+    const list = document.createElement("p");
+    section.className = "presentation-context";
+    heading.textContent = "PARTICIPANTS";
+    participants.forEach((participant, index) => {
+      if (index) list.append(document.createTextNode(" · "));
+      if (participant.profileSlug) {
+        const link = document.createElement("a");
+        link.href = createPublicProfileLink(participant.profileSlug);
+        link.textContent = participant.displayName;
+        list.append(link);
+      } else list.append(document.createTextNode(participant.displayName));
+    });
+    section.append(heading, list);
+    fragment.append(section);
+  }
+
+  if (program.length) {
+    const section = document.createElement("section");
+    const heading = document.createElement("h2");
+    section.className = "presentation-context";
+    heading.textContent = "PROGRAM";
+    section.append(heading);
+    program.forEach((item) => {
+      const line = document.createElement("p");
+      line.textContent = [item.title, formatDateRange(item.startDate, item.endDate), item.startTime, [item.venueName, item.city].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
+      section.append(line);
+    });
+    fragment.append(section);
   }
 
   const back = document.createElement("a");

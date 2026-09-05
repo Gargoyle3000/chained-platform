@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(147);
+select plan(149);
 
 -- Accounts
 
@@ -276,8 +276,10 @@ reset role; set local role anon;
 select set_config('request.jwt.claims','{"role":"anon"}',true);
 select results_eq($$select display_name from public.presentation_participants where presentation_id='a1300000-0000-4000-8000-000000000001' and display_name='HISTORICAL ARTIST'$$,$$values ('HISTORICAL ARTIST'::varchar)$$,'visible participant of public parent is public');
 select throws_ok($$select linked_profile_id from public.presentation_participants where presentation_id='a1300000-0000-4000-8000-000000000001'$$,'42501',null,'anonymous cannot read raw linked profile identifiers');
-select results_eq($$select linked_profile_id from public.get_public_presentation_participants('a1300000-0000-4000-8000-000000000001') where display_name='HISTORICAL ARTIST'$$,$$values ('a1200000-0000-4000-8000-000000000002'::uuid)$$,'safe projection exposes a public linked profile');
-select is_empty($$select display_name, linked_profile_id from public.get_public_presentation_participants('a1300000-0000-4000-8000-000000000001') where display_name='PRIVATE HISTORICAL NAME'$$,'rejected private participant linkage is not public');
+select throws_ok($$select * from public.get_public_presentation_participants('a1300000-0000-4000-8000-000000000001')$$,'42501',null,'anonymous cannot call the retired public raw participant projection');
+select throws_ok($$select * from private.get_public_presentation_participants('a1300000-0000-4000-8000-000000000001')$$,'42501',null,'anonymous cannot call the retired private raw participant projection');
+select results_eq($$select display_name, linked_profile_slug from public.get_public_presentation_participant_summaries('a1300000-0000-4000-8000-000000000001') where display_name='HISTORICAL ARTIST'$$,$$values ('HISTORICAL ARTIST'::varchar,'p2-work-owner'::varchar)$$,'safe public participant summary preserves historical name and public profile slug');
+select ok(position('linked_profile_id' in lower(pg_get_function_result('public.get_public_presentation_participant_summaries(uuid)'::regprocedure)))=0,'safe public participant summary exposes no linked profile identifier');
 select results_eq($$select work_id from public.presentation_works where presentation_id='a1300000-0000-4000-8000-000000000001' order by work_id$$,$$values ('a1400000-0000-4000-8000-000000000001'::uuid),('a1400000-0000-4000-8000-000000000002'::uuid)$$,'anonymous sees only accepted public Works');
 select is_empty($$select id from public.presentation_works where work_id='a1400000-0000-4000-8000-000000000003'$$,'rejected Work proposal is never public');
 

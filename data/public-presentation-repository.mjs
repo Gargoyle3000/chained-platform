@@ -1,9 +1,11 @@
 import { FRONTEND_MODES } from "../auth/config.mjs";
 import { getFrontendRuntime } from "../auth/supabase-client.mjs";
-import { requestPublicRows } from "./public-data-request.mjs";
+import { createPublicImageUrl, requestPublicRows } from "./public-data-request.mjs";
 import {
   isValidPublicPresentationId,
   isValidProfileSlug,
+  isValidPublicWorkId,
+  createPublicArtworkLink,
   mapPublishedArtistProfile,
   PUBLIC_PROFILE_SELECT
 } from "./public-work-mapping.mjs";
@@ -79,8 +81,32 @@ function mapPresentation(row) {
 
 export function createPublicPresentationRepository(
   config,
-  request = requestPublicRows
+  request = requestPublicRows,
+  client = null
 ) {
+  async function publicContext(id) {
+    const query = new URLSearchParams({ target_presentation_id: id });
+    const [participantRows, programRows, workRows] = await Promise.all([
+      request(config, "rpc/get_public_presentation_participant_summaries", query),
+      request(config, "rpc/get_public_presentation_program", query),
+      request(config, "rpc/get_public_presentation_works", query)
+    ]);
+    return Object.freeze({
+      participants: Object.freeze(participantRows.map((row) => Object.freeze({
+        displayName: cleanText(row.display_name),
+        profileSlug: isValidProfileSlug(row.linked_profile_slug) ? row.linked_profile_slug : ""
+      })).filter((row) => row.displayName)),
+      program: Object.freeze(programRows.map((row) => Object.freeze({
+        title: cleanText(row.title), type: cleanText(row.occurrence_type), startDate: row.start_date || "", endDate: row.end_date || "", startTime: cleanText(row.start_time), endTime: cleanText(row.end_time), venueName: cleanText(row.venue_name), city: cleanText(row.city)
+      })).filter((row) => row.title)),
+      works: Object.freeze(workRows.map((row) => {
+        const artistSlug = isValidProfileSlug(row.artist_slug) ? row.artist_slug : "";
+        const image = client && row.public_object_path ? createPublicImageUrl(client, row.public_object_path) : "";
+        const artworkHref = isValidPublicWorkId(row.work_id) ? createPublicArtworkLink(row.work_id) : null;
+        return Object.freeze({ title: cleanText(row.title), yearLabel: cleanText(row.year_label), workType: cleanText(row.work_type), artistName: cleanText(row.artist_display_name), artistSlug, artworkHref, image, width: Number(row.pixel_width) || null, height: Number(row.pixel_height) || null });
+      }).filter((row) => row.title && row.artistSlug && row.artworkHref && row.image))
+    });
+  }
   return Object.freeze({
     mode: FRONTEND_MODES.SUPABASE,
 
@@ -135,10 +161,12 @@ export function createPublicPresentationRepository(
         return Object.freeze({ kind: "unavailable" });
       }
 
+      const context = await publicContext(presentationRow.id);
       return Object.freeze({
         kind: "available",
         profile: Object.freeze({ ...profile, id: profileRow.id }),
-        presentation: mapPresentation(presentationRow)
+        presentation: mapPresentation(presentationRow),
+        ...context
       });
     },
 
@@ -244,6 +272,6 @@ export async function getPublicPresentationRepository() {
   return Object.freeze({
     runtime,
     repository:
-      createPublicPresentationRepository(runtime.config)
+      createPublicPresentationRepository(runtime.config, requestPublicRows, runtime.client)
   });
 }
