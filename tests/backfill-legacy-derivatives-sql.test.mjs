@@ -4,20 +4,26 @@ import { applyBackfillTarget, runLinkedSql } from "../scripts/backfill-legacy-de
 
 const target = { work_id: "b3000000-0000-4000-8000-000000000001", image_id: "b4000000-0000-4000-8000-000000000001" };
 
-test("linked SQL uses the current CLI JSON result format and parses a complete response", () => {
+test("linked SQL accepts the current CLI bare-array response", () => {
   let command = "";
   const rows = runLinkedSql("select 1", (_executable, args) => {
     command = args.at(-1);
-    return { status: 0, stdout: "\uFEFF{\n  \"rows\": [{\"probe\": 1}]\n}", stderr: "Initialising login role..." };
+    return { status: 0, stdout: "\uFEFF[\n  {\"probe\": 1}\n]", stderr: "Initialising login role..." };
   });
   assert.match(command, /--output-format json/);
   assert.deepEqual(rows, [{ probe: 1 }]);
 });
 
-test("linked SQL accepts an empty valid result and rejects mixed or malformed stdout", () => {
+test("linked SQL retains rows-envelope compatibility and accepts both empty result shapes", () => {
+  assert.deepEqual(runLinkedSql("select 1", () => ({ status: 0, stdout: "{\"rows\":[{\"probe\":1}]}", stderr: "" })), [{ probe: 1 }]);
+  assert.deepEqual(runLinkedSql("select 1", () => ({ status: 0, stdout: "[]", stderr: "" })), []);
   assert.deepEqual(runLinkedSql("select 1", () => ({ status: 0, stdout: "{\"rows\":[]}", stderr: "" })), []);
-  assert.throws(() => runLinkedSql("select 1", () => ({ status: 0, stdout: "Connecting...\n{\"rows\":[]}", stderr: "" })), /invalid database response/);
-  assert.throws(() => runLinkedSql("select 1", () => ({ status: 0, stdout: "{\"rows\":{}}", stderr: "" })), /invalid database response/);
+});
+
+test("linked SQL rejects malformed, mixed, or non-row JSON stdout", () => {
+  for (const stdout of ["[", "Connecting...\n[]", "{\"rows\":{}}", "{\"other\":[]}", "null", "\"rows\"", "1"]) {
+    assert.throws(() => runLinkedSql("select 1", () => ({ status: 0, stdout, stderr: "" })), /invalid database response/);
+  }
 });
 
 test("linked SQL failure remains failed with sanitized diagnostics", () => {

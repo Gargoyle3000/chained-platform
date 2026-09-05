@@ -21,8 +21,9 @@ export function runLinkedSql(query, run = spawnSync) {
   const output = String(child.stdout ?? "").replace(/^\uFEFF/, "").trim();
   try {
     const result = JSON.parse(output);
-    if (!Array.isArray(result.rows)) throw new Error("rows_missing");
-    return result.rows;
+    if (Array.isArray(result)) return result;
+    if (result && typeof result === "object" && Array.isArray(result.rows)) return result.rows;
+    throw new Error("rows_missing");
   } catch {
     throw new Error("database_command_failed: invalid database response");
   }
