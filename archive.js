@@ -7,6 +7,7 @@ import {
   resolveArchiveProjectId
 } from "./data/archive-project-state.mjs";
 import { calculateAnchoredPopoverPosition } from "./data/anchored-popover.mjs";
+import { writeChainedSelectSession } from "./data/chained-select-state.mjs";
 
 const page = document.querySelector(".archive-page");
 const grid = document.querySelector(".saved-grid");
@@ -28,6 +29,8 @@ const projectTitle = document.querySelector("#archive-current-project");
 const allWorksLabel = document.querySelector(".archive-all-works-label");
 const projectEditLink = document.querySelector(".archive-project-edit");
 const projectCloseButton = document.querySelector(".archive-project-close");
+const projectSelectButton = document.querySelector(".archive-select-project");
+const filterSelectButton = document.querySelector(".archive-select-filter");
 const viewStorageKey = "chained-archive-view";
 
 let repository = null;
@@ -443,12 +446,56 @@ function selectedProjectWorks() {
   return orderedProjectWorks(works, projectItems, selectedProjectId);
 }
 
+function projectWorkIds(projectId) {
+  return projectItems
+    .filter((item) => item.projectId === projectId)
+    .sort((first, second) => first.position - second.position || first.workId.localeCompare(second.workId, "en"))
+    .map((item) => item.workId);
+}
+
+function filteredSelectTitle(searchTerm) {
+  const activeTags = tags.filter((tag) => activeTagIds.has(tag.id));
+  if (activeTags.length === 1 && !searchTerm) return `TAG: ${activeTags[0].name}`;
+  if (searchTerm && activeTags.length === 0) return `SEARCH: ${searchTerm}`;
+  return "ARCHIVE SELECT";
+}
+
+function openChainedSelect(source) {
+  if (!writeChainedSelectSession(window.sessionStorage, source)) {
+    setTagMessage("CHAINED SELECT IS CURRENTLY UNAVAILABLE");
+    return;
+  }
+  window.location.assign("archive-select.html");
+}
+
+function renderSelectActions(visible, searchTerm) {
+  const project = selectedProject();
+  const narrowed = Boolean(searchTerm || activeTagIds.size);
+  projectSelectButton.hidden = !project;
+  filterSelectButton.hidden = !narrowed;
+  if (project) {
+    projectSelectButton.onclick = () => openChainedSelect({
+      source: "project",
+      title: project.title,
+      workIds: projectWorkIds(project.id)
+    });
+  }
+  if (narrowed) {
+    filterSelectButton.onclick = () => openChainedSelect({
+      source: "filter",
+      title: filteredSelectTitle(searchTerm),
+      workIds: visible.map((work) => work.id)
+    });
+  }
+}
+
 function renderWorks() {
   if (openArchivePopover) closeArchivePopover(openArchivePopover.menu, openArchivePopover.toggle);
   closeWorkManagementMenu();
   closeProjectMenu();
   const searchTerm = searchInput.value.trim().toLocaleLowerCase();
   const visible = filterArchiveProjectWorks(selectedProjectWorks(), searchTerm, activeTagIds, tagIdsForWork);
+  renderSelectActions(visible, searchTerm);
   grid.replaceChildren(...visible.map(createSavedWork));
   setResultCount(visible.length);
   emptyMessage.hidden = visible.length !== 0;

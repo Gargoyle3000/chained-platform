@@ -121,8 +121,9 @@ export function fitIntoBox(width, height, boxWidth, boxHeight) {
   return Object.freeze({ width: sourceWidth * scale, height: sourceHeight * scale, scale });
 }
 
-export async function generateWithinBudget({ renderTier, tiers = PORTFOLIO_IMAGE_TIERS, targetBytes = PORTFOLIO_SAFE_TARGET_BYTES }) {
+export async function generateWithinBudget({ renderTier, tiers = PORTFOLIO_IMAGE_TIERS, targetBytes = PORTFOLIO_SAFE_TARGET_BYTES, failureSubject = "PORTFOLIO" }) {
   if (typeof renderTier !== "function") throw new PortfolioExportError("PDF GENERATION IS UNAVAILABLE");
+  const subject = failureSubject === "SELECT" ? "SELECT" : "PORTFOLIO";
   let lastResult = null;
   for (const tier of tiers) {
     const result = await renderTier(tier);
@@ -133,8 +134,8 @@ export async function generateWithinBudget({ renderTier, tiers = PORTFOLIO_IMAGE
   }
   throw new PortfolioExportError(
     lastResult && lastResult.size > PORTFOLIO_MAX_BYTES
-      ? "THIS PORTFOLIO CANNOT MEET THE 20 MB EXPORT LIMIT. REMOVE SOME IMAGES OR WORKS."
-      : "THIS PORTFOLIO CANNOT MEET THE MAIL-FRIENDLY EXPORT LIMIT. REMOVE SOME IMAGES OR WORKS."
+      ? `THIS ${subject} CANNOT MEET THE 20 MB EXPORT LIMIT. REMOVE SOME IMAGES OR WORKS.`
+      : `THIS ${subject} CANNOT MEET THE MAIL-FRIENDLY EXPORT LIMIT. REMOVE SOME IMAGES OR WORKS.`
   );
 }
 
@@ -405,7 +406,11 @@ export async function renderPortfolioPdf({
   documentTitle,
   includeTitlePage,
   tier,
-  loadPreparedImage
+  loadPreparedImage,
+  titlePageLines = null,
+  imagePageCaption = (entry) => entry.reference,
+  indexHeading = "INDEX",
+  metadataLines = portfolioMetadataLines
 }) {
   if (!PDFLib?.PDFDocument || !fontkit || !fontBytes || !plan?.works?.length || typeof loadPreparedImage !== "function") {
     throw new PortfolioExportError("PDF GENERATION IS UNAVAILABLE");
@@ -422,15 +427,27 @@ export async function renderPortfolioPdf({
 
   if (includeTitlePage) {
     const page = pdf.addPage([A4_PAGE.width, A4_PAGE.height]);
-    const artist = text(artistName) || "ARTIST";
-    const artistSize = 24;
-    const titleSize = 16;
-    page.drawText(artist, { x: margin, y: A4_PAGE.height / 2 + 22, size: artistSize, font, color: black });
-    let titleY = A4_PAGE.height / 2 - 18;
-    wrapText(documentTitle, font, titleSize, contentWidth).forEach((line) => {
-      page.drawText(line, { x: margin, y: titleY, size: titleSize, font, color: black });
-      titleY -= 25;
-    });
+    if (Array.isArray(titlePageLines)) {
+      let titleY = A4_PAGE.height / 2 + 44;
+      titlePageLines.filter(Boolean).forEach((value, index) => {
+        const size = index < 2 ? 18 : 12;
+        wrapText(value, font, size, contentWidth).forEach((line) => {
+          page.drawText(line, { x: margin, y: titleY, size, font, color: black });
+          titleY -= index < 2 ? 27 : 20;
+        });
+        titleY -= 8;
+      });
+    } else {
+      const artist = text(artistName) || "ARTIST";
+      const artistSize = 24;
+      const titleSize = 16;
+      page.drawText(artist, { x: margin, y: A4_PAGE.height / 2 + 22, size: artistSize, font, color: black });
+      let titleY = A4_PAGE.height / 2 - 18;
+      wrapText(documentTitle, font, titleSize, contentWidth).forEach((line) => {
+        page.drawText(line, { x: margin, y: titleY, size: titleSize, font, color: black });
+        titleY -= 25;
+      });
+    }
   }
 
   for (const imagePage of plan.imagePages) {
@@ -447,20 +464,20 @@ export async function renderPortfolioPdf({
       width: fitted.width,
       height: fitted.height
     });
-    page.drawText(imagePage.reference, { x: margin, y: margin - 18, size: 9, font, color: black });
+    page.drawText(text(imagePageCaption(imagePage)) || imagePage.reference, { x: margin, y: margin - 18, size: 9, font, color: black });
   }
 
   let indexPage = null;
   let cursor = 0;
   const startIndexPage = () => {
     indexPage = pdf.addPage([A4_PAGE.width, A4_PAGE.height]);
-    indexPage.drawText("INDEX", { x: margin, y: A4_PAGE.height - margin, size: 11, font, color: black });
+    indexPage.drawText(text(indexHeading) || "INDEX", { x: margin, y: A4_PAGE.height - margin, size: 11, font, color: black });
     cursor = A4_PAGE.height - margin - 34;
   };
   startIndexPage();
 
   for (const entry of plan.works) {
-    const lineGroups = portfolioMetadataLines(entry.work).map((line) => wrapText(line, font, 10, contentWidth - 42));
+    const lineGroups = metadataLines(entry.work).map((line) => wrapText(line, font, 10, contentWidth - 42));
     const entryHeight = 14 + lineGroups.reduce((sum, lines) => sum + lines.length * 14, 0) + 14;
     if (cursor - entryHeight < margin) startIndexPage();
     indexPage.drawText(entry.number, { x: margin, y: cursor, size: 10, font, color: black });

@@ -8,6 +8,7 @@ import {
   PUBLIC_PROFILE_SELECT,
   PUBLIC_WORK_SELECT
 } from "./public-work-mapping.mjs";
+import { derivativeLargePublicPath } from "./work-mapping.mjs";
 
 export const ARCHIVE_DATA_SOURCE = "supabase-only";
 
@@ -130,6 +131,72 @@ async function publicArchivedWorks(client, config, workIds, request) {
   );
 }
 
+const PUBLIC_SELECT_IMAGE_SELECT = [
+  "id",
+  "work_id",
+  "public_object_path",
+  "pixel_width",
+  "pixel_height",
+  "sort_order",
+  "is_cover"
+].join(",");
+
+function selectImagesForWork(rows, workId, client) {
+  const sourceRows = [...(rows || [])].filter((row) => row?.work_id === workId && typeof row.public_object_path === "string");
+  if (!sourceRows.length) return null;
+  const images = sourceRows
+    .map((row) => {
+      const largePath = derivativeLargePublicPath(row.public_object_path, row.id);
+      const src = largePath ? createPublicImageUrl(client, largePath) : null;
+      if (!src) return null;
+      return Object.freeze({
+        id: row.id,
+        src,
+        width: Number(row.pixel_width) > 0 ? Number(row.pixel_width) : null,
+        height: Number(row.pixel_height) > 0 ? Number(row.pixel_height) : null,
+        order: Number.isFinite(Number(row.sort_order)) ? Number(row.sort_order) : 0,
+        uploadStatus: "ready"
+      });
+    })
+    .filter(Boolean)
+    .sort((first, second) => first.order - second.order || first.id.localeCompare(second.id, "en"));
+  return images.length === sourceRows.length ? Object.freeze(images) : null;
+}
+
+async function publicSelectWorks(client, config, workIds, request) {
+  if (!workIds.length) return [];
+  const works = await request(config, "works", new URLSearchParams({
+    select: PUBLIC_WORK_SELECT,
+    id: inFilter(workIds),
+    visibility: "eq.published",
+    order: "published_at.desc,id.asc"
+  }));
+  const profileIds = validWorkIds(works.map((work) => work?.owner_profile_id));
+  if (!profileIds.length) return [];
+  const [profiles, imageRows] = await Promise.all([
+    request(config, "public_profiles", new URLSearchParams({
+      select: PUBLIC_PROFILE_SELECT,
+      id: inFilter(profileIds),
+      profile_type: "eq.artist",
+      publication_status: "eq.published"
+    })),
+    request(config, "work_images", new URLSearchParams({
+      select: PUBLIC_SELECT_IMAGE_SELECT,
+      work_id: inFilter(workIds),
+      public_object_path: "not.is.null",
+      order: "sort_order.asc,id.asc"
+    }))
+  ]);
+
+  const publicWorks = mapDiscoverResult(works, profiles, imageRows, (path) => createPublicImageUrl(client, path));
+  return publicWorks
+    .map((work) => {
+      const images = selectImagesForWork(imageRows, work.id, client);
+      return images ? Object.freeze({ ...work, images }) : null;
+    })
+    .filter(Boolean);
+}
+
 export function createArchiveRepository(client, config, request = requestPublicRows) {
   return Object.freeze({
     mode: FRONTEND_MODES.SUPABASE,
@@ -218,6 +285,23 @@ export function createArchiveRepository(client, config, request = requestPublicR
         .delete()
         .eq("work_id", workId);
       if (error) throw archiveError();
+    },
+
+    async listArchivedSelectWorks(requestedWorkIds = []) {
+      const { data, error } = await client
+        .from("archive_items")
+        .select("work_id")
+        .order("created_at", { ascending: false })
+        .order("work_id", { ascending: true });
+      if (error) throw archiveError();
+
+      const saved = validWorkIds((data || []).map((item) => item?.work_id));
+      const savedSet = new Set(saved);
+      const requested = validWorkIds(requestedWorkIds);
+      const selected = (requested.length ? requested : saved).filter((id) => savedSet.has(id));
+      const loaded = await publicSelectWorks(client, config, selected, request);
+      const byId = new Map(loaded.map((work) => [work.id, work]));
+      return Object.freeze(selected.map((id) => byId.get(id)).filter(Boolean));
     },
 
     async listProjects() {

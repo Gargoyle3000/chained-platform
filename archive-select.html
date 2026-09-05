@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>CHAINED Select — Archive</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="scroll-indicators.js" defer></script>
+  <link rel="stylesheet" href="archive.css">
+  <link rel="stylesheet" href="archive-select.css">
+  <link rel="stylesheet" href="auth/auth.css">
+  <script type="module" src="auth/guard.mjs"></script>
+</head>
+<body class="archive-page archive-select-page" data-auth-protected="true">
+  <header class="site-header">
+    <a class="wordmark" href="discover.html">&lt;CHAINED&gt;</a>
+    <nav class="main-nav main-nav-with-dashboard" aria-label="Primary navigation">
+      <a href="discover.html">DISCOVER</a><a href="following.html">FOLLOWING</a><a class="is-active" href="archive.html">ARCHIVE</a><a href="agenda.html">AGENDA</a>
+      <span class="profile-nav-group"><a data-own-profile-link href="profile.html">PROFILE</a><a class="dashboard-link" href="dashboard.html" aria-label="Open dashboard">+</a></span>
+    </nav>
+  </header>
+  <main class="archive-layout">
+    <aside class="archive-sidebar"><div class="archive-sidebar-inner">
+      <section class="archive-sidebar-section"><h1>SELECT</h1><p class="archive-status">PUBLIC WORKS · CURATED CONTEXT</p></section>
+      <a class="text-action" href="archive.html">[ ← BACK TO ARCHIVE ]</a>
+    </div></aside>
+    <section class="archive-content chained-select-content" aria-labelledby="select-heading">
+      <header class="archive-content-header"><div><p class="archive-current-project">CHAINED SELECT</p><h2 id="select-heading">REVIEW SELECT</h2></div></header>
+      <p class="chained-select-error" id="select-error" role="alert" hidden></p>
+      <p class="chained-select-status" id="select-status" aria-live="polite"></p>
+      <section class="chained-select-section">
+        <label class="chained-select-label" for="select-title">SELECT TITLE<input id="select-title" type="text" maxlength="180" autocomplete="off"></label>
+        <label class="chained-select-label" for="select-selector">SELECTED BY<select id="select-selector" disabled></select></label>
+        <p class="chained-select-summary" id="select-summary"></p>
+      </section>
+      <section class="chained-select-section"><header><p>INCLUDE / ORDER</p><span id="select-count">0 SELECTED</span></header><div id="select-works" class="chained-select-works"></div></section>
+      <section class="chained-select-submit"><button class="text-action" id="select-generate" type="button">[ GENERATE CHAINED SELECT ]</button><p>PUBLIC WORKS ONLY · PDF FOR EMAIL OR SUBMISSION · MAX 20 MB</p></section>
+    </section>
+  </main>
+  <script src="assets/vendor/pdf-lib.min.js"></script>
+  <script src="assets/vendor/fontkit.umd.min.js"></script>
+  <script type="module" src="archive-select.js"></script>
+</body>
+</html>

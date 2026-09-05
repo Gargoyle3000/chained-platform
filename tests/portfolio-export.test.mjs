@@ -103,7 +103,7 @@ test("size budgeting retries a bounded set of compression tiers", async () => {
       tiers: [{ id: "minimum" }],
       renderTier: async () => ({ bytes: new Uint8Array(101) })
     }),
-    (error) => error instanceof PortfolioExportError && error.message.includes("MAIL-FRIENDLY")
+    (error) => error instanceof PortfolioExportError && error.message === "THIS PORTFOLIO CANNOT MEET THE MAIL-FRIENDLY EXPORT LIMIT. REMOVE SOME IMAGES OR WORKS."
   );
 });
 

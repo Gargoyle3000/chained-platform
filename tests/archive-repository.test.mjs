@@ -206,6 +206,26 @@ test("unavailable public mappings are omitted while their private Archive relati
   assert.deepEqual(await repository.listArchivedWorks(), []);
 });
 
+test("CHAINED Select loads only current public LARGE siblings and never carries private media", async () => {
+  const client = archiveClient([{ work_id: IDS.workA }, { work_id: IDS.workB }]);
+  const imageA = cover(IDS.workA);
+  const imageB = cover(IDS.workB);
+  const rows = {
+    works: [work(IDS.workA), work(IDS.workB)],
+    public_profiles: [profile()],
+    work_images: [
+      { ...imageA, public_object_path: `${IDS.profile}/${IDS.workA}/${IDS.workA}/${imageA.id}/small.webp`, sort_order: 0 },
+      { ...imageB, public_object_path: "legacy/public.jpg", sort_order: 0 }
+    ]
+  };
+  const repository = createArchiveRepository(client, config, async (_config, table) => rows[table]);
+  const selected = await repository.listArchivedSelectWorks([IDS.workA, IDS.workB]);
+  assert.deepEqual(selected.map((entry) => entry.id), [IDS.workA]);
+  assert.match(selected[0].images[0].src, /large\.webp$/);
+  assert.equal(JSON.stringify(selected).includes("private_object_path"), false);
+  assert.equal(JSON.stringify(selected).includes("legacy/public.jpg"), false);
+});
+
 test("save and remove send only the Work identity and sanitize failures", async () => {
   const client = archiveClient();
   const repository = createArchiveRepository(client, config);

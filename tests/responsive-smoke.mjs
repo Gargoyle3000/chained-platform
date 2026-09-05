@@ -72,7 +72,7 @@ try {
   await command("Page.enable");
 
   for (const width of [1440, 390, 320]) {
-    for (const page of ["dashboard-works.html", "dashboard-portfolio-export.html", "dashboard-work-edit.html", "artwork.html", "login.html", "password-update.html"]) {
+    for (const page of ["dashboard-works.html", "dashboard-portfolio-export.html", "dashboard-work-edit.html", "archive-select.html", "artwork.html", "login.html", "password-update.html"]) {
       await command("Emulation.setDeviceMetricsOverride", { width, height: width === 1440 ? 900 : 844, deviceScaleFactor: 1, mobile: width < 700 });
       const loaded = once("Page.loadEventFired");
       await command("Page.navigate", { url: `http://127.0.0.1:5500/${page}` });

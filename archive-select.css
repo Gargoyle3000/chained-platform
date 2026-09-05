@@ -1,0 +1,21 @@
+.chained-select-content { max-width: 900px; }
+.chained-select-error, .chained-select-status { margin: 0 0 24px; font-size: var(--font-meta); }
+.chained-select-error, .chained-select-status { color: var(--accent); }
+.chained-select-section { margin: 0 0 48px; }
+.chained-select-section > header { display: flex; justify-content: space-between; gap: 18px; font-size: var(--font-meta); }
+.chained-select-section > header p, .chained-select-section > header span { margin: 0 0 12px; }
+.chained-select-label { display: grid; gap: 8px; width: min(100%, 560px); margin: 0 0 20px; font-size: var(--font-meta); }
+.chained-select-label input, .chained-select-label select { width: 100%; border: 0; border-bottom: 1px solid var(--black); padding: 8px 0; border-radius: 0; background: var(--white); color: var(--black); font: inherit; }
+.chained-select-label input:focus-visible, .chained-select-label select:focus-visible { outline: 1px solid var(--accent); outline-offset: 4px; }
+.chained-select-summary { margin: 0; font-size: var(--font-meta); color: var(--accent); }
+.chained-select-works { display: grid; gap: 28px; }
+.chained-select-work { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; gap: 18px; align-items: start; padding: 0; font-size: var(--font-meta); }
+.chained-select-work input { width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--green); }
+.chained-select-work strong, .chained-select-work small { display: block; }
+.chained-select-work strong { font-size: 15px; font-weight: 400; }
+.chained-select-work small { margin-top: 5px; font-size: 10px; line-height: 1.35; }
+.chained-select-work input:checked + label strong { color: var(--green); }
+.chained-select-work-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 16px; }
+.chained-select-submit { display: grid; justify-items: start; gap: 18px; margin-bottom: 100px; }
+.chained-select-submit p { margin: 0; font-size: var(--font-meta); }
+@media (max-width: 700px) { .chained-select-work { grid-template-columns: max-content minmax(0, 1fr); } .chained-select-work-actions { grid-column: 2; justify-content: flex-start; } }

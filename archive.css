@@ -779,6 +779,18 @@
   margin-top: 7px;
 }
 
+.archive-select-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 16px;
+  font-size: var(--font-meta);
+}
+
+.archive-select-actions [hidden] {
+  display: none;
+}
+
 .archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-management-trigger {
   display: inline-block;
 }
@@ -889,6 +901,10 @@
   .archive-header-tools {
     width: 100%;
     align-items: flex-start;
+  }
+
+  .archive-select-actions {
+    justify-content: flex-start;
   }
 
   .archive-view-button[data-archive-view="supergrid"],
