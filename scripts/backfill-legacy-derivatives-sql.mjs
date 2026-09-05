@@ -12,16 +12,15 @@ export function sanitizeCommandDiagnostic(value) {
 }
 
 export function runLinkedSql(query, run = spawnSync) {
-  const command = `npx.cmd supabase db query --linked --output json "${query.replaceAll('"', '\\"')}"`;
+  const command = `npx.cmd supabase db query --linked --output-format json "${query.replaceAll('"', '\\"')}"`;
   const child = run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], {
     encoding: "utf8",
     env: { ...process.env, SUPABASE_TELEMETRY_DISABLED: "1" },
   });
   if (child.status !== 0) throw new Error(`database_command_failed: ${sanitizeCommandDiagnostic(child.stderr || child.stdout)}`);
-  const output = String(child.stdout ?? "");
-  const jsonStart = output.indexOf("{");
+  const output = String(child.stdout ?? "").replace(/^\uFEFF/, "").trim();
   try {
-    const result = JSON.parse(output.slice(jsonStart));
+    const result = JSON.parse(output);
     if (!Array.isArray(result.rows)) throw new Error("rows_missing");
     return result.rows;
   } catch {
