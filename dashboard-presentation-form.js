@@ -4,6 +4,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { getPresentationRepository } =
     await import("./data/presentation-repository.mjs");
 
+  const { getPublicProfileRepository } =
+    await import("./data/public-profile-repository.mjs");
+
   const { normalizeHttpUrl } =
     await import("./data/url-normalization.mjs");
 
@@ -42,6 +45,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const participantAddButton = participantAddForm?.querySelector('button[type="button"]');
   const cooperatorSearchInput = cooperatorInviteForm?.querySelector('[name="cooperator-profile-search"]');
   const cooperatorSearchResults = document.querySelector("#presentation-cooperator-results");
+  const worksSection = document.querySelector("#presentation-works-section");
+  const workParticipants = document.querySelector("#presentation-work-participants");
+  const workState = document.querySelector("#presentation-work-state");
+  const workGrid = document.querySelector("#presentation-work-grid");
   const programSection = document.querySelector("#presentation-program-section");
   const programList = document.querySelector("#presentation-program-list");
   const programAddForm = document.querySelector("#presentation-program-add");
@@ -59,6 +66,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   let managedProfiles = [];
   let currentPresentation = null;
   let isOwnerManager = false;
+  let selectedWorkParticipantProfileId = null;
+  let publicProfileRepository = null;
 
   function field(name) {
     return form.elements.namedItem(name);
@@ -172,6 +181,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   function updateEditorState(presentation = null) {
     const editing = Boolean(presentation);
 
+    if (editing && presentation.managementRole) {
+      isOwnerManager = presentation.managementRole === "owner";
+    }
+
     contextElement.textContent = editing
       ? "PRESENTATIONS / EDIT PRESENTATION"
       : "PRESENTATIONS / ADD PRESENTATION";
@@ -184,7 +197,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       ? `${presentation.title || "Untitled Presentation"} — CHAINED Dashboard`
       : "Add Presentation — CHAINED Dashboard";
 
-    deleteButton.hidden = !editing;
+    deleteButton.hidden = !editing || !isOwnerManager;
     publicationButton.hidden = !editing;
     agendaButton.hidden = !editing;
 
@@ -328,15 +341,123 @@ document.addEventListener("DOMContentLoaded", async () => {
     return linker;
   }
 
+  function workAssociationLabel(association) {
+    return association.status === "accepted" ? "ADDED" : association.status.toUpperCase();
+  }
+
+  async function renderSelectedParticipantWorks(participant, associations) {
+    workState.textContent = "LOADING PUBLIC WORKS";
+    workGrid.replaceChildren();
+
+    try {
+      if (!publicProfileRepository) {
+        const publicRuntime = await getPublicProfileRepository();
+        publicProfileRepository = publicRuntime.repository;
+      }
+      const result = await publicProfileRepository?.getProfileById(
+        participant.linkedProfileId
+      );
+      if (!result || result.kind !== "available") {
+        workState.textContent = "PUBLIC WORKS ARE CURRENTLY UNAVAILABLE";
+        return;
+      }
+
+      const associationsByWorkId = new Map(
+        associations.map((association) => [association.workId, association])
+      );
+      workState.textContent = result.works.length ? "" : "NO PUBLIC WORKS";
+      workGrid.replaceChildren(...result.works.map((work) => {
+        const item = document.createElement("article");
+        const title = document.createElement("p");
+        const controls = document.createElement("div");
+        const association = associationsByWorkId.get(work.id);
+        item.className = "presentation-work-item";
+        title.className = "presentation-work-title";
+        title.textContent = work.title || "UNTITLED WORK";
+        controls.className = "presentation-context-actions";
+
+        if (work.image?.src) {
+          const image = document.createElement("img");
+          image.className = "presentation-work-image";
+          image.src = work.image.src;
+          image.alt = work.title || "WORK";
+          image.loading = "lazy";
+          item.append(image);
+        }
+
+        if (association) {
+          const status = document.createElement("p");
+          status.className = "presentation-work-status";
+          status.textContent = workAssociationLabel(association);
+          controls.append(status);
+        } else {
+          controls.append(action("+", async () => {
+            try {
+              await repository.proposePresentationWork(currentPresentationId, work.id);
+              await refreshContext();
+            } catch {
+              setError("WORK COULD NOT BE ADDED");
+            }
+          }));
+        }
+
+        item.append(title, controls);
+        return item;
+      }));
+    } catch {
+      workState.textContent = "PUBLIC WORKS ARE CURRENTLY UNAVAILABLE";
+    }
+  }
+
+  async function renderWorksContext(participants, associations) {
+    const linkedParticipants = participants.filter(
+      (participant) => participant.linkedProfileId
+    );
+    worksSection.hidden = false;
+    workParticipants.replaceChildren();
+    workGrid.replaceChildren();
+
+    if (!linkedParticipants.length) {
+      selectedWorkParticipantProfileId = null;
+      workState.textContent = "NO LINKED CHAINED PARTICIPANTS";
+      return;
+    }
+
+    const selectedParticipant = linkedParticipants.find(
+      (participant) => participant.linkedProfileId === selectedWorkParticipantProfileId
+    );
+    workState.textContent = selectedParticipant
+      ? ""
+      : "SELECT A LINKED CHAINED PARTICIPANT";
+
+    workParticipants.replaceChildren(...linkedParticipants.map((participant) => {
+      const select = action(participant.displayName || "CHAINED ARTIST", async () => {
+        selectedWorkParticipantProfileId = participant.linkedProfileId;
+        await renderWorksContext(participants, associations);
+      });
+      select.classList.toggle(
+        "is-selected",
+        participant.linkedProfileId === selectedWorkParticipantProfileId
+      );
+      return select;
+    }));
+
+    if (selectedParticipant) {
+      await renderSelectedParticipantWorks(selectedParticipant, associations);
+    }
+  }
+
   async function refreshContext() {
     if (!currentPresentationId) return;
-    const [participants, cooperators, program] = await Promise.all([
+    const [participants, cooperators, program, works] = await Promise.all([
       repository.listManagedParticipants(currentPresentationId),
       repository.listManagedPresentationCooperatorSummaries(currentPresentationId),
-      repository.listPresentationProgramOccurrences(currentPresentationId)
+      repository.listPresentationProgramOccurrences(currentPresentationId),
+      repository.listManagedPresentationWorks(currentPresentationId)
     ]);
     participantsSection.hidden = false;
     cooperatorsSection.hidden = false;
+    worksSection.hidden = false;
     programSection.hidden = false;
     participantsList.replaceChildren(...(participants.length ? participants.map((participant, index) => {
       const row = document.createElement("div");
@@ -402,6 +523,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       row.append(title, visible, controls);
       return row;
     }) : [emptyContext("NO PROGRAM")]));
+    await renderWorksContext(participants, works);
   }
 
   participantAddButton?.addEventListener("click", async () => {
@@ -628,7 +750,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
 
     try {
-      const saved = currentPresentationId
+      const creating = !currentPresentationId;
+      const saved = !creating
         ? await repository.updatePresentation(
             record,
             expectedUpdatedAt
@@ -641,6 +764,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       currentPresentationId = saved.id;
       expectedUpdatedAt = saved.updatedAt;
       currentVisibility = saved.visibility;
+      if (creating) isOwnerManager = true;
 
       populateForm(saved);
       updateEditorState(saved);
@@ -722,9 +846,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     currentPresentationId = presentation.id;
     currentPresentation = presentation;
-    isOwnerManager = managedProfiles.some(
-      (profile) => profile.id === presentation.ownerProfileId
-    );
+    isOwnerManager = presentation.managementRole === "owner";
     expectedUpdatedAt = presentation.updatedAt;
     currentVisibility = presentation.visibility;
 

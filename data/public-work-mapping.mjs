@@ -100,6 +100,10 @@ export function isValidPublicWorkId(value) {
   return typeof value === "string" && UUID_PATTERN.test(value);
 }
 
+export function isValidPublicProfileId(value) {
+  return typeof value === "string" && UUID_PATTERN.test(value);
+}
+
 export function isValidPublicPresentationId(value) {
   return typeof value === "string" && UUID_PATTERN.test(value);
 }

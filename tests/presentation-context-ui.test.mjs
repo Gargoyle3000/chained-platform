@@ -11,6 +11,7 @@ test("Presentation editor wires profile-only context management without a client
   for (const id of [
     "presentation-participants-section",
     "presentation-cooperators-section",
+    "presentation-works-section",
     "presentation-program-section"
   ]) assert.match(page, new RegExp(`id=\\"${id}\\"`));
 
@@ -38,6 +39,15 @@ test("Presentation editor wires profile-only context management without a client
   assert.match(script, /CO-OPERATOR COULD NOT BE INVITED/);
   assert.match(script, /inviteButton\.disabled = true/);
   assert.match(script, /revokePresentationCooperator\(/);
+  assert.match(script, /presentation\.managementRole === "owner"/);
+  assert.match(script, /deleteButton\.hidden = !editing \|\| !isOwnerManager/);
+  assert.match(script, /listManagedPresentationWorks\(currentPresentationId\)/);
+  assert.match(script, /getPublicProfileRepository/);
+  assert.match(script, /getProfileById\(/);
+  assert.match(script, /proposePresentationWork\(currentPresentationId, work\.id\)/);
+  assert.match(script, /NO LINKED CHAINED PARTICIPANTS/);
+  assert.match(script, /SELECT A LINKED CHAINED PARTICIPANT/);
+  assert.match(script, /WORK COULD NOT BE ADDED/);
   assert.match(script, /listPresentationProgramOccurrences\(currentPresentationId\)/);
   assert.match(script, /createPresentationProgramOccurrence\(/);
   assert.match(script, /setPresentationProgramVisibility\(/);
@@ -50,4 +60,5 @@ test("Presentation editor wires profile-only context management without a client
   assert.match(page, /id="presentation-cooperator-invite"/);
   assert.match(page, /id="presentation-cooperator-results"/);
   assert.doesNotMatch(script, /listPresentationCooperators\(|invitePresentationCooperator\(|invitedAccountId|accountId|from\("accounts"\)/);
+  assert.doesNotMatch(script, /listWorks\(|getDiscoverWorks\(|search.*work/i);
 });

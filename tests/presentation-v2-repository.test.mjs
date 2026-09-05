@@ -118,6 +118,81 @@ test("Presentation v2 participant adapters use the bounded participant RPCs", as
   ]);
 });
 
+test("managed Presentation summaries use one bounded RPC and preserve management roles", async () => {
+  const client = createClient({
+    rpcRows: {
+      get_managed_presentation_summaries: [{
+        id: IDS.presentation,
+        owner_profile_id: IDS.profile,
+        title: "Owned Presentation",
+        activity_type: "group-exhibition",
+        visibility: "draft",
+        management_role: "owner"
+      }, {
+        id: IDS.association,
+        owner_profile_id: IDS.account,
+        title: "Co-operated Presentation",
+        activity_type: "project",
+        visibility: "published",
+        management_role: "cooperator"
+      }, {
+        id: IDS.presentation,
+        owner_profile_id: IDS.profile,
+        title: "Duplicate row",
+        management_role: "owner"
+      }]
+    }
+  });
+  const repository = createSupabasePresentationRepository(client);
+
+  const presentations = await repository.listPresentations();
+  assert.deepEqual(
+    presentations.map((presentation) => [presentation.id, presentation.managementRole]),
+    [[IDS.presentation, "owner"], [IDS.association, "cooperator"]]
+  );
+  assert.deepEqual(client.calls, [{
+    rpc: ["get_managed_presentation_summaries", {}]
+  }]);
+});
+
+test("Presentation detail is gated by the managed summary before reading editor fields", async () => {
+  const row = {
+    id: IDS.presentation,
+    owner_profile_id: IDS.profile,
+    title: "Co-operated Presentation",
+    activity_type: "project",
+    visibility: "draft"
+  };
+  const client = createClient({
+    rpcRows: {
+      get_managed_presentation_summaries: [{
+        ...row,
+        management_role: "cooperator"
+      }]
+    },
+    tables: {
+      profile_activities: [row]
+    }
+  });
+  const repository = createSupabasePresentationRepository(client);
+
+  const presentation = await repository.getPresentation(IDS.presentation);
+  assert.equal(presentation.managementRole, "cooperator");
+  assert.deepEqual(client.calls.slice(0, 2), [{
+    rpc: ["get_managed_presentation_summaries", {}]
+  }, { from: "profile_activities" }]);
+
+  const unrelatedClient = createClient({
+    rpcRows: { get_managed_presentation_summaries: [] },
+    tables: { profile_activities: [row] }
+  });
+  const unrelated = createSupabasePresentationRepository(unrelatedClient);
+  assert.equal(await unrelated.getPresentation(IDS.presentation), null);
+  assert.deepEqual(unrelatedClient.calls, [{
+    rpc: ["get_managed_presentation_summaries", {}]
+  }]);
+});
+
 test("Presentation identity adapters search and mutate only profile identifiers", async () => {
   const client = createClient({
     rpcRows: {

@@ -299,6 +299,13 @@
 .presentation-profile-results { display:grid; justify-items:start; gap:8px; }
 .presentation-profile-result { text-align:left; }
 .presentation-context-add .presentation-profile-results { grid-column:1 / -1; }
+.presentation-work-participants { display:flex; flex-wrap:wrap; gap:12px; margin-top:18px; }
+.presentation-work-participants .is-selected { color:#00D422; }
+.presentation-work-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:24px; margin-top:18px; }
+.presentation-work-item { display:grid; align-content:start; gap:10px; min-width:0; }
+.presentation-work-image { display:block; width:100%; height:auto; }
+.presentation-work-title,.presentation-work-status { margin:0; font-size:12px; line-height:1.35; }
+.presentation-work-status { color:#00D422; }
 @media (max-width:700px) { .presentation-context-row,.presentation-context-add { grid-template-columns:1fr; } .presentation-context-actions { padding-bottom:0; } .presentation-linked-profile,.presentation-profile-linker,.presentation-context-add .presentation-profile-results { grid-column:auto; } }
 
 .dashboard-visibility-list {

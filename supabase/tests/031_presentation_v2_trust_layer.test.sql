@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(139);
+select plan(147);
 
 -- Accounts
 
@@ -106,8 +106,10 @@ select has_function('public','get_public_activity_source_contexts',array['uuid[]
 select has_function('public','set_presentation_occurrence_visibility',array['uuid','boolean'],'Presentation-only program visibility RPC exists');
 select has_function('public','get_work_presentation_request_summaries',array['uuid'],'Work request summary projection exists');
 select has_function('public','get_my_presentation_work_request_summaries',array[]::text[],'Dashboard Work request summary projection exists');
+select has_function('public','get_managed_presentation_summaries',array[]::text[],'managed Presentation summary projection exists');
 select has_function('public','get_presentation_cooperator_invitation_summaries',array[]::text[],'co-operator invitation summary projection exists');
 select ok(not has_function_privilege('anon','public.get_my_presentation_work_request_summaries()','EXECUTE'),'anonymous cannot execute Dashboard Work request summaries');
+select ok(not has_function_privilege('anon','public.get_managed_presentation_summaries()','EXECUTE'),'anonymous cannot execute managed Presentation summaries');
 select ok((select relrowsecurity and relforcerowsecurity from pg_class where oid='public.presentation_works'::regclass),'Work association RLS is forced');
 select is_empty($$select grantee from information_schema.role_table_grants where table_schema='public' and table_name='presentation_works' and privilege_type in ('INSERT','UPDATE','DELETE') and grantee in ('anon','authenticated')$$,'association tables have no direct client writes');
 
@@ -121,11 +123,13 @@ select is_empty($$select id from public.profile_activities where id='a1300000-00
 select is_empty($$select id from public.profile_activities where id='a1300000-0000-4000-8000-000000000004'$$,'owner show_presentations false blocks anonymous');
 select is_empty($$select id from public.profile_activities where id='a1300000-0000-4000-8000-000000000005'$$,'unpublished owner profile blocks anonymous');
 select is_empty($$select id from public.profile_activities where id='a1300000-0000-4000-8000-000000000006'$$,'Agenda source Presentation remains hidden from direct public reads');
+select throws_ok($$select * from public.get_managed_presentation_summaries()$$,'42501',null,'anonymous cannot call managed Presentation summaries');
 
 -- Owner creates public/private-linked participants and invitations.
 
 reset role; set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+select results_eq($$select id,management_role from public.get_managed_presentation_summaries() where id='a1300000-0000-4000-8000-000000000001'$$,$$values ('a1300000-0000-4000-8000-000000000001'::uuid,'owner'::text)$$,'owner sees one managed Presentation summary');
 select lives_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','HISTORICAL ARTIST','a1200000-0000-4000-8000-000000000002')$$,'owner creates linked participant');
 select throws_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','PRIVATE HISTORICAL NAME','a1200000-0000-4000-8000-000000000006')$$,'22023',null,'private profile cannot be linked as a participant');
 select lives_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','EXTERNAL ARTIST',null)$$,'external participant needs no CHAINED account');
@@ -166,6 +170,7 @@ select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-00000000
 select throws_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','PENDING FAILURE',null)$$,'42501',null,'pending co-operator cannot manage participants');
 select results_eq($$update public.profile_activities set description='PENDING FAILURE' where id='a1300000-0000-4000-8000-000000000001' returning id$$,$$select null::uuid where false$$,'pending co-operator cannot edit Presentation');
 select results_eq($$select presentation_title,presentation_host_display_name,invitation_status from public.get_presentation_cooperator_invitation_summaries() where presentation_id='a1300000-0000-4000-8000-000000000003'$$,$$values ('DRAFT PRESENTATION'::varchar,'P2 HOST'::varchar,'pending'::public.presentation_cooperator_status)$$,'invitee receives minimal private Presentation context');
+select is_empty($$select id from public.get_managed_presentation_summaries() where id='a1300000-0000-4000-8000-000000000001'$$,'pending co-operator sees no invited Presentation summary');
 select ok(position('description' in lower(pg_get_function_result('public.get_presentation_cooperator_invitation_summaries()'::regprocedure)))=0 and position('external_url' in lower(pg_get_function_result('public.get_presentation_cooperator_invitation_summaries()'::regprocedure)))=0,'invitation summary projects no private Presentation content');
 select lives_ok($$select public.decline_presentation_cooperator('a1600000-0000-4000-8000-000000000002')$$,'invitee can decline a pending invitation');
 select results_eq($$select invitation_status from public.get_presentation_cooperator_invitation_summaries() where invitation_id='a1600000-0000-4000-8000-000000000002'$$,$$values ('declined'::public.presentation_cooperator_status)$$,'declined invitation records terminal status');
@@ -176,12 +181,14 @@ select throws_ok($$select public.accept_presentation_cooperator('a1600000-0000-4
 select throws_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','UNRELATED FAILURE',null)$$,'42501',null,'unrelated account cannot manage participants');
 select throws_ok($$select linked_profile_id from public.presentation_participants where presentation_id='a1300000-0000-4000-8000-000000000001'$$,'42501',null,'unrelated authenticated account cannot read raw linked profile identifiers');
 select is_empty($$select invitation_id from public.get_presentation_cooperator_invitation_summaries()$$,'unrelated account cannot read invitation summaries');
+select is_empty($$select id from public.get_managed_presentation_summaries()$$,'unrelated account sees no managed Presentation summaries');
 
 -- Invitee accepts and receives only Presentation context authority.
 
 reset role; set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000003","role":"authenticated"}',true);
 select lives_ok($$select public.accept_presentation_cooperator('a1600000-0000-4000-8000-000000000001')$$,'invitee accepts invitation');
+select results_eq($$select id,management_role from public.get_managed_presentation_summaries()$$,$$values ('a1300000-0000-4000-8000-000000000001'::uuid,'cooperator'::text)$$,'accepted co-operator sees exactly one co-operated Presentation summary');
 select results_eq($$update public.profile_activities set description='COOPERATOR CONTEXT' where id='a1300000-0000-4000-8000-000000000001' returning id$$,$$values ('a1300000-0000-4000-8000-000000000001'::uuid)$$,'accepted co-operator edits Presentation context');
 select lives_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','COOPERATOR PARTICIPANT',null)$$,'accepted co-operator manages participants');
 select results_eq($$update public.works set title='ILLEGAL WORK EDIT' where id='a1400000-0000-4000-8000-000000000002' returning id$$,$$select null::uuid where false$$,'Presentation role grants no Work edit authority');
@@ -339,6 +346,7 @@ reset role; set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"a1100000-0000-4000-8000-000000000003","role":"authenticated"}',true);
 select throws_ok($$select public.create_presentation_participant('a1300000-0000-4000-8000-000000000001','REVOKED FAILURE',null)$$,'42501',null,'revoked co-operator loses Presentation management');
 select throws_ok($$select public.set_presentation_occurrence_visibility('a1500000-0000-4000-8000-000000000002',true)$$,'42501',null,'revoked co-operator loses Presentation program visibility authority');
+select is_empty($$select id from public.get_managed_presentation_summaries()$$,'revoked co-operator no longer sees managed Presentation summaries');
 
 -- Work unpublish immediately removes public eligibility; final purge cascades.
 

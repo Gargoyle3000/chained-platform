@@ -152,18 +152,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     const title = document.createElement("h3");
     const metadata = document.createElement("p");
     const placement = document.createElement("p");
+    const management = document.createElement("p");
     const statusArea = document.createElement("div");
     const status = document.createElement("span");
     const actions = document.createElement("div");
     const edit = document.createElement("a");
 
-    const remove = createTextAction(
-      "DELETE",
-      `Delete ${presentation.title || "untitled presentation"}`
-    );
+    const remove = presentation.managementRole === "owner"
+      ? createTextAction(
+        "DELETE",
+        `Delete ${presentation.title || "untitled presentation"}`
+      )
+      : null;
 
-    const confirmation =
-      createDeleteConfirmation(presentation, reload);
+    const confirmation = remove
+      ? createDeleteConfirmation(presentation, reload)
+      : null;
 
     const location = [
       presentation.venueName,
@@ -197,7 +201,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     information.className = "dashboard-presentation-information";
     statusArea.className = "dashboard-presentation-status";
     actions.className = "dashboard-presentation-actions";
-    remove.classList.add("dashboard-delete-trigger");
+    remove?.classList.add("dashboard-delete-trigger");
 
     title.textContent = presentation.title || "UNTITLED";
 
@@ -208,6 +212,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     placement.textContent = destinations.length
       ? `USED IN: ${destinations.join(" / ")}`
       : "NOT SHOWN PUBLICLY";
+
+    management.className = "dashboard-presentation-management";
+    management.textContent = presentation.managementRole === "cooperator"
+      ? "CO-OPERATOR"
+      : "";
+    management.hidden = presentation.managementRole !== "cooperator";
 
     status.textContent =
       presentation.visibility === "published"
@@ -232,7 +242,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       `Edit ${presentation.title || "untitled presentation"}`
     );
 
-    remove.addEventListener("click", () => {
+    remove?.addEventListener("click", () => {
       confirmation.hidden = false;
 
       confirmation
@@ -240,9 +250,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         ?.focus();
     });
 
-    information.append(title, metadata, placement);
-    actions.append(edit, remove);
-    statusArea.append(status, actions, confirmation);
+    information.append(title, metadata, placement, management);
+    actions.append(edit);
+    if (remove) actions.append(remove);
+    statusArea.append(status, actions);
+    if (confirmation) statusArea.append(confirmation);
     row.append(information, statusArea);
 
     return row;
@@ -288,9 +300,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         : "PRESENTATIONS"}`;
   }
 
-  async function renderPresentations(profileIds = []) {
+  async function renderPresentations() {
     const presentations =
-      await repository.listPresentations(profileIds);
+      await repository.listPresentations();
 
     setError();
     updateCounts(presentations);
@@ -304,7 +316,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       ...presentations.map((presentation) =>
         createPresentationRow(
           presentation,
-          () => renderPresentations(profileIds)
+          () => renderPresentations()
         )
       )
     );
@@ -350,18 +362,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
 
       addPresentationLink.removeAttribute("href");
-      updateCounts([]);
-
-      presentationList.replaceChildren(
-        emptyState("ARTIST PROFILE SETUP REQUIRED")
-      );
-
-      return;
     }
 
-    await renderPresentations(
-      profiles.map((profile) => profile.id)
-    );
+    await renderPresentations();
   } catch {
     renderDashboardAccountIdentity([], "error");
     setError("PRESENTATIONS ARE CURRENTLY UNAVAILABLE");

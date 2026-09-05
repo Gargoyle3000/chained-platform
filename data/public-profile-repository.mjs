@@ -5,6 +5,7 @@ import {
   requestPublicRows
 } from "./public-data-request.mjs";
 import {
+  isValidPublicProfileId,
   isValidProfileSlug,
   mapPublicProfileResult,
   PUBLIC_COVER_SELECT,
@@ -55,6 +56,115 @@ export function createPublicProfileRepository(
   config,
   request = requestPublicRows
 ) {
+  async function getProfileByQuery(profileQuery) {
+    const profiles = await request(config, "public_profiles", profileQuery);
+    if (!profiles[0]) return Object.freeze({ kind: "unavailable" });
+
+    const presentationQuery = new URLSearchParams({
+      select: "id",
+      owner_profile_id: `eq.${profiles[0].id}`,
+      visibility: "eq.published",
+      show_in_presentations: "eq.true",
+      published_at: "not.is.null",
+      limit: "1"
+    });
+
+    const publicPresentations = await request(
+      config,
+      "profile_activities",
+      presentationQuery
+    );
+
+    const hasPublicPresentations =
+      Boolean(publicPresentations[0]);
+
+    const hasPublicCv =
+      await hasPublicCvForProfile(
+        config,
+        profiles[0].id,
+        request
+      );
+
+    const hasPublicAgenda =
+      await hasPublicAgendaForProfile(
+        config,
+        profiles[0].id,
+        request
+      );
+
+    const hasPublicPress =
+      await hasPublicPressForProfile(
+        config,
+        profiles[0].id,
+        request
+      );
+
+    const works = [];
+    let offset = 0;
+    let workPage;
+
+    do {
+      const workQuery = new URLSearchParams({
+        select: PUBLIC_WORK_SELECT,
+        owner_profile_id: `eq.${profiles[0].id}`,
+        visibility: "eq.published",
+        published_at: "not.is.null",
+        order: "year_sort.desc.nullslast,updated_at.desc,id.asc",
+        limit: String(PROFILE_WORK_PAGE_SIZE),
+        offset: String(offset)
+      });
+      workPage = await request(config, "works", workQuery);
+      works.push(...workPage);
+      offset += workPage.length;
+    } while (workPage.length === PROFILE_WORK_PAGE_SIZE);
+
+    if (!works.length) {
+      return withFollowIdentity(
+        mapPublicProfileResult(
+          profiles[0],
+          [],
+          [],
+          (path) => createPublicImageUrl(client, path)
+        ),
+        profiles[0],
+        hasPublicPresentations,
+        hasPublicCv,
+        hasPublicAgenda,
+        hasPublicPress
+      );
+    }
+
+    const images = [];
+    for (let start = 0; start < works.length; start += PROFILE_WORK_PAGE_SIZE) {
+      const imageQuery = new URLSearchParams({
+        select: PUBLIC_COVER_SELECT,
+        work_id: inFilter(
+          works.slice(start, start + PROFILE_WORK_PAGE_SIZE).map((work) => work.id)
+        ),
+        is_cover: "eq.true",
+        public_object_path: "not.is.null",
+        order: "work_id.asc,id.asc"
+      });
+      images.push(...await request(config, "work_images", imageQuery));
+    }
+
+    const mapped = mapPublicProfileResult(
+      profiles[0],
+      works,
+      images,
+      (path) => createPublicImageUrl(client, path)
+    );
+
+    return withFollowIdentity(
+      mapped,
+      profiles[0],
+      hasPublicPresentations,
+      hasPublicCv,
+      hasPublicAgenda,
+      hasPublicPress
+    );
+  }
+
   return Object.freeze({
     mode: FRONTEND_MODES.SUPABASE,
 
@@ -70,112 +180,21 @@ export function createPublicProfileRepository(
         publication_status: "eq.published",
         limit: "1"
       });
-      const profiles = await request(config, "public_profiles", profileQuery);
-      if (!profiles[0]) return Object.freeze({ kind: "unavailable" });
+      return getProfileByQuery(profileQuery);
+    },
 
-      const presentationQuery = new URLSearchParams({
-        select: "id",
-        owner_profile_id: `eq.${profiles[0].id}`,
-        visibility: "eq.published",
-        show_in_presentations: "eq.true",
-        published_at: "not.is.null",
+    async getProfileById(profileId) {
+      if (!isValidPublicProfileId(profileId)) {
+        return Object.freeze({ kind: "unavailable" });
+      }
+
+      return getProfileByQuery(new URLSearchParams({
+        select: PUBLIC_PROFILE_SELECT,
+        id: `eq.${profileId}`,
+        profile_type: "eq.artist",
+        publication_status: "eq.published",
         limit: "1"
-      });
-
-      const publicPresentations = await request(
-        config,
-        "profile_activities",
-        presentationQuery
-      );
-
-      const hasPublicPresentations =
-        Boolean(publicPresentations[0]);
-
-      const hasPublicCv =
-        await hasPublicCvForProfile(
-          config,
-          profiles[0].id,
-          request
-        );
-
-      const hasPublicAgenda =
-        await hasPublicAgendaForProfile(
-          config,
-          profiles[0].id,
-          request
-        );
-
-      const hasPublicPress =
-        await hasPublicPressForProfile(
-          config,
-          profiles[0].id,
-          request
-        );
-
-      const works = [];
-      let offset = 0;
-      let workPage;
-
-      do {
-        const workQuery = new URLSearchParams({
-          select: PUBLIC_WORK_SELECT,
-          owner_profile_id: `eq.${profiles[0].id}`,
-          visibility: "eq.published",
-          published_at: "not.is.null",
-          order: "year_sort.desc.nullslast,updated_at.desc,id.asc",
-          limit: String(PROFILE_WORK_PAGE_SIZE),
-          offset: String(offset)
-        });
-        workPage = await request(config, "works", workQuery);
-        works.push(...workPage);
-        offset += workPage.length;
-      } while (workPage.length === PROFILE_WORK_PAGE_SIZE);
-
-      if (!works.length) {
-        return withFollowIdentity(
-          mapPublicProfileResult(
-            profiles[0],
-            [],
-            [],
-            (path) => createPublicImageUrl(client, path)
-          ),
-          profiles[0],
-          hasPublicPresentations,
-          hasPublicCv,
-          hasPublicAgenda,
-          hasPublicPress
-        );
-      }
-
-      const images = [];
-      for (let start = 0; start < works.length; start += PROFILE_WORK_PAGE_SIZE) {
-        const imageQuery = new URLSearchParams({
-          select: PUBLIC_COVER_SELECT,
-          work_id: inFilter(
-            works.slice(start, start + PROFILE_WORK_PAGE_SIZE).map((work) => work.id)
-          ),
-          is_cover: "eq.true",
-          public_object_path: "not.is.null",
-          order: "work_id.asc,id.asc"
-        });
-        images.push(...await request(config, "work_images", imageQuery));
-      }
-
-      const mapped = mapPublicProfileResult(
-        profiles[0],
-        works,
-        images,
-        (path) => createPublicImageUrl(client, path)
-      );
-
-      return withFollowIdentity(
-        mapped,
-        profiles[0],
-        hasPublicPresentations,
-        hasPublicCv,
-        hasPublicAgenda,
-        hasPublicPress
-      );
+      }));
     }
   });
 }

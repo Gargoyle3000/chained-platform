@@ -13,6 +13,7 @@ import {
   DISCOVER_PROFILE_SELECT,
   DISCOVER_WORK_SELECT,
   isValidProfileSlug,
+  isValidPublicProfileId,
   mapDiscoverResult,
   mapPublishedArtistProfile,
   mapPublicProfileResult,
@@ -178,6 +179,12 @@ test("profile and artwork links use stable safe public routes", () => {
   assert.equal(createPublicArtworkLink("not-an-id"), null);
   assert.equal(createPublicPresentationLink(IDS.workA1), `presentation.html?id=${IDS.workA1}`);
   assert.equal(createPublicPresentationLink("not-an-id"), null);
+});
+
+test("public profile identifiers accept only UUID route values", () => {
+  assert.equal(isValidPublicProfileId(IDS.profileA), true);
+  assert.equal(isValidPublicProfileId("artist-a"), false);
+  assert.equal(isValidPublicProfileId("../private"), false);
 });
 
 test("Discover mapping excludes drafts, deleted Works, and missing public covers", () => {
@@ -374,4 +381,30 @@ test("public profiles continue stable Work and cover batches until complete", as
   assert.deepEqual(workOffsets, [0, 100]);
   assert.equal(coverRequests, 2);
   assert.equal(result.works.length, 101);
+});
+
+test("linked participant Work lookup reuses the bounded public profile projection", async () => {
+  const queries = [];
+  const request = async (_config, table, query) => {
+    queries.push([table, query]);
+    if (table === "public_profiles") return [profile()];
+    if (["profile_activities", "activity_occurrences", "cv_categories", "profile_press_items"].includes(table)) return [];
+    if (table === "works") return [work(IDS.workA1, IDS.profileA, "2026-08-01T00:00:00Z")];
+    if (table === "work_images") return [cover(IDS.workA1)];
+    return [];
+  };
+  const client = {
+    storage: {
+      from: () => ({ getPublicUrl: (path) => ({ data: { publicUrl: publicUrl(path) } }) })
+    }
+  };
+  const repository = createPublicProfileRepository(client, {}, request);
+
+  const result = await repository.getProfileById(IDS.profileA);
+  assert.equal(result.kind, "available");
+  assert.equal(result.works[0].id, IDS.workA1);
+  assert.equal(queries[0][0], "public_profiles");
+  assert.equal(queries[0][1].get("id"), `eq.${IDS.profileA}`);
+  assert.equal(queries[0][1].get("publication_status"), "eq.published");
+  assert.equal((await repository.getProfileById("not-a-profile-id")).kind, "unavailable");
 });

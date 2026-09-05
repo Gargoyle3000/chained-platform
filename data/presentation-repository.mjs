@@ -59,6 +59,11 @@ const PRESENTATION_COOPERATOR_STATUSES = new Set([
   "revoked"
 ]);
 
+const PRESENTATION_MANAGEMENT_ROLES = new Set([
+  "owner",
+  "cooperator"
+]);
+
 function requireId(id, message = "THIS PRESENTATION IS NOT AVAILABLE") {
   if (!UUID_PATTERN.test(String(id || ""))) {
     throw new Error(message);
@@ -121,7 +126,20 @@ function databaseToPresentation(row) {
     visibility: row.visibility || "draft",
     publishedAt: row.published_at,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    managementRole: PRESENTATION_MANAGEMENT_ROLES.has(row.management_role)
+      ? row.management_role
+      : null
+  });
+}
+
+function uniquePresentations(rows) {
+  const seen = new Set();
+
+  return mapRows(rows, databaseToPresentation).filter((presentation) => {
+    if (seen.has(presentation.id)) return false;
+    seen.add(presentation.id);
+    return true;
   });
 }
 
@@ -304,6 +322,17 @@ async function callRpc(client, name, args, fallback) {
   return requireResult(error, data, fallback);
 }
 
+async function getManagedPresentationSummaries(client) {
+  const data = await callRpc(
+    client,
+    "get_managed_presentation_summaries",
+    {},
+    "PRESENTATIONS ARE UNAVAILABLE"
+  );
+
+  return uniquePresentations(data);
+}
+
 function createUnavailableRepository() {
   return Object.freeze({
     mode: "prototype",
@@ -390,32 +419,21 @@ export function createSupabasePresentationRepository(client) {
       );
     },
 
-    async listPresentations(profileIds = []) {
-      if (!profileIds.length) return [];
-
-      const { data, error } = await client
-        .from("profile_activities")
-        .select(PRESENTATION_SELECT)
-        .in("owner_profile_id", profileIds)
-        .order("start_date", {
-          ascending: false,
-          nullsFirst: false
-        })
-        .order("updated_at", { ascending: false })
-        .order("id", { ascending: true });
-
-      return requireResult(
-        error,
-        data,
-        "PRESENTATIONS ARE UNAVAILABLE"
-      ).map(databaseToPresentation);
+    async listPresentations() {
+      return getManagedPresentationSummaries(client);
     },
 
     async getPresentation(id) {
+      const targetId = requireId(id);
+      const summary = (await getManagedPresentationSummaries(client)).find(
+        (presentation) => presentation.id === targetId
+      );
+      if (!summary) return null;
+
       const { data, error } = await client
         .from("profile_activities")
         .select(PRESENTATION_SELECT)
-        .eq("id", requireId(id))
+        .eq("id", targetId)
         .maybeSingle();
 
       const presentation = requireResult(
@@ -425,7 +443,10 @@ export function createSupabasePresentationRepository(client) {
       );
 
       return presentation
-        ? databaseToPresentation(presentation)
+        ? Object.freeze({
+          ...databaseToPresentation(presentation),
+          managementRole: summary.managementRole
+        })
         : null;
     },
 

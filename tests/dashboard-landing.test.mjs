@@ -101,3 +101,16 @@ test("Dashboard requests use only safe server summaries and preserve both action
   assert.doesNotMatch(script, /get_work_presentation_request_summaries/);
   assert.doesNotMatch(script, /get_work_presentation_requests/);
 });
+
+test("Presentation dashboard uses the managed summary feed and marks co-operator context", async () => {
+  const script = await readFile(
+    new URL("../dashboard-presentations.js", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(script, /repository\.listPresentations\(\)/);
+  assert.match(script, /presentation\.managementRole === "cooperator"/);
+  assert.match(script, /CO-OPERATOR/);
+  assert.match(script, /presentation\.managementRole === "owner"/);
+  assert.doesNotMatch(script, /listPresentations\(profiles\.map/);
+});
