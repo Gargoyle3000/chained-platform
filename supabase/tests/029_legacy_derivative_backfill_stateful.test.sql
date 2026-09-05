@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(63);
+select plan(73);
 
 insert into auth.users(instance_id,id,aud,role,email,created_at,updated_at) values
 ('00000000-0000-0000-0000-000000000000','b1000000-0000-4000-8000-000000000001','authenticated','authenticated','backfill@example.test',now(),now());
@@ -93,12 +93,24 @@ select is((select count(*) from public.work_publication_derivatives),0::bigint,'
 
 -- A completed legacy derivative pair can be promoted without republishing.
 select set_config('request.jwt.claims','{"role":"service_role"}',true);
+select is((select array_to_string(proargnames, ',') from pg_proc where oid = 'public.service_legacy_public_derivative_promotion_plan(uuid,uuid,uuid)'::regprocedure), 'target_work_id,target_image_id,expected_publication_revision', 'public promotion plan exposes its PostgREST JSON arguments');
+select is((select array_to_string(proargnames, ',') from pg_proc where oid = 'public.service_finalize_legacy_public_derivative_promotion(uuid,uuid,uuid)'::regprocedure), 'target_work_id,target_image_id,expected_publication_revision', 'public promotion finalizer exposes its PostgREST JSON arguments');
+select ok(has_function_privilege('service_role', 'public.service_legacy_public_derivative_promotion_plan(uuid,uuid,uuid)', 'EXECUTE'), 'service role can plan promotion');
+select ok(has_function_privilege('service_role', 'public.service_finalize_legacy_public_derivative_promotion(uuid,uuid,uuid)', 'EXECUTE'), 'service role can finalize promotion');
+select ok(not has_function_privilege('anon', 'public.service_legacy_public_derivative_promotion_plan(uuid,uuid,uuid)', 'EXECUTE'), 'anon cannot plan promotion');
+select ok(not has_function_privilege('anon', 'public.service_finalize_legacy_public_derivative_promotion(uuid,uuid,uuid)', 'EXECUTE'), 'anon cannot finalize promotion');
+select ok(not has_function_privilege('authenticated', 'public.service_legacy_public_derivative_promotion_plan(uuid,uuid,uuid)', 'EXECUTE'), 'authenticated cannot plan promotion');
+select ok(not has_function_privilege('authenticated', 'public.service_finalize_legacy_public_derivative_promotion(uuid,uuid,uuid)', 'EXECUTE'), 'authenticated cannot finalize promotion');
 update public.work_images set public_object_path='legacy/published.jpg' where id='b4000000-0000-4000-8000-000000000002';
 update private.work_image_derivatives set state='ready',mime_type='image/webp',file_size=10,pixel_width=1,pixel_height=1,checksum_sha256=repeat('c',64),pipeline_version='test',icc_profile_version='test',verified_at=now(),completed_at=now()
  where work_image_id='b4000000-0000-4000-8000-000000000002';
 insert into storage.objects(bucket_id,name)
  select 'work-derivative-staging',staging_object_path from private.work_image_derivatives where work_image_id='b4000000-0000-4000-8000-000000000002';
 select set_config('test.promoted_at',(select published_at::text from public.works where id='b3000000-0000-4000-8000-000000000002'),true);
+set local role service_role;
+select lives_ok($$select public.service_legacy_public_derivative_promotion_plan(target_work_id => 'b3000000-0000-4000-8000-000000000002',target_image_id => 'b4000000-0000-4000-8000-000000000002',expected_publication_revision => 'b9000000-0000-4000-8000-000000000001')$$, 'named promotion plan arguments resolve');
+select throws_ok($$select public.service_legacy_public_derivative_promotion_plan(wrong_target_work_id => 'b3000000-0000-4000-8000-000000000002',target_image_id => 'b4000000-0000-4000-8000-000000000002',expected_publication_revision => 'b9000000-0000-4000-8000-000000000001')$$, '42883', null, 'wrong promotion argument names do not resolve');
+reset role;
 
 -- Promotion rejects a stale source binding, wrong identity, and active operations before any pointer change.
 update private.work_image_derivatives set source_private_object_path='old/source.jpg' where work_image_id='b4000000-0000-4000-8000-000000000002' and rendition_key='small';

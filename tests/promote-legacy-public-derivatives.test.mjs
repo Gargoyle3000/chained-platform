@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { parseLegacyPromotionArguments, requirePromotionProductionGuard } from "../scripts/promote-legacy-public-derivatives-options.mjs";
-import { safePromotionSummary, verifyDerivativeBytes } from "../scripts/promote-legacy-public-derivatives.mjs";
+import { promotionRpcArguments, safePromotionSummary, verifyDerivativeBytes } from "../scripts/promote-legacy-public-derivatives.mjs";
 import { createHash } from "node:crypto";
 import { derivativeLargePublicPath } from "../data/work-mapping.mjs";
 
@@ -20,6 +20,14 @@ test("promotion apply requires its own production guard and service credential",
   assert.throws(() => requirePromotionProductionGuard(options, {}), /production_guard_failed/);
   assert.throws(() => requirePromotionProductionGuard(options, { CHAINED_PRODUCTION_LEGACY_PROMOTION: "1" }), /production_secret_unavailable/);
   assert.doesNotThrow(() => requirePromotionProductionGuard(options, { CHAINED_PRODUCTION_LEGACY_PROMOTION: "1", CHAINED_PRODUCTION_SUPABASE_SECRET_KEY: "not-printed" }));
+});
+
+test("promotion RPC bodies use the exact named PostgREST contract", () => {
+  assert.deepEqual(promotionRpcArguments({ work_id: workId, image_id: imageId, publication_revision: "b9000000-0000-4000-8000-000000000001" }), {
+    target_work_id: workId,
+    target_image_id: imageId,
+    expected_publication_revision: "b9000000-0000-4000-8000-000000000001",
+  });
 });
 
 test("public derivative verification requires exact WebP bytes, dimensions, MIME, and checksum", () => {

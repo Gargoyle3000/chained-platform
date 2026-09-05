@@ -8,6 +8,14 @@ const fail = (message) => { throw new Error(message); };
 const text = (value) => typeof value === "string" ? value.trim() : "";
 const encodePath = (path) => text(path).split("/").map(encodeURIComponent).join("/");
 
+export function promotionRpcArguments(row) {
+  return Object.freeze({
+    target_work_id: text(row?.work_id),
+    target_image_id: text(row?.image_id),
+    expected_publication_revision: text(row?.publication_revision),
+  });
+}
+
 function webpDimensions(bytes) {
   if (bytes.length < 30 || String.fromCharCode(...bytes.slice(0, 4)) !== "RIFF" || String.fromCharCode(...bytes.slice(8, 12)) !== "WEBP") return null;
   const tag = String.fromCharCode(...bytes.slice(12, 16));
@@ -64,12 +72,13 @@ async function ensurePublicCopy(key, source, target) {
 }
 
 async function promoteRow(row, key) {
-  const plan = await rpc(key, "service_legacy_public_derivative_promotion_plan", { target_work_id: row.work_id, target_image_id: row.image_id, expected_publication_revision: row.publication_revision });
+  const argumentsBody = promotionRpcArguments(row);
+  const plan = await rpc(key, "service_legacy_public_derivative_promotion_plan", argumentsBody);
   if (plan?.status === "already_promoted") return "already_promoted";
   if (plan?.status !== "ready_to_promote") fail("promotion_plan_invalid");
   await ensurePublicCopy(key, plan.small, plan.small);
   await ensurePublicCopy(key, plan.large, plan.large);
-  const result = await rpc(key, "service_finalize_legacy_public_derivative_promotion", { target_work_id: row.work_id, target_image_id: row.image_id, expected_publication_revision: row.publication_revision });
+  const result = await rpc(key, "service_finalize_legacy_public_derivative_promotion", argumentsBody);
   if (result?.status !== "promoted" && result?.status !== "already_promoted") fail("promotion_finalize_invalid");
   return result.status;
 }
