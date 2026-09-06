@@ -26,3 +26,11 @@ test("Archive Work management menus explicitly retain opening and inside-menu cl
   assert.match(script, /document\.addEventListener\("click", \(event\) => \{[\s\S]*openWorkManagementMenu[\s\S]*!openWorkManagementMenu\.menu\.contains\(event\.target\)[\s\S]*closeWorkManagementMenu\(\);/);
   assert.match(script, /if \(openWorkManagementMenu\) \{ event\.preventDefault\(\); closeWorkManagementMenu\(true\); return; \}/);
 });
+
+test("Archive Work management menus use measured fixed viewport placement and clean it up on close", async () => {
+  const script = await read("archive.js");
+  const css = await read("archive.css");
+  assert.match(script, /function createSupergridManagement\(work\)[\s\S]*menu\.classList\.add\("is-anchored"\);[\s\S]*calculateAnchoredPopoverPosition\(\{[\s\S]*trigger: toggle\.getBoundingClientRect\(\),[\s\S]*popover: menu\.getBoundingClientRect\(\),[\s\S]*window\.addEventListener\("scroll", reposition, true\);[\s\S]*window\.addEventListener\("resize", reposition\);/);
+  assert.match(script, /function closeWorkManagementMenu\(returnFocus = false\)[\s\S]*window\.removeEventListener\("scroll", reposition, true\);[\s\S]*window\.removeEventListener\("resize", reposition\);[\s\S]*menu\.classList\.remove\("is-anchored"\);[\s\S]*menu\.style\.removeProperty\("left"\);[\s\S]*menu\.style\.removeProperty\("top"\);/);
+  assert.match(css, /\.archive-supergrid-menu\.is-anchored \{[\s\S]*position: fixed;[\s\S]*z-index: 40;/);
+});

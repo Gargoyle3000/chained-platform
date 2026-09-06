@@ -843,6 +843,11 @@
   display: flex;
 }
 
+.archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu.is-anchored {
+  position: fixed;
+  z-index: 40;
+}
+
 .archive-page:is([data-view="supergrid"], .archive-mobile-grid) .archive-supergrid-menu-close {
   position: absolute;
   top: 7px;

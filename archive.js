@@ -147,7 +147,9 @@ function openArchivePopoverFor(toggle, menu) {
 
 function closeWorkManagementMenu(returnFocus = false) {
   if (!openWorkManagementMenu) return;
-  const { menu, toggle } = openWorkManagementMenu;
+  const { menu, toggle, reposition } = openWorkManagementMenu;
+  window.removeEventListener("scroll", reposition, true);
+  window.removeEventListener("resize", reposition);
   if (openProjectMenu && menu.contains(openProjectMenu.menu)) closeProjectMenu();
   if (openArchivePopover && menu.contains(openArchivePopover.menu)) {
     closeArchivePopover(openArchivePopover.menu, openArchivePopover.toggle);
@@ -158,6 +160,9 @@ function closeWorkManagementMenu(returnFocus = false) {
     if (tagToggle) tagToggle.setAttribute("aria-expanded", "false");
   });
   menu.dataset.open = "false";
+  menu.classList.remove("is-anchored");
+  menu.style.removeProperty("left");
+  menu.style.removeProperty("top");
   toggle.setAttribute("aria-expanded", "false");
   openWorkManagementMenu = null;
   if (returnFocus) toggle.focus();
@@ -192,8 +197,21 @@ function createSupergridManagement(work) {
     closeWorkManagementMenu();
     if (isOpen) return;
     menu.dataset.open = "true";
+    menu.classList.add("is-anchored");
+    const reposition = () => {
+      const placement = calculateAnchoredPopoverPosition({
+        trigger: toggle.getBoundingClientRect(),
+        popover: menu.getBoundingClientRect(),
+        viewport: { width: window.innerWidth, height: window.innerHeight }
+      });
+      menu.style.left = `${placement.left}px`;
+      menu.style.top = `${placement.top}px`;
+    };
+    reposition();
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
     toggle.setAttribute("aria-expanded", "true");
-    openWorkManagementMenu = { menu, toggle };
+    openWorkManagementMenu = { menu, toggle, reposition };
   });
 
   menu.addEventListener("click", (event) => event.stopPropagation());

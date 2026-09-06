@@ -5,7 +5,6 @@ Last updated: 2026-09-06
 ## POLISH
 
 - Archive SINGLE / GRID should gain the same proven swipe interaction as Discover and Following, while preserving existing view behavior, image ratios, and layout.
-- Correct Archive Work `[...]` dropdown viewport-edge positioning: keep the menu fully visible by flipping it above the trigger when there is insufficient room below, while preserving Work anchoring, no page scroll jump, and the existing toggle, outside-click, Escape, switching, and action behavior.
 - Implement circular media-carousel navigation: last → next returns to first, and first → previous returns to last.
 - Add Agenda `[ ALL ]` and `[ FOLLOWING ]` views.
 - Use normal prose capitalization and conjunctions for user-facing metadata values, rather than system-style uppercase conjunctions.
