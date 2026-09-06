@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   archiveProjectLocation,
+  currentProjectChainedSelectSource,
   filterArchiveProjectWorks,
   orderedProjectWorks,
   projectChainedSelectSource,
@@ -42,6 +43,20 @@ test("Project CHAINED Select source keeps the active Project title and complete 
     workIds: ["work-a"]
   });
   assert.equal(projectChainedSelectSource(null, items), null);
+});
+
+test("Project CHAINED Select re-reads current Project membership before export", async () => {
+  const current = await currentProjectChainedSelectSource({
+    async listProjects() { return [{ id: "project-a", title: "CURRENT TITLE" }]; },
+    async listProjectItems() { return [{ projectId: "project-a", workId: "work-c", position: 0 }]; }
+  }, "project-a");
+  assert.deepEqual(current.source, { source: "project", title: "CURRENT TITLE", workIds: ["work-c"] });
+
+  const missing = await currentProjectChainedSelectSource({
+    async listProjects() { return []; },
+    async listProjectItems() { return items; }
+  }, "project-a");
+  assert.equal(missing, null);
 });
 
 test("Archive search and tags only narrow the active Project sequence", () => {

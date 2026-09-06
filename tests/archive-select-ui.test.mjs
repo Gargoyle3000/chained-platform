@@ -1,38 +1,35 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 
 const read = (file) => readFile(new URL(`../${file}`, import.meta.url), "utf8");
 
-test("Archive renders Project SELECT from active Project state while retaining the separate filtered action", async () => {
+test("Archive renders direct Project SELECT export only from active Project state", async () => {
   const [page, script] = await Promise.all([read("archive.html"), read("archive.js")]);
-  assert.match(page, /archive-project-context-actions[\s\S]*archive-select-project[^>]*>\[ CHAINED SELECT \]/);
-  assert.match(page, /archive-select-filter[^>]*>\[ CHAINED SELECT FILTERED \]/);
-  assert.match(script, /function renderProjects\(\)[\s\S]*projectSelectButton\.hidden = !project[\s\S]*projectChainedSelectSource\(project, projectItems\)/);
+  assert.match(page, /archive-project-context-actions[\s\S]*archive-select-project[^>]*>\[ EXPORT CHAINED SELECT \]/);
+  assert.match(page, /archive-select-status/);
+  assert.doesNotMatch(page, /CHAINED SELECT FILTERED|archive-select\.html/);
+  assert.match(script, /function renderProjects\(\)[\s\S]*projectSelectButton\.hidden = !project[\s\S]*exportProjectChainedSelect\(project\)/);
   assert.match(script, /function selectProject\(projectId[\s\S]*renderProjects\(\);[\s\S]*renderWorks\(\);/);
   assert.match(script, /loadArchive\(\)[\s\S]*renderTags\(\); renderProjects\(\); renderWorks\(\);/);
-  assert.match(script, /workIds: visible\.map\(\(work\) => work\.id\)/);
-  assert.match(script, /const narrowed = Boolean\(searchTerm \|\| activeTagIds\.size\)/);
+  assert.match(script, /currentProjectChainedSelectSource\(repository, project\.id\)/);
+  assert.doesNotMatch(script, /writeChainedSelectSession|archive-select\.html|filterSelectButton/);
 });
 
-test("CHAINED Select review uses public media only and keeps public attribution visible", async () => {
-  const [page, script, repository] = await Promise.all([
-    read("archive-select.html"),
-    read("archive-select.js"),
-    read("data/archive-repository.mjs")
-  ]);
-  assert.match(page, /SELECTED BY/);
-  assert.match(script, /fetch\(image\.src/);
-  assert.match(script, /artistName/);
-  assert.doesNotMatch(script, /authorizedPrivateMedia|downloadAuthorizedPrivateMedia|privatePreview|signed/i);
+test("direct Project Select uses public media only and keeps revalidation before source fetch", async () => {
+  const [generator, repository] = await Promise.all([read("data/chained-select-direct-generator.mjs"), read("data/archive-repository.mjs")]);
+  assert.match(generator, /revalidateProjectChainedSelect/);
+  assert.match(generator, /fetch\(image\.src/);
+  assert.doesNotMatch(generator, /authorizedPrivateMedia|downloadAuthorizedPrivateMedia|privatePreview|signed/i);
   assert.match(repository, /derivativeLargePublicPath/);
   assert.doesNotMatch(repository, /private_object_path/);
 });
 
-test("CHAINED Select revalidates the current selection before fetching public sources", async () => {
-  const script = await read("archive-select.js");
-  assert.match(script, /revalidateChainedSelectWorks\(\{ repository: archiveRepository, reviewWorks: works, selectedIds: selection\.ids\(\) \}\)/);
-  assert.ok(script.indexOf("revalidateChainedSelectWorks") < script.indexOf("fetch(image.src"));
-  assert.match(script, /NO LONGER PUBLICLY AVAILABLE · REVIEW BEFORE GENERATING/);
-  assert.match(script, /if \(!currentLimit\.valid\) return render\(\);/);
+test("old review route, review state, and session navigation are absent", async () => {
+  const [page, script] = await Promise.all([read("archive.html"), read("archive.js")]);
+  await assert.rejects(() => access(new URL("../archive-select.html", import.meta.url)));
+  await assert.rejects(() => access(new URL("../data/chained-select-state.mjs", import.meta.url)));
+  await assert.rejects(() => access(new URL("../data/chained-select-review.mjs", import.meta.url)));
+  assert.doesNotMatch(script, /writeChainedSelectSession|chained-select-state|chained-select-review|archive-select\.html/);
+  assert.doesNotMatch(page, /CHAINED SELECT FILTERED/);
 });

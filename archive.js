@@ -1,14 +1,17 @@
 import { FRONTEND_MODES } from "./auth/config.mjs";
 import { getArchiveRepository } from "./data/archive-repository.mjs";
+import { getWorkRepository } from "./data/work-repository.mjs";
 import {
   archiveProjectLocation,
+  currentProjectChainedSelectSource,
   filterArchiveProjectWorks,
   orderedProjectWorks,
-  projectChainedSelectSource,
   resolveArchiveProjectId
 } from "./data/archive-project-state.mjs";
 import { calculateAnchoredPopoverPosition } from "./data/anchored-popover.mjs";
-import { writeChainedSelectSession } from "./data/chained-select-state.mjs";
+import { CHAINED_SELECT_MAX_IMAGES, CHAINED_SELECT_MAX_WORKS, resolveChainedSelectSelector } from "./data/chained-select-direct-export.mjs";
+import { generateProjectChainedSelect } from "./data/chained-select-direct-generator.mjs";
+import { PortfolioExportError } from "./data/portfolio-export.mjs";
 
 const page = document.querySelector(".archive-page");
 const grid = document.querySelector(".saved-grid");
@@ -31,7 +34,7 @@ const allWorksLabel = document.querySelector(".archive-all-works-label");
 const projectEditLink = document.querySelector(".archive-project-edit");
 const projectCloseButton = document.querySelector(".archive-project-close");
 const projectSelectButton = document.querySelector(".archive-select-project");
-const filterSelectButton = document.querySelector(".archive-select-filter");
+const projectSelectStatus = document.querySelector(".archive-select-status");
 const viewStorageKey = "chained-archive-view";
 
 let repository = null;
@@ -46,6 +49,8 @@ let selectedProjectId = new URL(window.location.href).searchParams.get("project"
 let openProjectMenu = null;
 let openWorkManagementMenu = null;
 let openArchivePopover = null;
+let projectExportInProgress = false;
+let projectExportResetTimer = null;
 
 function setResultCount(count) {
   resultCount.textContent = `${count} ${count === 1 ? "WORK" : "WORKS"}`;
@@ -447,30 +452,64 @@ function selectedProjectWorks() {
   return orderedProjectWorks(works, projectItems, selectedProjectId);
 }
 
-function filteredSelectTitle(searchTerm) {
-  const activeTags = tags.filter((tag) => activeTagIds.has(tag.id));
-  if (activeTags.length === 1 && !searchTerm) return `TAG: ${activeTags[0].name}`;
-  if (searchTerm && activeTags.length === 0) return `SEARCH: ${searchTerm}`;
-  return "ARCHIVE SELECT";
+function setProjectSelectStatus(message = "") {
+  projectSelectStatus.textContent = message;
+  projectSelectStatus.hidden = !message;
 }
 
-function openChainedSelect(source) {
-  if (!writeChainedSelectSession(window.sessionStorage, source)) {
-    setTagMessage("CHAINED SELECT IS CURRENTLY UNAVAILABLE");
-    return;
-  }
-  window.location.assign("archive-select.html");
+function selectLimitMessage(limit) {
+  if (limit.workCount > CHAINED_SELECT_MAX_WORKS) return `SELECT TOO LARGE · ${limit.workCount} WORKS · MAX ${CHAINED_SELECT_MAX_WORKS}`;
+  return `SELECT TOO LARGE · ${limit.imageCount} IMAGES · MAX ${CHAINED_SELECT_MAX_IMAGES}`;
 }
 
-function renderSelectActions(visible, searchTerm) {
-  const narrowed = Boolean(searchTerm || activeTagIds.size);
-  filterSelectButton.hidden = !narrowed;
-  if (narrowed) {
-    filterSelectButton.onclick = () => openChainedSelect({
-      source: "filter",
-      title: filteredSelectTitle(searchTerm),
-      workIds: visible.map((work) => work.id)
+async function exportProjectChainedSelect(project) {
+  if (!project || projectExportInProgress) return;
+  projectExportInProgress = true;
+  if (projectExportResetTimer) window.clearTimeout(projectExportResetTimer);
+  setProjectSelectStatus("RESOLVING SELECTOR");
+  renderProjects();
+  try {
+    const current = await currentProjectChainedSelectSource(repository, project.id);
+    if (!current) {
+      setProjectSelectStatus("PROJECT IS CURRENTLY UNAVAILABLE");
+      return;
+    }
+    const { project: currentProject, source } = current;
+    if (!source.workIds.length) {
+      setProjectSelectStatus("SELECT HAS NO WORKS");
+      return;
+    }
+    const [{ repository: workRepository }, publisherProfiles] = await Promise.all([
+      getWorkRepository(),
+      repository.listEligiblePublisherProfiles()
+    ]);
+    const artistProfiles = workRepository ? await workRepository.listManagedProfiles() : [];
+    const selectorName = resolveChainedSelectSelector(currentProject, publisherProfiles, artistProfiles);
+    if (!selectorName) {
+      setProjectSelectStatus("SELECTOR IDENTITY IS CURRENTLY UNAVAILABLE");
+      return;
+    }
+    const result = await generateProjectChainedSelect({
+      repository,
+      project: currentProject,
+      workIds: source.workIds,
+      selectorName,
+      setStatus: setProjectSelectStatus,
+      environment: window
     });
+    if (result.status === "changed") {
+      const unavailable = result.unavailableIds.length;
+      setProjectSelectStatus(`SELECT CHANGED · ${unavailable} WORK${unavailable === 1 ? " IS" : "S ARE"} NO LONGER AVAILABLE FOR SELECT`);
+    } else if (result.status === "limit") {
+      setProjectSelectStatus(selectLimitMessage(result.limit));
+    } else if (result.status === "ready") {
+      projectExportResetTimer = window.setTimeout(() => setProjectSelectStatus(), 4000);
+    }
+  } catch (error) {
+    setProjectSelectStatus(error instanceof PortfolioExportError ? error.message : "PDF GENERATION FAILED");
+  } finally {
+    projectExportInProgress = false;
+    renderProjects();
   }
 }
 
@@ -480,7 +519,6 @@ function renderWorks() {
   closeProjectMenu();
   const searchTerm = searchInput.value.trim().toLocaleLowerCase();
   const visible = filterArchiveProjectWorks(selectedProjectWorks(), searchTerm, activeTagIds, tagIdsForWork);
-  renderSelectActions(visible, searchTerm);
   grid.replaceChildren(...visible.map(createSavedWork));
   setResultCount(visible.length);
   emptyMessage.hidden = visible.length !== 0;
@@ -532,12 +570,14 @@ function renderProjects() {
   projectContext.hidden = !project;
   allWorksLabel.hidden = Boolean(project);
   projectSelectButton.hidden = !project;
+  projectSelectButton.disabled = projectExportInProgress;
   if (project) {
     projectTitle.textContent = project.title;
     projectEditLink.href = `archive-project.html?id=${encodeURIComponent(project.id)}`;
-    projectSelectButton.onclick = () => openChainedSelect(projectChainedSelectSource(project, projectItems));
+    projectSelectButton.onclick = () => void exportProjectChainedSelect(project);
   } else {
     projectSelectButton.onclick = null;
+    setProjectSelectStatus();
   }
   projectList.replaceChildren();
   projects.forEach((entry) => {

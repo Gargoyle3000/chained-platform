@@ -52,6 +52,17 @@ export function projectChainedSelectSource(project, projectItems) {
   });
 }
 
+/** Re-read persisted Project state so an export never uses stale membership. */
+export async function currentProjectChainedSelectSource(repository, projectId) {
+  if (!repository || typeof repository.listProjects !== "function" || typeof repository.listProjectItems !== "function") {
+    throw new Error("ARCHIVE PROJECT IS CURRENTLY UNAVAILABLE");
+  }
+  const [projects, projectItems] = await Promise.all([repository.listProjects(), repository.listProjectItems()]);
+  const project = [...(projects || [])].find((entry) => entry?.id === projectId) || null;
+  const source = projectChainedSelectSource(project, projectItems);
+  return source ? Object.freeze({ project, source }) : null;
+}
+
 export function filterArchiveProjectWorks(works, searchTerm, activeTagIds, tagIdsForWork) {
   const term = String(searchTerm || "").trim().toLocaleLowerCase();
   return works.filter((work) => {

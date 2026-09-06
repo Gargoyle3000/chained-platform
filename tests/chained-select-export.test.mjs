@@ -22,7 +22,7 @@ const work = (id, artistName = "ARTIST") => ({
   ]
 });
 
-test("CHAINED Select preserves mixed-artist Work order and all public images", () => {
+test("CHAINED Select plan preserves canonical supplied Work order and all public images", () => {
   const plan = createChainedSelectPlan([work("one", "ARTIST A"), work("two", "ARTIST B")]);
   assert.deepEqual(plan.works.map((entry) => entry.work.artistName), ["ARTIST A", "ARTIST B"]);
   assert.deepEqual(plan.imagePages.map((entry) => entry.reference), ["01A", "01B", "02A", "02B"]);
