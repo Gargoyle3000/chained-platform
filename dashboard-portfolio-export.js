@@ -171,7 +171,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       meta.textContent = workSummary(work);
       actions.className = "portfolio-selected-work-actions";
       actions.append(
-        createAction(`[ ${imageSelection.count(work.id)} / ${readyImageCount(work)} IMAGES · SELECT IMAGES ]`, `Select images for ${work.title || "untitled work"}`, () => openExportImageSelection(imageDialog, work, imageSelection, renderComposition)),
         createAction("[ MOVE UP ]", `Move ${work.title || "untitled work"} up`, () => {
           selection.move(work.id, -1);
           renderComposition();
@@ -266,7 +265,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  async function generatePortfolio() {
+  async function generatePortfolioFromPicker() {
     setError();
     const selected = selectedWorks();
     const artist = selectedArtist();
@@ -326,8 +325,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  function openPortfolioImagePicker() {
+    setError();
+    const selected = selectedWorks();
+    const artist = selectedArtist();
+    if (!selected.length) return setError("SELECT AT LEAST ONE WORK");
+    if (!artist) return setError("SELECT WORKS FROM ONE ARTIST PROFILE");
+    openExportImageSelection(imageDialog, selected, imageSelection, {
+      title: "SELECT IMAGES",
+      onChange: renderComposition,
+      onConfirm: () => void generatePortfolioFromPicker()
+    });
+  }
+
   titlePage.addEventListener("change", updateTitleControl);
-  generateButton.addEventListener("click", () => { void generatePortfolio(); });
+  generateButton.addEventListener("click", openPortfolioImagePicker);
 
   try {
     const selected = await getWorkRepository();

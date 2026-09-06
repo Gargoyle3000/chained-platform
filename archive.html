@@ -72,7 +72,6 @@
             <p class="archive-current-project" id="archive-current-project">SAVED WORKS</p>
             <div class="archive-project-context-actions">
               <a class="text-action archive-project-edit" href="archive-project.html">[ EDIT ]</a>
-              <button class="text-action archive-select-images" type="button" hidden>[ SELECT IMAGES ]</button>
               <button class="text-action archive-select-project" type="button" hidden>[ EXPORT CHAINED SELECT ]</button>
               <button class="archive-project-close" type="button" aria-label="Close Project view">×</button>
             </div>
@@ -107,6 +106,7 @@
     <header><p>SELECT IMAGES</p><button class="text-action" type="button" data-export-image-close>[ CLOSE ]</button></header>
     <h2 data-export-image-title></h2>
     <div data-export-image-list></div>
+    <footer class="export-image-dialog-footer"><p data-export-image-summary></p><button class="text-action" type="button" data-export-image-cancel>[ CANCEL ]</button><button class="text-action" type="button" data-export-image-confirm>[ EXPORT SELECT ]</button></footer>
   </dialog>
 
   <script src="assets/vendor/pdf-lib.min.js"></script>

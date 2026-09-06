@@ -8,14 +8,15 @@ test("Archive renders direct Project SELECT export only from active Project stat
   const [page, script] = await Promise.all([read("archive.html"), read("archive.js")]);
   assert.match(page, /archive-project-context-actions[\s\S]*archive-select-project[^>]*>\[ EXPORT CHAINED SELECT \]/);
   assert.match(page, /archive-select-status/);
-  assert.match(page, /archive-select-images[^>]*>\[ SELECT IMAGES \]/);
+  assert.doesNotMatch(page, /archive-select-images|>\[ SELECT IMAGES \]</);
+  assert.match(page, /data-export-image-summary[\s\S]*data-export-image-cancel[\s\S]*\[ EXPORT SELECT \]/);
   assert.doesNotMatch(page, /CHAINED SELECT FILTERED|archive-select\.html/);
-  assert.match(script, /function renderProjects\(\)[\s\S]*projectSelectButton\.hidden = !project[\s\S]*exportProjectChainedSelect\(project\)/);
+  assert.match(script, /function renderProjects\(\)[\s\S]*projectSelectButton\.hidden = !project[\s\S]*openExportImageSelection\(imageDialog, projectWorks/);
   assert.match(script, /function selectProject\(projectId[\s\S]*renderProjects\(\);[\s\S]*renderWorks\(\);/);
   assert.match(script, /loadArchive\(\)[\s\S]*renderTags\(\); renderProjects\(\); renderWorks\(\);/);
   assert.match(script, /currentProjectChainedSelectSource\(repository, project\.id\)/);
   assert.match(script, /createExportImageSelectionState\(projectSelectWorks\)/);
-  assert.match(script, /openProjectExportImageSelection/);
+  assert.match(script, /onConfirm: \(\) => void runProjectChainedSelect\(project\)/);
   assert.match(script, /repository\.listArchivedSelectWorks\(workIds\)/);
   assert.match(script, /\[ LOADING IMAGES \]/);
   assert.doesNotMatch(script, /writeChainedSelectSession|archive-select\.html|filterSelectButton/);

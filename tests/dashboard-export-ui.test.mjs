@@ -34,8 +34,10 @@ test("Portfolio export owns progress at its action and resets safely", async () 
   assert.match(script, /progress = 100/);
   assert.match(script, /if \(!isBusy\) generateButton\.textContent = idleExportLabel/);
   assert.match(page, /portfolio-image-dialog/);
+  assert.match(page, /data-export-image-summary[\s\S]*data-export-image-cancel[\s\S]*\[ EXPORT PORTFOLIO \]/);
   assert.match(script, /createExportImageSelectionState\(works\)/);
   assert.match(script, /applyExportImageSelection\(selected, imageSelection\)/);
-  assert.match(script, /SELECT IMAGES/);
+  assert.match(script, /function openPortfolioImagePicker\(\)[\s\S]*openExportImageSelection\(imageDialog, selected, imageSelection/);
+  assert.doesNotMatch(script, /SELECT IMAGES \]`, `Select images for/);
   assert.doesNotMatch(script, /ENTER A DOCUMENT TITLE OR TURN OFF TITLE PAGE/);
 });

@@ -14,7 +14,7 @@ import { CHAINED_SELECT_MAX_IMAGES, CHAINED_SELECT_MAX_WORKS, resolveChainedSele
 import { generateProjectChainedSelect } from "./data/chained-select-direct-generator.mjs";
 import { PortfolioExportError } from "./data/portfolio-export.mjs";
 import { createExportImageSelectionState } from "./data/export-image-selection-state.mjs";
-import { openProjectExportImageSelection } from "./data/export-image-selection-ui.mjs";
+import { openExportImageSelection } from "./data/export-image-selection-ui.mjs";
 
 const page = document.querySelector(".archive-page");
 const grid = document.querySelector(".saved-grid");
@@ -38,7 +38,6 @@ const projectEditLink = document.querySelector(".archive-project-edit");
 const projectCloseButton = document.querySelector(".archive-project-close");
 const projectSelectButton = document.querySelector(".archive-select-project");
 const projectSelectStatus = document.querySelector(".archive-select-status");
-const projectImageSelectButton = document.querySelector(".archive-select-images");
 const imageDialog = document.querySelector("#archive-image-dialog");
 const viewStorageKey = "chained-archive-view";
 
@@ -493,7 +492,7 @@ function selectLimitMessage(limit) {
   return `SELECT TOO LARGE · ${limit.imageCount} IMAGES · MAX ${CHAINED_SELECT_MAX_IMAGES}`;
 }
 
-async function exportProjectChainedSelect(project) {
+async function runProjectChainedSelect(project) {
   if (!project || projectExportInProgress) return;
   projectExportInProgress = true;
   if (projectExportResetTimer) window.clearTimeout(projectExportResetTimer);
@@ -602,22 +601,21 @@ function renderProjects() {
   projectContext.hidden = !project;
   allWorksLabel.hidden = Boolean(project);
   projectSelectButton.hidden = !project;
-  projectImageSelectButton.hidden = !project;
   projectSelectButton.disabled = projectExportInProgress;
   if (project) {
     const imageSelectionReady = projectImageSelectionId === project.id && !projectImageSelectionLoading;
     const projectWorks = imageSelectionReady ? projectSelectWorks : [];
     projectTitle.textContent = project.title;
     projectEditLink.href = `archive-project.html?id=${encodeURIComponent(project.id)}`;
-    projectSelectButton.onclick = () => void exportProjectChainedSelect(project);
-    const selectedImages = projectWorks.reduce((count, work) => count + projectImageSelection.count(work.id), 0);
-    const eligibleImages = projectWorks.reduce((count, work) => count + (work.images || []).filter((image) => image.uploadStatus === "ready").length, 0);
-    projectImageSelectButton.disabled = !imageSelectionReady || !projectWorks.length;
-    projectImageSelectButton.textContent = !imageSelectionReady ? "[ LOADING IMAGES ]" : `[ ${selectedImages} / ${eligibleImages} IMAGES · SELECT IMAGES ]`;
-    projectImageSelectButton.onclick = () => openProjectExportImageSelection(imageDialog, projectWorks, projectImageSelection, renderProjects);
+    projectSelectButton.disabled = !imageSelectionReady || !projectWorks.length || projectExportInProgress;
+    projectSelectButton.textContent = !imageSelectionReady ? "[ LOADING IMAGES ]" : "[ EXPORT CHAINED SELECT ]";
+    projectSelectButton.onclick = () => openExportImageSelection(imageDialog, projectWorks, projectImageSelection, {
+      title: "SELECT IMAGES",
+      onChange: renderProjects,
+      onConfirm: () => void runProjectChainedSelect(project)
+    });
   } else {
     projectSelectButton.onclick = null;
-    projectImageSelectButton.onclick = null;
     projectImageSelectionId = null;
     projectSelectWorks = [];
     setProjectSelectStatus();
