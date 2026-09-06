@@ -36,8 +36,7 @@ export function chainedSelectMetadataLines(work = {}) {
     [title, year].filter(Boolean).join(", "),
     format && format.replaceAll("-", " ").toUpperCase(),
     portfolioMaterials(work),
-    portfolioDimensions(work),
-    text(work.artworkHref)
+    portfolioDimensions(work)
   ].filter(Boolean));
 }
 

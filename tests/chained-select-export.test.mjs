@@ -32,7 +32,8 @@ test("CHAINED Select metadata makes attribution mandatory and distinct from Work
   const lines = chainedSelectMetadataLines(work("one", "ARTIST A"));
   assert.equal(lines[0], "ARTIST A");
   assert.equal(lines[1], "WORK one, 2026");
-  assert.ok(lines.includes("https://chained.work/artwork.html?id=one"));
+  assert.equal(lines.some((line) => /artwork\.html\?id=|https?:\/\//i.test(line)), false);
+  assert.ok(lines.includes("Oil, canvas"));
   assert.equal(lines.some((line) => /private|signed|object_path/i.test(line)), false);
 });
 

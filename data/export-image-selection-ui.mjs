@@ -7,7 +7,7 @@ function eligibleImages(work) {
 }
 
 /** Opens the export-local picker; confirmation is the only path into generation. */
-export function openExportImageSelection(dialog, works, selection, { title = "SELECT IMAGES", onConfirm = () => {}, onChange = () => {} } = {}) {
+export function openExportImageSelection(dialog, works, selection, { title = "SELECT IMAGES", onConfirm = () => {}, onChange = () => {}, resolveThumbnail = null } = {}) {
   const heading = dialog?.querySelector("[data-export-image-title]");
   const list = dialog?.querySelector("[data-export-image-list]");
   const close = dialog?.querySelector("[data-export-image-close]");
@@ -33,12 +33,17 @@ export function openExportImageSelection(dialog, works, selection, { title = "SE
         input.checked = selection.ids(work.id).includes(image.id);
         input.setAttribute("aria-label", `Include ${text(work.title) || "untitled work"} image ${index + 1}`);
         input.addEventListener("change", () => { if (!selection.toggle(work.id, image.id)) input.checked = true; onChange(); render(); });
-        thumbnail.src = image.src;
+        thumbnail.src = "";
         thumbnail.alt = "";
         thumbnail.className = "export-image-thumbnail";
         caption.textContent = `${String(index + 1).padStart(2, "0")}${image.isCover ? " · COVER" : ""}`;
         label.append(input, thumbnail, caption);
         list.append(label);
+        if (typeof resolveThumbnail === "function") {
+          Promise.resolve(resolveThumbnail(image)).then((src) => {
+            if (typeof src === "string" && src) thumbnail.src = src;
+          }).catch(() => {});
+        } else if (typeof image.src === "string" && image.src) thumbnail.src = image.src;
       });
     });
     const total = (works || []).reduce((count, work) => count + eligibleImages(work).length, 0);

@@ -334,7 +334,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     openExportImageSelection(imageDialog, selected, imageSelection, {
       title: "SELECT IMAGES",
       onChange: renderComposition,
-      onConfirm: () => void generatePortfolioFromPicker()
+      onConfirm: () => void generatePortfolioFromPicker(),
+      resolveThumbnail: (image) => repository.media.privatePreview(image)
     });
   }
 

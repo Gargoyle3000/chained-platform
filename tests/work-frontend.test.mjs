@@ -575,7 +575,7 @@ test("private preview consumers use shared batches while public published media 
   assert.match(works, /privatePreviewBatch\(privateCovers\)/);
   assert.match(overview, /privatePreviewBatch\(privateCovers\)/);
   assert.match(portfolio, /downloadAuthorizedPrivateMedia\(images, \{ purpose: "pdf_export", concurrency: 4 \}\)/);
-  assert.doesNotMatch(portfolio, /privatePreview\(/);
+  assert.match(portfolio, /privatePreview\(image\)/);
   assert.match(works, /repository\.media\.publicUrl\(cover\.publicPath\)/);
   assert.doesNotMatch(service, /storage\/v1\/object\/authenticated\/work-originals/);
 });
