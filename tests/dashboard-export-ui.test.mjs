@@ -33,5 +33,9 @@ test("Portfolio export owns progress at its action and resets safely", async () 
   assert.match(script, /preparedImages \/ totalImages/);
   assert.match(script, /progress = 100/);
   assert.match(script, /if \(!isBusy\) generateButton\.textContent = idleExportLabel/);
+  assert.match(page, /portfolio-image-dialog/);
+  assert.match(script, /createExportImageSelectionState\(works\)/);
+  assert.match(script, /applyExportImageSelection\(selected, imageSelection\)/);
+  assert.match(script, /SELECT IMAGES/);
   assert.doesNotMatch(script, /ENTER A DOCUMENT TITLE OR TURN OFF TITLE PAGE/);
 });

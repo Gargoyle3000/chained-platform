@@ -2,6 +2,7 @@ import { downloadBlob } from "./browser-download.mjs";
 import { createPortfolioSourceCache, generateWithinBudget, PortfolioExportError } from "./portfolio-export.mjs";
 import { chainedSelectFilename, createChainedSelectPlan, renderChainedSelectPdf } from "./chained-select-export.mjs";
 import { chainedSelectLimit, revalidateProjectChainedSelect } from "./chained-select-direct-export.mjs";
+import { applyExportImageSelection } from "./export-image-selection-state.mjs";
 
 const FONT_URL = "assets/fonts/CascadiaCode-Regular.ttf";
 
@@ -45,6 +46,7 @@ export async function generateProjectChainedSelect({
   project,
   workIds,
   selectorName,
+  imageSelection = null,
   setStatus = () => {},
   environment = globalThis,
   fontUrl = FONT_URL
@@ -53,12 +55,14 @@ export async function generateProjectChainedSelect({
   setStatus("VALIDATING PUBLIC WORKS");
   const revalidated = await revalidateProjectChainedSelect({ repository, workIds });
   if (revalidated.unavailableIds.length) return Object.freeze({ status: "changed", unavailableIds: revalidated.unavailableIds });
-  const limit = chainedSelectLimit(revalidated.works);
+  const selectedWorks = imageSelection ? applyExportImageSelection(revalidated.works, imageSelection) : revalidated.works;
+  if (selectedWorks.length !== revalidated.works.length) return Object.freeze({ status: "changed", unavailableIds: revalidated.works.filter((work) => !selectedWorks.some((entry) => entry.id === work.id)).map((work) => work.id) });
+  const limit = chainedSelectLimit(selectedWorks);
   if (!limit.valid) return Object.freeze({ status: "limit", limit });
   if (!environment.PDFLib || !environment.fontkit) throw new PortfolioExportError("PDF GENERATION IS CURRENTLY UNAVAILABLE");
 
   setStatus(`PREPARING ${limit.workCount} ${limit.workCount === 1 ? "WORK" : "WORKS"} / ${limit.imageCount} ${limit.imageCount === 1 ? "IMAGE" : "IMAGES"}`);
-  const plan = createChainedSelectPlan(revalidated.works);
+  const plan = createChainedSelectPlan(selectedWorks);
   let fontBytesPromise;
   const fontBytes = () => {
     if (!fontBytesPromise) fontBytesPromise = environment.fetch(fontUrl).then((response) => response.ok ? response.arrayBuffer() : Promise.reject(new Error("font unavailable")));
@@ -95,7 +99,7 @@ export async function generateProjectChainedSelect({
     });
     downloadBlob(output.bytes, { filename: chainedSelectFilename(project?.title), documentRef: environment.document, urlApi: environment.URL, setTimeoutFn: environment.setTimeout });
     setStatus("READY · DOWNLOAD COMPLETE");
-    return Object.freeze({ status: "ready", output, works: revalidated.works });
+    return Object.freeze({ status: "ready", output, works: selectedWorks });
   } finally {
     try {
       await cache.clear();

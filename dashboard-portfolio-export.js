@@ -11,6 +11,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   } = await import("./data/portfolio-export.mjs");
   const { downloadBlob } = await import("./data/browser-download.mjs");
   const { createPortfolioSelectionState } = await import("./data/portfolio-selection-state.mjs");
+  const { applyExportImageSelection, createExportImageSelectionState } = await import("./data/export-image-selection-state.mjs");
+  const { openExportImageSelection } = await import("./data/export-image-selection-ui.mjs");
   const { getWorkRepository } = await import("./data/work-repository.mjs");
   const { renderDashboardAccountIdentity } = await import("./data/dashboard-context.mjs");
 
@@ -24,8 +26,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const generateButton = document.querySelector("#portfolio-generate");
   const statusElement = document.querySelector("#portfolio-export-status");
   const errorElement = document.querySelector("#portfolio-export-error");
+  const imageDialog = document.querySelector("#portfolio-image-dialog");
   const fontUrl = "assets/fonts/CascadiaCode-Regular.ttf";
   let selection = createPortfolioSelectionState();
+  let imageSelection = createExportImageSelectionState();
   let works = [];
   let profilesById = new Map();
   let repository = null;
@@ -167,6 +171,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       meta.textContent = workSummary(work);
       actions.className = "portfolio-selected-work-actions";
       actions.append(
+        createAction(`[ ${imageSelection.count(work.id)} / ${readyImageCount(work)} IMAGES · SELECT IMAGES ]`, `Select images for ${work.title || "untitled work"}`, () => openExportImageSelection(imageDialog, work, imageSelection, renderComposition)),
         createAction("[ MOVE UP ]", `Move ${work.title || "untitled work"} up`, () => {
           selection.move(work.id, -1);
           renderComposition();
@@ -267,7 +272,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const artist = selectedArtist();
     if (!selected.length) return setError("SELECT AT LEAST ONE WORK");
     if (!artist) return setError("SELECT WORKS FROM ONE ARTIST PROFILE");
-    const plan = createPortfolioPlan(selected);
+    const plan = createPortfolioPlan(applyExportImageSelection(selected, imageSelection));
     if (!plan.works.length) return setError("SELECTED WORKS NEED AT LEAST ONE READY IMAGE");
     if (!window.PDFLib || !window.fontkit) return setError("PDF GENERATION IS CURRENTLY UNAVAILABLE");
 
@@ -338,6 +343,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     profilesById = new Map(profiles.map((profile) => [profile.id, profile]));
     works = await repository.listWorks(profiles.map((profile) => profile.id));
     selection = createPortfolioSelectionState(works.filter((work) => readyImageCount(work) > 0).map((work) => work.id));
+    imageSelection = createExportImageSelectionState(works);
     if (!works.length) {
       const empty = document.createElement("p");
       empty.className = "portfolio-export-empty";

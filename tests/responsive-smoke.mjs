@@ -16,6 +16,10 @@ let socket;
 let sequence = 0;
 const pending = new Map();
 const listeners = new Map();
+const requestedPages = process.env.CHAINED_RESPONSIVE_PAGES?.split(",").map((page) => page.trim()).filter(Boolean);
+const responsivePages = requestedPages?.length
+  ? requestedPages
+  : ["dashboard-works.html", "dashboard-portfolio-export.html", "dashboard-work-edit.html", "archive.html", "artwork.html", "login.html", "password-update.html"];
 
 function wait(milliseconds) { return new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds)); }
 
@@ -72,7 +76,7 @@ try {
   await command("Page.enable");
 
   for (const width of [1440, 390, 320]) {
-    for (const page of ["dashboard-works.html", "dashboard-portfolio-export.html", "dashboard-work-edit.html", "archive.html", "artwork.html", "login.html", "password-update.html"]) {
+    for (const page of responsivePages) {
       await command("Emulation.setDeviceMetricsOverride", { width, height: width === 1440 ? 900 : 844, deviceScaleFactor: 1, mobile: width < 700 });
       const loaded = once("Page.loadEventFired");
       await command("Page.navigate", { url: `http://127.0.0.1:5500/${page}` });
@@ -82,12 +86,15 @@ try {
         expression: `(() => {
           const header = document.querySelector('.site-header')?.getBoundingClientRect();
           const main = document.querySelector('main')?.getBoundingClientRect();
+          const imageDialog = document.querySelector('.export-image-dialog');
+          if (imageDialog && !imageDialog.open) imageDialog.showModal();
           const contentTop = Math.min(...[...document.querySelectorAll('main > *')].map((element) => element.getBoundingClientRect().top).filter((value) => Number.isFinite(value)));
           return {
             overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
             protected: document.body.hasAttribute('data-auth-protected'),
             portfolioLibraries: !document.querySelector('#portfolio-generate') || (Boolean(window.PDFLib) && Boolean(window.fontkit)),
             portfolioControls: !document.querySelector('#portfolio-generate') || Boolean(document.querySelector('#portfolio-work-selection') && document.querySelector('#portfolio-selected-works')),
+            imagePicker: !imageDialog || (imageDialog.open && imageDialog.getBoundingClientRect().width <= document.documentElement.clientWidth),
             headerBottom: header?.bottom || 0,
             mainTop: Number.isFinite(contentTop) ? contentTop : main?.top || 0,
             hasMain: Boolean(main),
@@ -102,6 +109,7 @@ try {
       assert.equal(value.overflow, false, `${page} has no horizontal overflow at ${width}px`);
       assert.equal(value.portfolioLibraries, true, `${page} PDF libraries load at ${width}px`);
       assert.equal(value.portfolioControls, true, `${page} portfolio controls render at ${width}px`);
+      assert.equal(value.imagePicker, true, `${page} image picker opens without horizontal overflow at ${width}px`);
       assert.ok(value.mainTop >= value.headerBottom - 1, `${page} starts below the full header at ${width}px`);
       results.push(`${page}:${width}`);
     }

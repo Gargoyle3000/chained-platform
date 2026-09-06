@@ -131,6 +131,25 @@
   font-size: var(--font-meta);
 }
 
+.export-image-dialog {
+  width: min(92vw, 520px);
+  max-height: 78vh;
+  padding: 22px;
+  border: 1px solid var(--black);
+  border-radius: 0;
+  background: var(--white);
+  color: var(--black);
+  font: inherit;
+}
+
+.export-image-dialog::backdrop { background: rgb(255 255 255 / 0.82); }
+.export-image-dialog header { display: flex; justify-content: space-between; gap: 18px; align-items: baseline; }
+.export-image-dialog header p, .export-image-dialog h2 { margin: 0; font-size: var(--font-meta); font-weight: 400; }
+.export-image-dialog h2 { margin: 24px 0 14px; font-size: 16px; }
+.export-image-choice { display: flex; gap: 10px; padding: 7px 0; font-size: var(--font-meta); }
+.export-image-choice input { accent-color: var(--green); }
+.export-image-work-title { margin: 20px 0 4px; font-size: var(--font-meta); }
+
 @media (max-width: 700px) {
   .portfolio-work-option,
   .portfolio-selected-work {

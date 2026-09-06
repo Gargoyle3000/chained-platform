@@ -8,17 +8,21 @@ test("Archive renders direct Project SELECT export only from active Project stat
   const [page, script] = await Promise.all([read("archive.html"), read("archive.js")]);
   assert.match(page, /archive-project-context-actions[\s\S]*archive-select-project[^>]*>\[ EXPORT CHAINED SELECT \]/);
   assert.match(page, /archive-select-status/);
+  assert.match(page, /archive-select-images[^>]*>\[ SELECT IMAGES \]/);
   assert.doesNotMatch(page, /CHAINED SELECT FILTERED|archive-select\.html/);
   assert.match(script, /function renderProjects\(\)[\s\S]*projectSelectButton\.hidden = !project[\s\S]*exportProjectChainedSelect\(project\)/);
   assert.match(script, /function selectProject\(projectId[\s\S]*renderProjects\(\);[\s\S]*renderWorks\(\);/);
   assert.match(script, /loadArchive\(\)[\s\S]*renderTags\(\); renderProjects\(\); renderWorks\(\);/);
   assert.match(script, /currentProjectChainedSelectSource\(repository, project\.id\)/);
+  assert.match(script, /createExportImageSelectionState\(projectWorks\)/);
+  assert.match(script, /openProjectExportImageSelection/);
   assert.doesNotMatch(script, /writeChainedSelectSession|archive-select\.html|filterSelectButton/);
 });
 
 test("direct Project Select uses public media only and keeps revalidation before source fetch", async () => {
   const [generator, repository] = await Promise.all([read("data/chained-select-direct-generator.mjs"), read("data/archive-repository.mjs")]);
   assert.match(generator, /revalidateProjectChainedSelect/);
+  assert.match(generator, /applyExportImageSelection\(revalidated\.works, imageSelection\)/);
   assert.match(generator, /fetch\(image\.src/);
   assert.doesNotMatch(generator, /authorizedPrivateMedia|downloadAuthorizedPrivateMedia|privatePreview|signed/i);
   assert.match(repository, /derivativeLargePublicPath/);

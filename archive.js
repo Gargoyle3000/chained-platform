@@ -12,6 +12,8 @@ import { calculateAnchoredPopoverPosition } from "./data/anchored-popover.mjs";
 import { CHAINED_SELECT_MAX_IMAGES, CHAINED_SELECT_MAX_WORKS, resolveChainedSelectSelector } from "./data/chained-select-direct-export.mjs";
 import { generateProjectChainedSelect } from "./data/chained-select-direct-generator.mjs";
 import { PortfolioExportError } from "./data/portfolio-export.mjs";
+import { createExportImageSelectionState } from "./data/export-image-selection-state.mjs";
+import { openProjectExportImageSelection } from "./data/export-image-selection-ui.mjs";
 
 const page = document.querySelector(".archive-page");
 const grid = document.querySelector(".saved-grid");
@@ -35,6 +37,8 @@ const projectEditLink = document.querySelector(".archive-project-edit");
 const projectCloseButton = document.querySelector(".archive-project-close");
 const projectSelectButton = document.querySelector(".archive-select-project");
 const projectSelectStatus = document.querySelector(".archive-select-status");
+const projectImageSelectButton = document.querySelector(".archive-select-images");
+const imageDialog = document.querySelector("#archive-image-dialog");
 const viewStorageKey = "chained-archive-view";
 
 let repository = null;
@@ -51,6 +55,8 @@ let openWorkManagementMenu = null;
 let openArchivePopover = null;
 let projectExportInProgress = false;
 let projectExportResetTimer = null;
+let projectImageSelection = createExportImageSelectionState();
+let projectImageSelectionId = null;
 
 function setResultCount(count) {
   resultCount.textContent = `${count} ${count === 1 ? "WORK" : "WORKS"}`;
@@ -494,6 +500,7 @@ async function exportProjectChainedSelect(project) {
       project: currentProject,
       workIds: source.workIds,
       selectorName,
+      imageSelection: projectImageSelection,
       setStatus: setProjectSelectStatus,
       environment: window
     });
@@ -570,13 +577,25 @@ function renderProjects() {
   projectContext.hidden = !project;
   allWorksLabel.hidden = Boolean(project);
   projectSelectButton.hidden = !project;
+  projectImageSelectButton.hidden = !project;
   projectSelectButton.disabled = projectExportInProgress;
   if (project) {
+    const projectWorks = selectedProjectWorks();
+    if (projectImageSelectionId !== project.id) {
+      projectImageSelection = createExportImageSelectionState(projectWorks);
+      projectImageSelectionId = project.id;
+    }
     projectTitle.textContent = project.title;
     projectEditLink.href = `archive-project.html?id=${encodeURIComponent(project.id)}`;
     projectSelectButton.onclick = () => void exportProjectChainedSelect(project);
+    const selectedImages = projectWorks.reduce((count, work) => count + projectImageSelection.count(work.id), 0);
+    const eligibleImages = projectWorks.reduce((count, work) => count + (work.images || []).filter((image) => image.uploadStatus === "ready").length, 0);
+    projectImageSelectButton.textContent = `[ ${selectedImages} / ${eligibleImages} IMAGES · SELECT IMAGES ]`;
+    projectImageSelectButton.onclick = () => openProjectExportImageSelection(imageDialog, projectWorks, projectImageSelection, renderProjects);
   } else {
     projectSelectButton.onclick = null;
+    projectImageSelectButton.onclick = null;
+    projectImageSelectionId = null;
     setProjectSelectStatus();
   }
   projectList.replaceChildren();
