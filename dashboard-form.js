@@ -249,6 +249,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderImagePreviews();
   }
 
+  async function retryPrivatePreviews() {
+    if (!localSupabaseMode) return;
+    try {
+      setEditorBusy(true);
+      showFormStatus("LOADING PREVIEWS");
+      workStore.media.urls.revokeAll();
+      await loadSelectedImages(selectedImages);
+      showFormStatus("");
+    } finally {
+      setEditorBusy(false);
+    }
+  }
+
 
   function createImagePreview(selectedImage, index) {
     const preview = document.createElement("article");
@@ -326,8 +339,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       const unavailable = document.createElement("p");
       unavailable.className = "work-image-preview-unavailable";
-      unavailable.textContent = "PREVIEW UNAVAILABLE";
+      unavailable.textContent = selectedImage.previewFailure === "unavailable"
+        ? "PREVIEW UNAVAILABLE"
+        : "PREVIEW TEMPORARILY UNAVAILABLE";
       preview.append(unavailable);
+      if (selectedImage.previewFailure && selectedImage.previewFailure !== "unavailable") {
+        actions.append(createImageAction("RETRY PREVIEW", `Retry ${selectedImage.filename} preview`, retryPrivatePreviews));
+      }
     }
     preview.append(metadata);
 
@@ -612,17 +630,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         serverRecord: localSupabaseMode,
         privatePath: image.privatePath || null,
         publicPath: image.publicPath || null,
+        previewFailure: "",
         isCover: image.isCover === true
       }));
     if (localSupabaseMode) {
       const privateImages = mapped.filter((image) => !(image.publicPath && currentVisibility() === "published"));
-      let privatePreviews = new Map();
-      try { privatePreviews = await workStore.media.privatePreviewBatch(privateImages); }
-      catch { privatePreviews = new Map(); }
+      const privatePreviewResult = await workStore.media.privatePreviewBatchResult(privateImages);
       mapped.forEach((image) => {
         image.previewUrl = image.publicPath && currentVisibility() === "published"
           ? workStore.media.publicUrl(image.publicPath)
-          : privatePreviews.get(String(image.id).toLowerCase()) || "";
+          : privatePreviewResult.previews.get(String(image.id).toLowerCase()) || "";
+        image.previewFailure = privatePreviewResult.failures.get(String(image.id).toLowerCase())?.category || "";
       });
     }
     selectedImages.splice(

@@ -341,7 +341,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return images.find((image) => image.isCover) || images[0] || null;
   }
 
-  async function createWorkImage(work, privatePreviews = new Map()) {
+  async function createWorkImage(work, privatePreviewResult = { previews: new Map(), failures: new Map() }) {
     const coverImage = getCoverImage(work);
 
     if (!coverImage) {
@@ -365,7 +365,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         image.src =
           coverImage.publicPath && work.visibility === "published"
             ? repository.media.publicUrl(coverImage.publicPath)
-            : privatePreviews.get(String(coverImage.id).toLowerCase()) || "";
+            : privatePreviewResult.previews.get(String(coverImage.id).toLowerCase()) || "";
         if (!image.src) throw new Error("private preview unavailable");
       } else if (coverImage.blob) {
         image.src = URL.createObjectURL(coverImage.blob);
@@ -377,7 +377,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const placeholder = document.createElement("div");
 
       placeholder.className = "dashboard-work-image-placeholder";
-      placeholder.textContent = "PREVIEW UNAVAILABLE";
+      const privatePreview = repository.mode === "supabase" && !(coverImage.publicPath && work.visibility === "published");
+      const failure = privatePreviewResult.failures.get(String(coverImage.id).toLowerCase());
+      placeholder.textContent = privatePreview && failure?.category !== "unavailable"
+        ? "PREVIEW TEMPORARILY UNAVAILABLE"
+        : "PREVIEW UNAVAILABLE";
 
       return placeholder;
     }
@@ -385,7 +389,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return image;
   }
 
-  async function createRecentWorkRow(work, privatePreviews) {
+  async function createRecentWorkRow(work, privatePreviewResult) {
     const row = document.createElement("article");
     const information = document.createElement("div");
     const title = document.createElement("h3");
@@ -413,7 +417,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     title.append(editLink);
     information.append(title, year);
     row.append(
-      await createWorkImage(work, privatePreviews),
+      await createWorkImage(work, privatePreviewResult),
       information,
       status
     );
@@ -725,14 +729,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       const cover = getCoverImage(work);
       return cover && !(cover.publicPath && work.visibility === "published") ? cover : null;
     }).filter(Boolean);
-    let privatePreviews = new Map();
+    let privatePreviewResult = { previews: new Map(), failures: new Map() };
     if (repository.mode === "supabase") {
-      try { privatePreviews = await repository.media.privatePreviewBatch(privateCovers); }
-      catch { privatePreviews = new Map(); }
+      privatePreviewResult = await repository.media.privatePreviewBatchResult(privateCovers);
     }
     recentList.replaceChildren(
       ...await Promise.all(
-        recentWorks.map((work) => createRecentWorkRow(work, privatePreviews))
+        recentWorks.map((work) => createRecentWorkRow(work, privatePreviewResult))
       )
     );
   }

@@ -96,6 +96,19 @@ function signedUrlMayHaveExpired(value) {
   return status === 401 || status === 403;
 }
 
+async function gatewayFailureCode(value) {
+  const response = value?.context;
+  if (!response || typeof response.clone !== "function") return "";
+  try {
+    const body = await response.clone().json();
+    return body?.ok === false && body?.error === "media_unavailable"
+      ? "media_unavailable"
+      : "";
+  } catch {
+    return "";
+  }
+}
+
 function normalizePrivateMediaImages(images) {
   const values = Array.isArray(images) ? images : [images];
   const resolved = [];
@@ -232,6 +245,76 @@ export function createWorkMediaService(client, config = {}, {
     return Object.freeze(requested.map((item) => completed.get(item.id)));
   };
 
+  const previewFailure = async (error) => {
+    const status = statusOf(error);
+    const gatewayCode = await gatewayFailureCode(error);
+    const category = gatewayCode === "media_unavailable" || status === 404
+      ? "unavailable"
+      : status === 401 || status === 403
+        ? "authorization"
+        : "request";
+    return Object.freeze({
+      category,
+      retryable: category === "request" && (status === null || retryableGatewayFailure(error)),
+      status
+    });
+  };
+
+  const resolvePrivatePreviewBatch = async (images) => {
+    const requested = normalizePrivateMediaImages(images);
+    const previews = new Map();
+    const failures = new Map();
+    if (!requested.length) return Object.freeze({ previews, failures });
+
+    let signed;
+    try {
+      signed = await authorize(requested.map((item) => item.image), "preview");
+    } catch (error) {
+      const failure = await previewFailure(error);
+      requested.forEach((item) => failures.set(item.id, failure));
+      return Object.freeze({ previews, failures });
+    }
+
+    const fetchSigned = async (items, signedMedia) => {
+      const signedById = new Map(signedMedia.map((item) => [item.imageId, item]));
+      return await mapWithConcurrency(items, PRIVATE_MEDIA_DOWNLOAD_CONCURRENCY, async (item) => {
+        const media = signedById.get(item.id);
+        if (!media) throw { status: 502 };
+        const response = await fetcher(media.url, { cache: "no-store" });
+        if (!response.ok) throw { status: response.status };
+        return Object.freeze({ imageId: item.id, blob: await response.blob() });
+      });
+    };
+
+    const collect = async (items, results, allowRenewal) => {
+      const expired = [];
+      for (let index = 0; index < results.length; index += 1) {
+        const result = results[index];
+        const item = items[index];
+        if (result.value) {
+          previews.set(result.value.imageId, urls.create(result.value.blob));
+        } else if (allowRenewal && signedUrlMayHaveExpired(result.error)) {
+          expired.push(item);
+        } else {
+          failures.set(item.id, await previewFailure(result.error));
+        }
+      }
+      return expired;
+    };
+
+    const expired = await collect(requested, await fetchSigned(requested, signed), true);
+    if (expired.length) {
+      try {
+        const renewed = await authorize(expired.map((item) => item.image), "preview");
+        await collect(expired, await fetchSigned(expired, renewed), false);
+      } catch (error) {
+        const failure = await previewFailure(error);
+        expired.forEach((item) => failures.set(item.id, failure));
+      }
+    }
+    return Object.freeze({ previews, failures });
+  };
+
   return Object.freeze({
     urls,
     async upload(workId, file, makeCover, onStage = () => {}) {
@@ -310,6 +393,9 @@ export function createWorkMediaService(client, config = {}, {
       } catch (error) {
         throw sanitizeWorkError(error, "PRIVATE PREVIEW IS UNAVAILABLE");
       }
+    },
+    async privatePreviewBatchResult(images) {
+      return await resolvePrivatePreviewBatch(images);
     },
     async privatePreview(image) {
       if (!image?.id) return null;

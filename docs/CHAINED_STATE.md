@@ -72,7 +72,7 @@ Current focus: complete and polish core product surfaces before broader rollout.
 
 ## NEXT
 
-- WORKS / MEDIA LIFECYCLE HARDENING: investigate the confirmed state where a published Work returned to draft can lose image/preview availability. Trace publish → draft transitions, private original/preview preservation, and public/private derivative lifecycle. This requires SOL HIGH because it touches Storage and private/public media trust.
+- WORKS / MEDIA LIFECYCLE HARDENING: the reported Published Work → draft preview incident did not reproduce in the stateful lifecycle fixture or recent read-only production audit. Private-preview UI now distinguishes genuine unavailability from authorized resolver/request failure; monitor any recurrence through its safe failure category without changing private/public media trust.
 - Continue the compact pre-tester security and usability pass.
 - First 1–2 external testers.
 

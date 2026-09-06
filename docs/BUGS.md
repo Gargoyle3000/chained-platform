@@ -2,10 +2,10 @@
 
 Last updated: 2026-09-06
 
-## Work / media lifecycle regression
+## Private Work preview diagnostics
 
-- Published Work → return to draft can leave an image/preview unavailable (`preview unavailable`).
-- Investigate the publish → draft media-state transition, preservation/restoration of private original and private preview references, and interaction with the public/private derivative lifecycle.
+- An observed Published Work → return to draft `PREVIEW UNAVAILABLE` incident did not reproduce in the stateful lifecycle fixture or recent read-only production audit: private source preservation through publish, unpublish and republish remains intact.
+- The confirmed UI defect was that authorized private-preview resolver/request failures were collapsed into the same unavailable state as genuinely unresolved media. The UI now distinguishes those states and supports a safe retry; monitor for a concrete recurrence with the preserved request category.
 
 ## Resolved incidents
 

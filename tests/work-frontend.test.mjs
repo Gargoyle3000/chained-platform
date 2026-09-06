@@ -466,6 +466,67 @@ test("private previews batch gateway authorization, create revocable blobs, and 
   assert.equal(preview.urls.size(), 0);
 });
 
+test("private preview results distinguish resolver-unavailable media from gateway request failures", async () => {
+  const unavailable = createWorkMediaService(
+    { functions: { invoke: async () => ({
+      data: null,
+      error: { context: new Response(JSON.stringify({ ok: false, error: "media_unavailable" }), { status: 403, headers: { "content-type": "application/json" } }) }
+    }) } },
+    {}
+  );
+  const unavailableResult = await unavailable.privatePreviewBatchResult([{ id: ID }]);
+  assert.equal(unavailableResult.previews.size, 0);
+  assert.deepEqual(unavailableResult.failures.get(ID), { category: "unavailable", retryable: false, status: 403 });
+
+  let attempts = 0;
+  const requestedUrl = "https://signed.example/private?token=not-for-output";
+  const requestFailure = createWorkMediaService(
+    { functions: { invoke: async () => { attempts += 1; return { data: null, error: { status: 503, message: requestedUrl } }; } } },
+    {},
+    { wait: async () => {}, random: () => 0 }
+  );
+  const requestResult = await requestFailure.privatePreviewBatchResult([{ id: ID }]);
+  assert.equal(attempts, 3);
+  assert.deepEqual(requestResult.failures.get(ID), { category: "request", retryable: true, status: 503 });
+  assert.equal(JSON.stringify(requestResult).includes(requestedUrl), false);
+});
+
+test("private preview results keep successful images when an individual signed download is unavailable", async () => {
+  const preview = createWorkMediaService(
+    { functions: { invoke: async (_name, { body }) => ({ data: {
+      ok: true,
+      purpose: body.purpose,
+      media: body.imageIds.map((imageId) => ({ imageId, url: `https://signed.example/${imageId}`, mimeType: "image/png", fileSize: 1 }))
+    }, error: null }) } },
+    {},
+    { fetcher: async (url) => url.endsWith(IMAGE_TWO)
+      ? new Response(null, { status: 404 })
+      : new Response(new Blob(["image"], { type: "image/png" }), { status: 200 }) }
+  );
+  const result = await preview.privatePreviewBatchResult([{ id: ID }, { id: IMAGE_TWO }]);
+  assert.equal(result.previews.get(ID).startsWith("blob:"), true);
+  assert.deepEqual(result.failures.get(IMAGE_TWO), { category: "unavailable", retryable: false, status: 404 });
+  assert.equal(preview.urls.size(), 1);
+});
+
+test("private preview results classify session failures separately and recover on a fresh request", async () => {
+  let calls = 0;
+  const preview = createWorkMediaService(
+    { functions: { invoke: async (_name, { body }) => {
+      calls += 1;
+      if (calls === 1) return { data: null, error: { status: 401 } };
+      return { data: { ok: true, purpose: body.purpose, media: body.imageIds.map((imageId) => ({ imageId, url: `https://signed.example/${imageId}`, mimeType: "image/png", fileSize: 1 })) }, error: null };
+    } } },
+    {},
+    { fetcher: async () => new Response(new Blob(["image"], { type: "image/png" }), { status: 200 }) }
+  );
+  const first = await preview.privatePreviewBatchResult([{ id: ID }]);
+  assert.deepEqual(first.failures.get(ID), { category: "authorization", retryable: false, status: 401 });
+  const second = await preview.privatePreviewBatchResult([{ id: ID }]);
+  assert.equal(second.previews.get(ID).startsWith("blob:"), true);
+  assert.equal(second.failures.size, 0);
+});
+
 test("private media rejects malformed or partial gateway responses without a Storage fallback", async () => {
   let downloads = 0;
   const preview = createWorkMediaService(
@@ -571,9 +632,12 @@ test("private preview consumers use shared batches while public published media 
     readFile(new URL("../dashboard-portfolio-export.js", import.meta.url), "utf8"),
     readFile(new URL("../data/work-media-service.mjs", import.meta.url), "utf8")
   ]);
-  assert.match(editor, /privatePreviewBatch\(privateImages\)/);
-  assert.match(works, /privatePreviewBatch\(privateCovers\)/);
-  assert.match(overview, /privatePreviewBatch\(privateCovers\)/);
+  assert.match(editor, /privatePreviewBatchResult\(privateImages\)/);
+  assert.match(editor, /PREVIEW TEMPORARILY UNAVAILABLE/);
+  assert.match(editor, /RETRY PREVIEW/);
+  assert.match(editor, /workStore\.media\.urls\.revokeAll\(\)/);
+  assert.match(works, /privatePreviewBatchResult\(privateCovers\)/);
+  assert.match(overview, /privatePreviewBatchResult\(privateCovers\)/);
   assert.match(portfolio, /downloadAuthorizedPrivateMedia\(images, \{ purpose: "pdf_export", concurrency: 4 \}\)/);
   assert.match(portfolio, /privatePreview\(image\)/);
   assert.match(works, /repository\.media\.publicUrl\(cover\.publicPath\)/);

@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return button;
   }
 
-  async function createWorkImage(work, privatePreviews = new Map()) {
+  async function createWorkImage(work, privatePreviewResult = { previews: new Map(), failures: new Map() }) {
     const cover = [...(work.images || [])].sort((a, b) => a.order - b.order).find((image) => image.isCover) || work.images?.[0];
     if (!cover) {
       const placeholder = document.createElement("div");
@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (repository.mode === "supabase") {
         image.src = cover.publicPath && work.visibility === "published"
           ? repository.media.publicUrl(cover.publicPath)
-          : privatePreviews.get(String(cover.id).toLowerCase()) || "";
+          : privatePreviewResult.previews.get(String(cover.id).toLowerCase()) || "";
         if (!image.src) throw new Error("private preview unavailable");
       } else if (cover.blob) {
         image.src = URL.createObjectURL(cover.blob);
@@ -63,7 +63,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch {
       const placeholder = document.createElement("div");
       placeholder.className = "dashboard-work-image-placeholder";
-      placeholder.textContent = "PREVIEW UNAVAILABLE";
+      const privatePreview = repository.mode === "supabase" && !(cover.publicPath && work.visibility === "published");
+      const failure = privatePreviewResult.failures.get(String(cover.id).toLowerCase());
+      placeholder.textContent = privatePreview && failure?.category !== "unavailable"
+        ? "PREVIEW TEMPORARILY UNAVAILABLE"
+        : "PREVIEW UNAVAILABLE";
       return placeholder;
     }
     return image;
@@ -95,7 +99,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return container;
   }
 
-  async function createWorkRow(work, reload, privatePreviews) {
+  async function createWorkRow(work, reload, privatePreviewResult) {
     const row = document.createElement("article");
     const information = document.createElement("div");
     const title = document.createElement("h3");
@@ -127,7 +131,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     information.append(title, metadata, imageState);
     actions.append(edit, remove);
     statusArea.append(status, actions, confirmation);
-    row.append(await createWorkImage(work, privatePreviews), information, statusArea);
+    row.append(await createWorkImage(work, privatePreviewResult), information, statusArea);
     return row;
   }
 
@@ -164,12 +168,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const cover = [...(work.images || [])].sort((a, b) => a.order - b.order).find((image) => image.isCover) || work.images?.[0];
       return cover && !(cover.publicPath && work.visibility === "published") ? cover : null;
     }).filter(Boolean);
-    let privatePreviews = new Map();
+    let privatePreviewResult = { previews: new Map(), failures: new Map() };
     if (repository.mode === "supabase") {
-      try { privatePreviews = await repository.media.privatePreviewBatch(privateCovers); }
-      catch { privatePreviews = new Map(); }
+      privatePreviewResult = await repository.media.privatePreviewBatchResult(privateCovers);
     }
-    workList.replaceChildren(...await Promise.all(works.map((work) => createWorkRow(work, () => renderWorks(profileIds), privatePreviews))));
+    workList.replaceChildren(...await Promise.all(works.map((work) => createWorkRow(work, () => renderWorks(profileIds), privatePreviewResult))));
   }
 
   try {
