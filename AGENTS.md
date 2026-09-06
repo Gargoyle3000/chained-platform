@@ -85,6 +85,11 @@
 
 ## Workflow
 
+### Backlog discipline
+
+- Conversationally identified open work must not live only in chat or memory. When Peer identifies a bug, later item, polish request, “this doesn't feel right” concern, future feature/improvement, or other unresolved product/development point, record it in the canonical backlog during the same development round or the next documentation sync: actual defects or broken behavior go in `docs/BUGS.md`; features, UX improvements, polish, and future enhancements go in `docs/ROADMAP.md`.
+- An item remains open until implementation is complete, relevant validation/tests pass, and the canonical docs are updated to close, remove, or move it. Memory may preserve rationale and history but is not the sole backlog. During every docs sync, explicitly check recent project work and conversation context for unresolved items missing from `BUGS.md` or `ROADMAP.md`.
+
 Before making changes:
 
 1. Inspect the relevant existing files.
