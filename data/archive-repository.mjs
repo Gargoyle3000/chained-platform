@@ -155,6 +155,7 @@ function selectImagesForWork(rows, workId, client) {
         width: Number(row.pixel_width) > 0 ? Number(row.pixel_width) : null,
         height: Number(row.pixel_height) > 0 ? Number(row.pixel_height) : null,
         order: Number.isFinite(Number(row.sort_order)) ? Number(row.sort_order) : 0,
+        isCover: row.is_cover === true,
         uploadStatus: "ready"
       });
     })

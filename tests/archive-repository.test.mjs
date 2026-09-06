@@ -226,6 +226,21 @@ test("CHAINED Select loads only current public LARGE siblings and never carries 
   assert.equal(JSON.stringify(selected).includes("legacy/public.jpg"), false);
 });
 
+test("Archive cards expose only a cover while the SELECT projection hydrates every eligible public image", async () => {
+  const client = archiveClient([{ work_id: IDS.workA }]);
+  const coverImage = { ...cover(IDS.workA), public_object_path: `${IDS.profile}/${IDS.workA}/${IDS.workA}/${IDS.workA.replace(/.$/, "f")}/small.webp`, sort_order: 1 };
+  const detailImage = { ...coverImage, id: IDS.workA.replace(/.$/, "e"), is_cover: false, sort_order: 2, public_object_path: `${IDS.profile}/${IDS.workA}/${IDS.workA}/${IDS.workA.replace(/.$/, "e")}/small.webp` };
+  const rows = { works: [work(IDS.workA)], public_profiles: [profile()], work_images: [coverImage, detailImage] };
+  const repository = createArchiveRepository(client, config, async (_config, table) => rows[table]);
+  const cards = await repository.listArchivedWorks();
+  const selected = await repository.listArchivedSelectWorks([IDS.workA]);
+  assert.equal(cards[0].images, undefined);
+  assert.ok(cards[0].image?.src);
+  assert.deepEqual(selected[0].images.map((image) => image.id), [coverImage.id, detailImage.id]);
+  assert.equal(selected[0].images[0].isCover, true);
+  assert.match(selected[0].images[1].src, /large\.webp$/);
+});
+
 test("save and remove send only the Work identity and sanitize failures", async () => {
   const client = archiveClient();
   const repository = createArchiveRepository(client, config);

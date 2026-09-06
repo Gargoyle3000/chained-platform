@@ -14,8 +14,10 @@ test("Archive renders direct Project SELECT export only from active Project stat
   assert.match(script, /function selectProject\(projectId[\s\S]*renderProjects\(\);[\s\S]*renderWorks\(\);/);
   assert.match(script, /loadArchive\(\)[\s\S]*renderTags\(\); renderProjects\(\); renderWorks\(\);/);
   assert.match(script, /currentProjectChainedSelectSource\(repository, project\.id\)/);
-  assert.match(script, /createExportImageSelectionState\(projectWorks\)/);
+  assert.match(script, /createExportImageSelectionState\(projectSelectWorks\)/);
   assert.match(script, /openProjectExportImageSelection/);
+  assert.match(script, /repository\.listArchivedSelectWorks\(workIds\)/);
+  assert.match(script, /\[ LOADING IMAGES \]/);
   assert.doesNotMatch(script, /writeChainedSelectSession|archive-select\.html|filterSelectButton/);
 });
 

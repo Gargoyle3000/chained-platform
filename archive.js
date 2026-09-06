@@ -6,6 +6,7 @@ import {
   currentProjectChainedSelectSource,
   filterArchiveProjectWorks,
   orderedProjectWorks,
+  projectSelectWorkIds,
   resolveArchiveProjectId
 } from "./data/archive-project-state.mjs";
 import { calculateAnchoredPopoverPosition } from "./data/anchored-popover.mjs";
@@ -57,6 +58,8 @@ let projectExportInProgress = false;
 let projectExportResetTimer = null;
 let projectImageSelection = createExportImageSelectionState();
 let projectImageSelectionId = null;
+let projectSelectWorks = [];
+let projectImageSelectionLoading = false;
 
 function setResultCount(count) {
   resultCount.textContent = `${count} ${count === 1 ? "WORK" : "WORKS"}`;
@@ -458,6 +461,28 @@ function selectedProjectWorks() {
   return orderedProjectWorks(works, projectItems, selectedProjectId);
 }
 
+async function hydrateProjectImageSelection(project) {
+  if (!project?.id || !repository) return;
+  const projectId = project.id;
+  projectImageSelectionLoading = true;
+  renderProjects();
+  try {
+    const workIds = projectSelectWorkIds(projectItems, projectId);
+    const hydrated = await repository.listArchivedSelectWorks(workIds);
+    if (selectedProjectId !== projectId) return;
+    projectSelectWorks = [...hydrated];
+    projectImageSelection = createExportImageSelectionState(projectSelectWorks);
+    projectImageSelectionId = projectId;
+  } catch {
+    if (selectedProjectId === projectId) projectSelectWorks = [];
+  } finally {
+    if (selectedProjectId === projectId) {
+      projectImageSelectionLoading = false;
+      renderProjects();
+    }
+  }
+}
+
 function setProjectSelectStatus(message = "") {
   projectSelectStatus.textContent = message;
   projectSelectStatus.hidden = !message;
@@ -580,22 +605,21 @@ function renderProjects() {
   projectImageSelectButton.hidden = !project;
   projectSelectButton.disabled = projectExportInProgress;
   if (project) {
-    const projectWorks = selectedProjectWorks();
-    if (projectImageSelectionId !== project.id) {
-      projectImageSelection = createExportImageSelectionState(projectWorks);
-      projectImageSelectionId = project.id;
-    }
+    const imageSelectionReady = projectImageSelectionId === project.id && !projectImageSelectionLoading;
+    const projectWorks = imageSelectionReady ? projectSelectWorks : [];
     projectTitle.textContent = project.title;
     projectEditLink.href = `archive-project.html?id=${encodeURIComponent(project.id)}`;
     projectSelectButton.onclick = () => void exportProjectChainedSelect(project);
     const selectedImages = projectWorks.reduce((count, work) => count + projectImageSelection.count(work.id), 0);
     const eligibleImages = projectWorks.reduce((count, work) => count + (work.images || []).filter((image) => image.uploadStatus === "ready").length, 0);
-    projectImageSelectButton.textContent = `[ ${selectedImages} / ${eligibleImages} IMAGES · SELECT IMAGES ]`;
+    projectImageSelectButton.disabled = !imageSelectionReady || !projectWorks.length;
+    projectImageSelectButton.textContent = !imageSelectionReady ? "[ LOADING IMAGES ]" : `[ ${selectedImages} / ${eligibleImages} IMAGES · SELECT IMAGES ]`;
     projectImageSelectButton.onclick = () => openProjectExportImageSelection(imageDialog, projectWorks, projectImageSelection, renderProjects);
   } else {
     projectSelectButton.onclick = null;
     projectImageSelectButton.onclick = null;
     projectImageSelectionId = null;
+    projectSelectWorks = [];
     setProjectSelectStatus();
   }
   projectList.replaceChildren();
@@ -640,6 +664,7 @@ async function loadArchive() {
     tagInput.disabled = false;
     tagCreateButton.disabled = false;
     renderTags(); renderProjects(); renderWorks();
+    await hydrateProjectImageSelection(selectedProject());
   } catch {
     setResultCount(0);
     emptyMessage.textContent = "ARCHIVE IS CURRENTLY UNAVAILABLE";
@@ -648,7 +673,7 @@ async function loadArchive() {
   }
 }
 
-function selectProject(projectId, { history = "push" } = {}) {
+async function selectProject(projectId, { history = "push" } = {}) {
   const nextProjectId = projectId === null
     ? null
     : projects.some((project) => project.id === projectId) ? projectId : null;
@@ -657,6 +682,7 @@ function selectProject(projectId, { history = "push" } = {}) {
   if (history === "replace") updateProjectLocation(nextProjectId, "replace");
   renderProjects();
   renderWorks();
+  await hydrateProjectImageSelection(selectedProject());
 }
 
 function initialiseView() {
