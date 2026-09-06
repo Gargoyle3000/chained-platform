@@ -35,3 +35,8 @@ Important agent rule: failure to resolve `docker` from PATH does not mean Docker
 - Node.js and npm are installed and used for application and test tooling.
 - Git is installed and used for repository history and GitHub integration.
 - Google Cloud tooling is used for CHAINED Cloud Run, Cloud Scheduler, Artifact Registry, and Secret Manager operations; discover its current executable location before reporting it unavailable.
+
+### Production operator notes
+
+- Supabase CLI 2.111.0 `db query --output-format json` returns a root JSON array. Operator helpers must accept that machine-readable shape and reject mixed stdout.
+- Production server/operator REST access uses current `sb_secret_` API keys. They are server/operator-only and must never enter browser/frontend code; session-local production guards and secrets must not be committed or printed.

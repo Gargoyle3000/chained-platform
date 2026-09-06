@@ -1,10 +1,10 @@
 # CHAINED — CURRENT STATE
 
-Last updated: 2026-09-04
+Last updated: 2026-09-06
 
 ## NOW
 
-Current focus: the image-derivative migration is closed; complete and polish core product surfaces before broader rollout. The roadmap is a priority map, not a fixed calendar.
+Current focus: complete and polish core product surfaces before broader rollout. The roadmap is a priority map, not a fixed calendar.
 
 ### Auth UX rollout
 
@@ -30,7 +30,14 @@ Current focus: the image-derivative migration is closed; complete and polish cor
 - Public multi-image carousel is live and manually validated on Discover, Following and Public Profile; Work detail remains a vertical full-image sequence.
 - Published Works can be removed directly from WORKS through `[ DELETE ]` → `[ CONFIRM DELETE ]`; the backend unpublishes, recalls exact public derivatives, and soft-deletes only after cleanup succeeds. A cleanup-pending retry resumes the same lifecycle.
 - Public Presentation v1 is live: profile lists use canonical Presentation detail links, and public detail pages show core metadata with optional description and validated external URL. Presentation media and Work links are not yet modeled.
-- Presentation v2 trust layer and Dashboard REQUESTS are live: strict public Presentation visibility, participant/Work/co-operator/program relations, and scoped request/invitation summaries exist server-side. Authorized recipients can accept or decline co-operator invitations and pending Work proposals from Dashboard. Presentation management UI and public v2 participants/Works/program rendering are not implemented yet.
+- Presentation v2 trust layer, management context, participation consent, and Dashboard REQUESTS are live. Public Presentation pages can render their safe context projection, including participants, accepted visible Works and Program; authorized recipients can decide co-operator invitations, Work proposals and participation requests from Dashboard.
+
+### Exports
+
+- DIRECT CHAINED SELECT is live: an active Archive Project opens one export-local image picker and then generates/downloads the PDF directly. It uses only freshly revalidated public Works and strict canonical LARGE derivatives; search, tag and filtered Archive states do not define a Select.
+- SELECT is limited to 20 Works / 40 selected images, has a 19 MiB target and 20 MiB hard maximum, preserves its deterministic artist/year/title/image ordering, and never falls back to private media or legacy JPGs.
+- SELECT uses CHAINED green only for its cover identity, selector name and artist names. Its index no longer prints raw Work URLs.
+- Portfolio uses the same export-local picker principle while retaining its separate authorized private-original `pdf_export` path and neutral PDF styling. Picker previews use authorized private previews, are cached for the lifetime of the picker, and are revoked when it closes.
 
 ## DONE — IMPORTANT INFRASTRUCTURE
 
@@ -54,10 +61,12 @@ Current focus: the image-derivative migration is closed; complete and polish cor
 - The shared VP8 parser's width/height endian bug is fixed and covered by regression tests. Trusted terminal-failed current-source derivative recovery exists without fabricating READY state or bypassing broker validation.
 - The controlled legacy migration is complete: 35/35 backfill-created jobs reached READY, zero active eligible legacy images remain without a lifecycle, and one image under a soft-deleted Work remains intentionally excluded. Existing published Works retained their audited visibility, revisions and public-media state; HEDO MAXXING II was successfully republished through the strict lifecycle.
 - Active old and new Works now use the same derivative publication contract. The temporary production smoke environment/key still exists pending cleanup and revocation.
+- The one-time legacy public-media promotion is complete: 9 published Works / 29 images now have canonical SMALL and LARGE publication derivatives. Historic legacy objects remain only for cleanup compatibility; promotion is idempotent and did not alter publication, Archive, Project or Presentation relations.
 
-## AFTER EXPORT
+## NEXT
 
-- Reuse the same PDF renderer for Archive / Project export.
+- Fix the Agenda occurrence publication regression before expanding Agenda/Presentation work.
+- Continue the Presentation/Agenda product round: independent Work association, participant and manager roles; clarified public role semantics; and the next public Presentation layout pass.
 - Compact pre-tester security and usability pass.
 - First 1–2 external testers.
 
@@ -73,6 +82,6 @@ Current focus: the image-derivative migration is closed; complete and polish cor
 
 - Production is stable after the Phase 4 public-image derivative rollout.
 - Private preview frontend implementation is deployed and production-validated: the browser generates a fixed private WebP derivative before reservation, uploads both server-reserved objects, and finalizes them together. Production smoke covered JPEG and transparent PNG images, including full and partial alpha. Broader browser/device matrix validation remains future hardening.
-- Controlled private-preview backfill remains open where still needed before Portfolio `ALL IMAGES / SELECT IMAGES`; it is separate from the completed public-derivative legacy migration.
+- Controlled private-preview backfill remains open where still needed; it is separate from the completed public-derivative legacy migration.
 - Protect the authorized private-media gateway, PDF export, Phase 4 public derivative behavior, and current Discover/Following/Profile geometry.
 - Optional drag-follow carousel animation is future polish, not an active bug.

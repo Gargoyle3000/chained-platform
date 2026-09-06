@@ -1,11 +1,11 @@
 # CHAINED — ROADMAP
 
-Last updated: 2026-09-04
+Last updated: 2026-09-06
 
 ## POLISH
 
-- Add direct published-Work DELETE → CONFIRM DELETE from WORKS, coordinating safe unpublish, exact public cleanup and soft-delete.
 - Archive SINGLE / GRID should gain the same proven swipe interaction as Discover and Following, while preserving existing view behavior, image ratios, and layout.
+- Archive SINGLE should be horizontally centered like Following / Discover SINGLE. The horizontal scrollbar should become roughly twice as thick and support genuine click-drag. Clicking the active Project or Tag should toggle it off, and the Work `[...]` action menu should remain open until an action, outside click or explicit close.
 - Implement circular media-carousel navigation: last → next returns to first, and first → previous returns to last.
 - Add Agenda `[ ALL ]` and `[ FOLLOWING ]` views.
 - Use normal prose capitalization and conjunctions for user-facing metadata values, rather than system-style uppercase conjunctions.
@@ -26,13 +26,16 @@ Last updated: 2026-09-04
 
 ## PRESENTATIONS + AGENDA
 
-- Public Presentation v1 list/detail routing, the Presentation v2 backend trust layer, and Dashboard REQUESTS are live. Dashboard shows authorized co-operator invitations and pending Work proposals through server-side summary feeds and decisions. Build the Presentation management UI next, without treating participant, Work association or program data as public rendering until those surfaces are implemented.
-- Complete Presentation end-to-end functionality, including Agenda/events creation, editing and public display.
-- Complete Presentation ↔ Agenda ↔ Works crosslinks and attachments; standalone Agenda entries remain supported.
+- Fix the Agenda occurrence publication regression: new occurrences start draft by design, but the UI needs a clear working publish path and must preserve independent `show_in_agenda` / `show_in_presentation` settings.
+- Work association must not require its maker to first become a Presentation participant. Work association, participant history and co-operator/manager access remain independent concepts.
+- Clarify public role semantics: `HOST / PRESENTED BY` is organizational/contextual; `PARTICIPANTS` are artists actually participating; `MANAGER / OWNER` is a technical CHAINED role and must not become a prominent public identity. Avoid duplicate public people caused only by overlapping internal roles.
+- Move PARTICIPANTS above WORKS on public Presentation pages: TITLE / CONTEXT → HOST / PRESENTED BY → PARTICIPANTS → WORKS → PROGRAM.
+- Rework public Presentation Works from the narrow left column into a broader responsive CHAINED GRID / SUPERGRID treatment: retain approximate image scale, use more page width and space between Works, collapse responsively, and add no cards/dividers/SaaS styling.
+- Complete remaining Presentation ↔ Agenda ↔ Works crosslinks and attachments; standalone Agenda entries remain supported.
 
 ## PRIVATE PREVIEW DERIVATIVES — DEPLOYED
 
-Before Portfolio image selection, add one lightweight private screen-preview rendition per Work image.
+One lightweight private screen-preview rendition per Work image is deployed. The remaining work is bounded backfill/coverage verification and removal of any temporary fallback.
 
 - Originals remain untouched in private `work-originals` and continue serving `pdf_export`; Phase 4 publication copies use verified public derivatives.
 - A deterministic sibling object (likely `preview.webp`) serves editor/Dashboard previews and later visual selectors through the existing authorized gateway.
@@ -52,14 +55,13 @@ The broader browser/device compatibility matrix remains future hardening; produc
 
 Implementation should verify the largest real preview display and HiDPI needs before freezing dimensions/quality. Reconcile the current editor validation mismatch (approximately 25 MiB and no AVIF versus the service/backend 50 MiB and AVIF support) during that work.
 
-## PORTFOLIO EXPORT
+## EXPORTS — LIVE
 
-- Per selected Work, choose `ALL IMAGES` (default) or `SELECT IMAGES` for the export session only. Selection does not modify the Work or stored images, keeps one metadata/index entry, and preserves existing multi-image numbering semantics.
-- Implement only after private previews are established; selectors use `purpose: preview`, and only chosen IDs proceed to `purpose: pdf_export`.
+- DIRECT CHAINED SELECT is active-Project-only: `[ EXPORT CHAINED SELECT ]` opens the shared picker and `[ EXPORT SELECT ]` directly generates/downloads. It uses fresh Project membership, fresh strict public projection and canonical LARGE derivatives only; it has no review page, private-media path or legacy fallback.
+- Both SELECT and Portfolio use export-local per-Work image selection: cover first, otherwise first eligible image by `sort_order`; each included Work retains at least one image. Selection is not persisted and never mutates Work/media state.
+- Portfolio remains a separate authorized private-original export using `purpose: pdf_export`; its picker uses `purpose: preview` only for temporary thumbnails.
 
 ## AFTER FIRST TESTERS
-
-- Archive / Project PDF export using the same Portfolio renderer.
 - Publications as a separate future profile/content object, not a Presentation: overview of titles, then a dedicated detail page with multiple images, fixed context, and optional publication metadata.
 - Optional external profile `SHOP` link only; no CHAINED commerce, products, prices, carts, checkout or payments.
 - Import.
@@ -71,6 +73,7 @@ Implementation should verify the largest real preview display and HiDPI needs be
 
 - Quiet multi-image Work browsing is live on Discover, Following and Public Profile only: swipe on mobile and drag/grab on desktop, with no persistent carousel chrome. Work detail remains the full image sequence; current card geometry, natural ratios, containment, and lazy secondary-image loading are preserved.
 - Phase 4 public image derivatives are live: verified new and backfilled active Works publish exact WebP SMALL (960px maximum long edge) and LARGE (3200px maximum long edge) renditions. SMALL serves public grid/feed contexts, LARGE serves strict Work detail paths, originals remain private, and legacy public paths remain compatible. The active legacy migration is complete.
+- The one-time legacy public-media promotion is complete: all 9 target Works / 29 images use canonical SMALL + LARGE publication derivatives, retain historic objects solely for cleanup compatibility, and are idempotently promotable no-ops thereafter.
 
 ## OPTIONAL LATER POLISH
 

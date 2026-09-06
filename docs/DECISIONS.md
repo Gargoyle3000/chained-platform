@@ -2,7 +2,7 @@
 
 
 
-Last updated: 2026-08-27
+Last updated: 2026-09-06
 
 
 
@@ -171,7 +171,7 @@ Last updated: 2026-08-27
 
 \## Portfolio export images
 
-\- Each selected Work defaults to its cover image. The export session offers `ALL IMAGES` or `SELECT IMAGES`; multiple images may be selected and the cover may be deselected.
+\- Each selected Work defaults to its cover image. The export-session picker allows multiple images and permits cover deselection only when another image remains selected.
 \- Selected images retain the Work's media order. Work order is independently changeable for the export. Every selected image gets a PDF page; the first page for a Work gets normal metadata and later pages use compact identification such as `TITLE · 2/3`.
 \- Numbering is relative to the images selected for that PDF, not their original positions. There are no saved preferred images or export presets in v1. Preserve native ratio; never crop or stretch.
 
@@ -257,3 +257,27 @@ Last updated: 2026-08-27
 \## Video
 
 \- Vimeo-first remains the near-term video direction. Native video upload/hosting is intentionally deferred until infrastructure and revenue justify it; it is not a v1 requirement.
+
+\## New Work publication UX
+
+\- Direct publishing remains a first-class flow: a user may create a Work and choose `PUBLISH WORK` without first explicitly saving a draft. Image processing begins as early as the existing architecture safely allows after upload/finalization, and pressing publish records or retains publish intent while the user remains on the Work page. The interface must communicate actual discrete stages such as `SAVING WORK` → `PROCESSING IMAGES` → `WAITING FOR PUBLIC IMAGES` → `PUBLISHING` → `PUBLISHED`; normal processing must not appear as a save/publication failure, and only a genuine terminal failure should produce an error/retry state. Once required public derivatives are READY, publication should continue automatically. `SAVE DRAFT` remains available but is not a mandatory intermediate step. Do not show invented percentage progress unless trustworthy backend/worker progress data exists; use discrete stages and/or an indeterminate indicator.
+
+\## Public Work ordering
+
+\- Public artist profiles may retain YEAR as their primary chronological structure while supporting curatorially controlled manual ordering of Works within each year. Dashboard → Works should support drag-and-drop ordering within the same year. Upload and publication timestamps remain immutable history data; manual position is separate presentation data and becomes authoritative once set, with existing upload/publication ordering as the fallback when no override exists.
+
+\## Horizontal sidescroll interaction
+
+\- The existing restrained horizontal sidescroll visual language remains approved. Future desktop polish should make the scrollbar approximately twice as thick for a practical pointer target while preserving wheel/trackpad horizontal scrolling and the minimal visual character. The thumb must support genuine mouse click-and-drag; inability to drag it is an interaction bug to investigate, not merely a cosmetic sizing issue. Do not replace it with a bulky generic browser-like treatment.
+
+\## Export image selection
+
+\- CHAINED SELECT and Portfolio use one export-local image-selection model. Each included Work starts with its cover image, or the first eligible image by `sort_order` when no valid cover exists. Users may add, replace or deselect images but cannot leave an included Work with zero selected images. Selection is keyed by Work and image ID, preserves media order, is not persisted and never changes Work/media data.
+\- The picker belongs inside the primary export action: Archive Project → `EXPORT CHAINED SELECT` → picker → `EXPORT SELECT`; Works → `EXPORT PORTFOLIO` → picker → `EXPORT PORTFOLIO`. There are no standalone image-selection controls outside those flows.
+\- SELECT is contextual public output: active Project membership only, fresh strict public revalidation at generation, canonical public LARGE only, no private media and no legacy JPG fallback. Portfolio remains the separate formal private-original export through authorized `pdf_export` media.
+
+\## Presentation role and visibility semantics
+
+\- Presentation Work association, participant status and co-operator/manager access are independent. Associating a Work must not require its maker to be a Presentation participant.
+\- Public Presentation identity distinguishes organizational `HOST / PRESENTED BY` from artist `PARTICIPANTS`. `MANAGER / OWNER` is technical CHAINED management metadata and must not become prominent public identity merely because an account has that role. Public rendering should avoid duplicate people caused by overlapping internal roles.
+\- Presentation Program visibility and Agenda visibility are independent: `show_in_presentation` does not imply `show_in_agenda`, and vice versa.
