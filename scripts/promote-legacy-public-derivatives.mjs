@@ -50,48 +50,49 @@ export function safePromotionSummary(row) {
   return Object.freeze({ title: text(row.title), work_id: text(row.work_id), image_id: text(row.image_id), current_public_state: text(row.current_public_state), original_verified: row.original_verified === true, small_ready: row.small_ready === true, small_staged: row.small_staged === true, large_ready: row.large_ready === true, large_staged: row.large_staged === true, publication_revision_valid: Boolean(text(row.publication_revision)), historic_publication_valid: row.historic_publish === true, no_active_operation: row.no_active_operation === true, expected_public_paths: "<profile>/<work>/<revision>/<image>/small.webp + large.webp", state: alreadyPromoted ? "already_promoted" : (eligible ? "needs_promotion" : "blocked"), blocker: alreadyPromoted || eligible ? null : "legacy_promotion_prerequisite_unavailable" });
 }
 
-async function rpc(key, name, body) {
-  const response = await fetch(`${API}/rest/v1/rpc/${name}`, { method: "POST", headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json" }, body: JSON.stringify(body) });
+async function rpc(key, name, body, request) {
+  const response = await request(`${API}/rest/v1/rpc/${name}`, { method: "POST", headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json" }, body: JSON.stringify(body) });
   if (!response.ok) fail(`promotion_rpc_failed:${name}`);
   return await response.json();
 }
 
-async function download(key, bucket, path) {
-  const response = await fetch(`${API}/storage/v1/object/authenticated/${bucket}/${encodePath(path)}`, { headers: { apikey: key, authorization: `Bearer ${key}` } });
+async function download(key, bucket, path, request) {
+  const response = await request(`${API}/storage/v1/object/authenticated/${bucket}/${encodePath(path)}`, { headers: { apikey: key, authorization: `Bearer ${key}` } });
   if (!response.ok) fail("promotion_object_download_failed");
   return { bytes: new Uint8Array(await response.arrayBuffer()), mimeType: (response.headers.get("content-type") || "").split(";", 1)[0] };
 }
 
-async function ensurePublicCopy(key, source, target) {
-  const sourceObject = await download(key, "work-derivative-staging", source.staging_object_path);
+async function ensurePublicCopy(key, source, target, request) {
+  const sourceObject = await download(key, "work-derivative-staging", source.staging_object_path, request);
   if (!verifyDerivativeBytes(sourceObject.bytes, sourceObject.mimeType, source)) fail("promotion_staging_verification_failed");
-  const upload = await fetch(`${API}/storage/v1/object/work-public/${encodePath(target.public_object_path)}`, { method: "POST", headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "image/webp", "x-upsert": "false" }, body: sourceObject.bytes });
+  const upload = await request(`${API}/storage/v1/object/work-public/${encodePath(target.public_object_path)}`, { method: "POST", headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "image/webp", "x-upsert": "false" }, body: sourceObject.bytes });
   if (!upload.ok && upload.status !== 409) fail("promotion_public_copy_failed");
-  const publicObject = await download(key, "work-public", target.public_object_path);
+  const publicObject = await download(key, "work-public", target.public_object_path, request);
   if (!verifyDerivativeBytes(publicObject.bytes, publicObject.mimeType, target)) fail("promotion_public_verification_failed");
 }
 
-async function promoteRow(row, key) {
+async function promoteRow(row, key, request) {
   const argumentsBody = promotionRpcArguments(row);
-  const plan = await rpc(key, "service_legacy_public_derivative_promotion_plan", argumentsBody);
+  const plan = await rpc(key, "service_legacy_public_derivative_promotion_plan", argumentsBody, request);
   if (plan?.status === "already_promoted") return "already_promoted";
   if (plan?.status !== "ready_to_promote") fail("promotion_plan_invalid");
-  await ensurePublicCopy(key, plan.small, plan.small);
-  await ensurePublicCopy(key, plan.large, plan.large);
-  const result = await rpc(key, "service_finalize_legacy_public_derivative_promotion", argumentsBody);
+  await ensurePublicCopy(key, plan.small, plan.small, request);
+  await ensurePublicCopy(key, plan.large, plan.large, request);
+  const result = await rpc(key, "service_finalize_legacy_public_derivative_promotion", argumentsBody, request);
   if (result?.status !== "promoted" && result?.status !== "already_promoted") fail("promotion_finalize_invalid");
   return result.status;
 }
 
-export async function runLegacyPublicDerivativePromotion(options, environment = process.env) {
-  const rows = targetRows(options);
+export async function runLegacyPublicDerivativePromotion(options, environment = process.env, dependencies = {}) {
+  const rows = (dependencies.targetRows || targetRows)(options);
   if (!rows.length) fail("no_published_targets");
   const results = rows.map(safePromotionSummary);
   if (!options.apply) return Object.freeze({ mode: "dry_run", results });
   requirePromotionProductionGuard(options, environment);
   if (results.some((result) => result.state === "blocked")) fail("promotion_preflight_blocked");
   const key = text(environment.CHAINED_PRODUCTION_SUPABASE_SECRET_KEY);
-  for (let index = 0; index < rows.length; index += 1) results[index] = Object.freeze({ ...results[index], action: await promoteRow(rows[index], key) });
+  const request = dependencies.fetch || fetch;
+  for (let index = 0; index < rows.length; index += 1) results[index] = Object.freeze({ ...results[index], action: await promoteRow(rows[index], key, request) });
   return Object.freeze({ mode: "apply", results });
 }
 
