@@ -48,6 +48,15 @@ test("Presentation editor wires profile-only context management without a client
   assert.match(script, /getPublicProfileRepository/);
   assert.match(script, /getProfileById\(/);
   assert.match(script, /proposePresentationWork\(currentPresentationId, work\.id\)/);
+  assert.match(script, /const pendingWorkRemovalIds = new Set\(\)/);
+  assert.match(script, /REMOVE ON SAVE/);
+  assert.match(script, /action\(\s*isWorkRemovalPending\(association\) \? "KEEP" : "REMOVE"/);
+  assert.match(script, /async function reconcilePendingWorkRemovals\(\)/);
+  assert.match(script, /await repository\.removePresentationWork\(associationId\)/);
+  assert.match(script, /let removalError = null/);
+  assert.match(script, /await refreshContext\(\);[\s\S]*if \(removalError\) throw removalError/);
+  assert.match(script, /await reconcilePendingWorkRemovals\(\)/);
+  assert.match(script, /await refreshContext\(\);/);
   assert.match(script, /SELECT OR SEARCH A CHAINED ARTIST/);
   assert.match(script, /selectedWorkProfile = profile/);
   assert.match(script, /availableProfiles\.set\(profile\.id/);

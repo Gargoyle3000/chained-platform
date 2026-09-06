@@ -72,6 +72,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let selectedWorkProfileId = null;
   let selectedWorkProfile = null;
   let publicProfileRepository = null;
+  const pendingWorkRemovalIds = new Set();
 
   function field(name) {
     return form.elements.namedItem(name);
@@ -349,6 +350,34 @@ document.addEventListener("DOMContentLoaded", async () => {
     return association.status === "accepted" ? "ADDED" : association.status.toUpperCase();
   }
 
+  function isWorkRemovalPending(association) {
+    return pendingWorkRemovalIds.has(association.id);
+  }
+
+  async function reconcilePendingWorkRemovals() {
+    if (!pendingWorkRemovalIds.size) return;
+
+    setStatus("REMOVING WORKS");
+    let removalError = null;
+
+    try {
+      for (const associationId of [...pendingWorkRemovalIds]) {
+        await repository.removePresentationWork(associationId);
+        pendingWorkRemovalIds.delete(associationId);
+      }
+    } catch (error) {
+      removalError = error;
+    }
+
+    try {
+      await refreshContext();
+    } catch (refreshError) {
+      if (!removalError) throw refreshError;
+    }
+
+    if (removalError) throw removalError;
+  }
+
   async function renderSelectedProfileWorks(profile, associations) {
     workState.textContent = "LOADING PUBLIC WORKS";
     workGrid.replaceChildren();
@@ -392,8 +421,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (association) {
           const status = document.createElement("p");
           status.className = "presentation-work-status";
-          status.textContent = workAssociationLabel(association);
-          controls.append(status);
+          status.textContent = isWorkRemovalPending(association)
+            ? "REMOVE ON SAVE"
+            : workAssociationLabel(association);
+          controls.append(
+            status,
+            action(
+              isWorkRemovalPending(association) ? "KEEP" : "REMOVE",
+              async () => {
+                if (isWorkRemovalPending(association)) {
+                  pendingWorkRemovalIds.delete(association.id);
+                } else {
+                  pendingWorkRemovalIds.add(association.id);
+                }
+                await renderSelectedProfileWorks(profile, associations);
+              }
+            )
+          );
         } else {
           controls.append(action("+", async () => {
             try {
@@ -475,6 +519,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       repository.listPresentationProgramOccurrences(currentPresentationId),
       repository.listManagedPresentationWorks(currentPresentationId)
     ]);
+    const activeAssociationIds = new Set(
+      works.map((association) => association.id)
+    );
+    for (const associationId of pendingWorkRemovalIds) {
+      if (!activeAssociationIds.has(associationId)) {
+        pendingWorkRemovalIds.delete(associationId);
+      }
+    }
     participantsSection.hidden = false;
     cooperatorsSection.hidden = false;
     worksSection.hidden = false;
@@ -790,6 +842,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             record,
             ownerProfileId
           );
+
+      await reconcilePendingWorkRemovals();
 
       currentPresentationId = saved.id;
       expectedUpdatedAt = saved.updatedAt;
