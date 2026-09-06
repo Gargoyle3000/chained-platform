@@ -534,12 +534,16 @@ try {
     const presentationLayout = await evaluate(`(() => {
       const header = document.querySelector('.site-header')?.getBoundingClientRect();
       const title = document.querySelector('.presentation-detail h1')?.getBoundingClientRect();
+      const grid = document.querySelector('.presentation-work-grid')?.getBoundingClientRect();
       const works = [...document.querySelectorAll('.presentation-work-grid article')]
         .map((work) => work.getBoundingClientRect());
       return {
         overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
         titleTop: title?.top || 0,
         headerBottom: header?.bottom || 0,
+        gridCenterOffset: grid
+          ? Math.abs((grid.left + (grid.width / 2)) - (document.documentElement.clientWidth / 2))
+          : Number.POSITIVE_INFINITY,
         workColumns: new Set(works.map((work) => Math.round(work.left))).size,
         workCount: works.length
       };
@@ -547,6 +551,7 @@ try {
     record(`responsive Presentation detail ${width}`, !presentationLayout.overflow
       && presentationLayout.titleTop >= presentationLayout.headerBottom - 1
       && presentationLayout.workCount === 2
+      && presentationLayout.gridCenterOffset <= 1
       && (width === 1440 ? presentationLayout.workColumns > 1 : presentationLayout.workColumns === 1));
   }
 

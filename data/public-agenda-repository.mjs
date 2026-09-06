@@ -1,6 +1,9 @@
 import { FRONTEND_MODES } from "../auth/config.mjs";
 import { getFrontendRuntime } from "../auth/supabase-client.mjs";
 import { requestPublicRows } from "./public-data-request.mjs";
+import {
+  createPublicPresentationLink
+} from "./public-work-mapping.mjs";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -31,6 +34,15 @@ const PROFILE_SELECT = [
   "display_name",
   "profile_type",
   "publication_status",
+  "published_at"
+].join(",");
+
+const PRESENTATION_SELECT = [
+  "id",
+  "owner_profile_id",
+  "external_url",
+  "show_in_presentations",
+  "visibility",
   "published_at"
 ].join(",");
 
@@ -110,7 +122,8 @@ function mapActivity(row) {
     activityType: cleanText(row.activity_type),
     venueName: cleanText(row.venue_name),
     city: cleanText(row.city),
-    country: cleanText(row.country)
+    country: cleanText(row.country),
+    externalUrl: cleanText(row.external_url)
   });
 }
 
@@ -118,11 +131,27 @@ function mapProfile(row) {
   return Object.freeze({
     id: row.id,
     slug: cleanText(row.slug),
-    displayName: cleanText(row.display_name)
+    displayName: cleanText(row.display_name),
+    showPresentations: row.show_presentations !== false
   });
 }
 
-function mapOccurrence(row, activity, profile) {
+function isPublicPresentation(row, activity, profile) {
+  return Boolean(
+    row &&
+    activity &&
+    profile &&
+    row.id === activity.id &&
+    row.owner_profile_id === activity.ownerProfileId &&
+    row.owner_profile_id === profile.id &&
+    row.visibility === "published" &&
+    row.show_in_presentations === true &&
+    row.published_at &&
+    profile.showPresentations === true
+  );
+}
+
+function mapOccurrence(row, activity, profile, presentation) {
   const title =
     cleanText(row.title_override) ||
     cleanText(activity?.title);
@@ -149,6 +178,16 @@ function mapOccurrence(row, activity, profile) {
     venueName,
     city,
     country: cleanText(activity?.country),
+    externalUrl:
+      cleanText(presentation?.external_url) ||
+      cleanText(activity?.externalUrl),
+    presentationHref: isPublicPresentation(
+      presentation,
+      activity,
+      profile
+    )
+      ? createPublicPresentationLink(activity.id)
+      : null,
     artist: profile,
     activity
   });
@@ -252,6 +291,40 @@ async function resolveProfiles(
   );
 }
 
+async function resolvePublicPresentations(
+  config,
+  request,
+  rows
+) {
+  const ids = [
+    ...new Set(
+      rows
+        .map((row) => row.activity_id)
+        .filter(Boolean)
+    )
+  ];
+
+  if (!ids.length) return new Map();
+
+  const query = new URLSearchParams({
+    select: PRESENTATION_SELECT,
+    id: inFilter(ids),
+    visibility: "eq.published",
+    show_in_presentations: "eq.true",
+    published_at: "not.is.null"
+  });
+
+  const presentationRows = await request(
+    config,
+    "profile_activities",
+    query
+  );
+
+  return new Map(
+    presentationRows.map((row) => [row.id, row])
+  );
+}
+
 async function mapPublicAgendaRows(
   config,
   request,
@@ -263,7 +336,7 @@ async function mapPublicAgendaRows(
       isPublicOccurrence(row, today)
     );
 
-  const [activities, profiles] =
+  const [activities, profiles, presentations] =
     await Promise.all([
       resolveActivities(
         config,
@@ -271,6 +344,11 @@ async function mapPublicAgendaRows(
         publicRows
       ),
       resolveProfiles(
+        config,
+        request,
+        publicRows
+      ),
+      resolvePublicPresentations(
         config,
         request,
         publicRows
@@ -308,7 +386,8 @@ async function mapPublicAgendaRows(
         mapOccurrence(
           row,
           activity,
-          profile
+          profile,
+          presentations.get(row.activity_id)
         );
 
       if (

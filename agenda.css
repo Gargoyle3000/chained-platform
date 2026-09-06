@@ -226,6 +226,18 @@
   font-size: var(--font-meta);
 }
 
+.agenda-event-main .agenda-presentation-link {
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+}
+
+.agenda-presentation-link:hover,
+.agenda-presentation-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
 .agenda-event-main > p:last-child {
   margin: 0;
   font-size: var(--font-meta);
@@ -237,6 +249,10 @@
 
 .agenda-event-details p {
   margin: 0 0 14px;
+}
+
+.agenda-external {
+  color: var(--accent);
 }
 
 .agenda-empty {

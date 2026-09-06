@@ -23,7 +23,7 @@ function publicProfile() {
     publication_status: "published",
     published_at: "2026-01-01T00:00:00Z",
     show_works: true,
-    show_presentations: false,
+    show_presentations: true,
     show_agenda: true,
     show_cv: true,
     show_press: true
@@ -78,6 +78,17 @@ test("Agenda resolves a public occurrence through the safe source projection", a
       return [publicProfile()];
     }
 
+    if (resource === "profile_activities") {
+      return [{
+        id: ACTIVITY_ID,
+        owner_profile_id: PROFILE_ID,
+        external_url: "https://example.test/presentation-detail",
+        show_in_presentations: true,
+        visibility: "published",
+        published_at: "2026-12-01T00:00:00Z"
+      }];
+    }
+
     throw new Error(`Unexpected public Agenda resource: ${resource}`);
   }, "2026-09-04");
 
@@ -87,12 +98,51 @@ test("Agenda resolves a public occurrence through the safe source projection", a
   assert.equal(items[0].title, "HIDDEN PRESENTATION");
   assert.equal(items[0].venueName, "SOURCE VENUE");
   assert.equal(items[0].activity.id, ACTIVITY_ID);
-  assert.equal(requests.some(({ resource }) => resource === "profile_activities"), false);
+  assert.equal(items[0].externalUrl, "https://example.test/presentation-detail");
+  assert.equal(items[0].presentationHref, `presentation.html?id=${ACTIVITY_ID}`);
 
   const projectionRequest = requests.find(
     ({ resource }) => resource === "rpc/get_public_activity_source_contexts"
   );
   assert.equal(projectionRequest.query.get("target_activity_ids"), `{${ACTIVITY_ID}}`);
+
+  const presentationRequest = requests.find(
+    ({ resource }) => resource === "profile_activities"
+  );
+  assert.equal(presentationRequest.query.get("id"), `in.(${ACTIVITY_ID})`);
+  assert.equal(presentationRequest.query.get("show_in_presentations"), "eq.true");
+});
+
+test("Agenda leaves standalone or ineligible activity parents without a Presentation route", async () => {
+  const repository = createPublicAgendaRepository({}, async (_config, resource) => {
+    if (resource === "activity_occurrences") {
+      return [{
+        id: OCCURRENCE_ID,
+        owner_profile_id: PROFILE_ID,
+        activity_id: ACTIVITY_ID,
+        occurrence_type: "opening",
+        title_override: null,
+        start_date: "2027-01-02",
+        end_date: null,
+        start_time: null,
+        end_time: null,
+        time_zone: null,
+        venue_name_override: null,
+        city_override: null,
+        show_in_agenda: true,
+        visibility: "published",
+        published_at: "2026-12-01T00:00:00Z"
+      }];
+    }
+
+    if (resource === "rpc/get_public_activity_source_contexts") return [sourceContext()];
+    if (resource === "public_profiles") return [publicProfile({ show_presentations: false })];
+    if (resource === "profile_activities") return [];
+    throw new Error(`Unexpected public Agenda resource: ${resource}`);
+  }, "2026-09-04");
+
+  const [item] = await repository.listAgenda();
+  assert.equal(item.presentationHref, null);
 });
 
 test("automatic CV entries resolve through the safe source projection", async () => {

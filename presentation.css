@@ -59,7 +59,10 @@ body.presentation-page {
 .presentation-context p { white-space:pre-line; }
 .presentation-context a { color:var(--accent); }
 .presentation-works {
-  width: min(calc(100vw - (2 * var(--page-gutter))), 1280px);
+  --presentation-works-width: min(calc(100vw - (2 * var(--page-gutter))), 1280px);
+
+  width: var(--presentation-works-width);
+  margin-left: calc((100vw - var(--presentation-works-width)) / 2 - (2 * var(--page-gutter)));
 }
 .presentation-work-grid {
   display:grid;
@@ -81,6 +84,9 @@ body.presentation-page {
     padding-top: calc(var(--header-height) + 22px);
     padding-bottom: 80px;
   }
-  .presentation-works { width:100%; }
+  .presentation-works {
+    width:100%;
+    margin-left:0;
+  }
   .presentation-work-grid { grid-template-columns:1fr; gap:36px; }
 }

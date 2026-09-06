@@ -142,6 +142,7 @@ test("technical ownership is not public host context and participants render bef
     "participants are rendered before Works"
   );
   assert.match(css, /\.presentation-works \{[\s\S]*1280px/);
+  assert.match(css, /margin-left:\s*calc\(\(100vw - var\(--presentation-works-width\)\) \/ 2 - \(2 \* var\(--page-gutter\)\)\)/);
   assert.match(css, /grid-template-columns:repeat\(auto-fit,minmax\(min\(100%, 280px\),1fr\)\)/);
 });
 

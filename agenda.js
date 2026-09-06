@@ -122,6 +122,19 @@ function formatTimeRange(start, end) {
   return `${startValue}–${endValue}`;
 }
 
+function validExternalUrl(value) {
+  try {
+    const url = new URL(cleanText(value));
+
+    return ["http:", "https:"].includes(url.protocol) &&
+      Boolean(url.hostname)
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function createFilterButton(
   value,
   type,
@@ -249,7 +262,18 @@ function createEvent(item) {
   type.textContent =
     formatType(item.occurrenceType);
 
-  title.textContent = item.title;
+  if (item.presentationHref) {
+    const presentation =
+      document.createElement("a");
+
+    presentation.className =
+      "agenda-presentation-link";
+    presentation.href = item.presentationHref;
+    presentation.textContent = item.title;
+    title.append(presentation);
+  } else {
+    title.textContent = item.title;
+  }
 
   artist.href =
     `profile.html?slug=${encodeURIComponent(
@@ -303,6 +327,21 @@ function createEvent(item) {
     );
 
     details.append(line);
+  }
+
+  const externalUrl =
+    validExternalUrl(item.externalUrl);
+
+  if (externalUrl) {
+    const external =
+      document.createElement("a");
+
+    external.className = "agenda-external";
+    external.href = externalUrl;
+    external.target = "_blank";
+    external.rel = "noopener noreferrer";
+    external.textContent = "EXTERNAL LINK ↗";
+    details.append(external);
   }
 
   article.append(
