@@ -355,6 +355,14 @@
   font-size: var(--font-meta);
 }
 
+.archive-pdf-delivery {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 18px;
+  margin-top: 10px;
+}
+
 .archive-project-close {
   border: 0;
   padding: 0;
@@ -374,6 +382,7 @@
 .archive-all-works-label[hidden],
 .archive-project-context[hidden],
 .archive-select-status[hidden],
+.archive-pdf-delivery[hidden],
 .archive-project-context-actions [hidden] {
   display: none;
 }

@@ -8,6 +8,7 @@ test("Archive renders direct Project SELECT export only from active Project stat
   const [page, script] = await Promise.all([read("archive.html"), read("archive.js")]);
   assert.match(page, /archive-project-context-actions[\s\S]*archive-select-project[^>]*>\[ EXPORT CHAINED SELECT \]/);
   assert.match(page, /archive-select-status/);
+  assert.match(page, /id="archive-pdf-delivery"[\s\S]*id="archive-share-pdf"[\s\S]*\[ SAVE \/ SHARE PDF \][\s\S]*id="archive-download-pdf"[\s\S]*\[ DOWNLOAD PDF \]/);
   assert.doesNotMatch(page, /archive-select-images|>\[ SELECT IMAGES \]</);
   assert.match(page, /data-export-image-summary[\s\S]*data-export-image-cancel[\s\S]*\[ EXPORT SELECT \]/);
   assert.doesNotMatch(page, /CHAINED SELECT FILTERED|archive-select\.html/);
@@ -17,6 +18,9 @@ test("Archive renders direct Project SELECT export only from active Project stat
   assert.match(script, /currentProjectChainedSelectSource\(repository, project\.id\)/);
   assert.match(script, /createExportImageSelectionState\(projectSelectWorks\)/);
   assert.match(script, /onConfirm: \(\) => void runProjectChainedSelect\(project\)/);
+  assert.match(script, /createPdfDelivery/);
+  assert.match(script, /setProjectPdfDelivery\(result\.output\.bytes, result\.filename\)/);
+  assert.doesNotMatch(script, /downloadBlob\(/);
   assert.match(script, /repository\.listArchivedSelectWorks\(workIds\)/);
   assert.match(script, /\[ LOADING IMAGES \]/);
   assert.doesNotMatch(script, /writeChainedSelectSession|archive-select\.html|filterSelectButton/);

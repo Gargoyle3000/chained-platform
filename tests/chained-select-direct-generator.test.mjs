@@ -37,9 +37,8 @@ test("direct generator blocks an oversized fresh Project before fetching media",
   assert.equal(result.limit.workCount, 21);
 });
 
-test("direct generator creates one browser-local download after the real status stages", async () => {
+test("direct generator returns a ready browser-local PDF without triggering delivery", async () => {
   const stages = [];
-  const downloads = [];
   const page = () => ({ drawText() {}, drawImage() {} });
   const pdf = {
     registerFontkit() {},
@@ -55,7 +54,6 @@ test("direct generator creates one browser-local download after the real status 
     set src(value) { if (value) queueMicrotask(() => this.onload?.()); }
   }
   const document = {
-    body: { append(link) { downloads.push(link); } },
     createElement(tag) {
       if (tag === "a") return { click() {}, remove() {} };
       return { width: 0, height: 0, getContext: () => ({ fillRect() {}, drawImage() {} }), toBlob(callback) { callback(new Blob([new Uint8Array([1])], { type: "image/jpeg" })); } };
@@ -78,6 +76,6 @@ test("direct generator creates one browser-local download after the real status 
     }
   });
   assert.equal(result.status, "ready");
-  assert.equal(downloads.length, 1);
-  assert.deepEqual(stages, ["VALIDATING PUBLIC WORKS", "PREPARING 1 WORK / 1 IMAGE", "FETCHING PUBLIC IMAGES", "GENERATING PDF", "READY · DOWNLOAD COMPLETE"]);
+  assert.equal(result.filename, "project.pdf");
+  assert.deepEqual(stages, ["VALIDATING PUBLIC WORKS", "PREPARING 1 WORK / 1 IMAGE", "FETCHING PUBLIC IMAGES", "GENERATING PDF", "PDF READY"]);
 });

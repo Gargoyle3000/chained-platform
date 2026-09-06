@@ -15,6 +15,7 @@ import { generateProjectChainedSelect } from "./data/chained-select-direct-gener
 import { PortfolioExportError } from "./data/portfolio-export.mjs";
 import { createExportImageSelectionState } from "./data/export-image-selection-state.mjs";
 import { openExportImageSelection } from "./data/export-image-selection-ui.mjs";
+import { createPdfDelivery } from "./data/pdf-delivery.mjs";
 
 const page = document.querySelector(".archive-page");
 const grid = document.querySelector(".saved-grid");
@@ -38,6 +39,9 @@ const projectEditLink = document.querySelector(".archive-project-edit");
 const projectCloseButton = document.querySelector(".archive-project-close");
 const projectSelectButton = document.querySelector(".archive-select-project");
 const projectSelectStatus = document.querySelector(".archive-select-status");
+const projectPdfDeliveryRoot = document.querySelector("#archive-pdf-delivery");
+const projectSharePdfButton = document.querySelector("#archive-share-pdf");
+const projectDownloadPdfButton = document.querySelector("#archive-download-pdf");
 const imageDialog = document.querySelector("#archive-image-dialog");
 const viewStorageKey = "chained-archive-view";
 
@@ -54,7 +58,7 @@ let openProjectMenu = null;
 let openWorkManagementMenu = null;
 let openArchivePopover = null;
 let projectExportInProgress = false;
-let projectExportResetTimer = null;
+let projectPdfDelivery = null;
 let projectImageSelection = createExportImageSelectionState();
 let projectImageSelectionId = null;
 let projectSelectWorks = [];
@@ -487,6 +491,35 @@ function setProjectSelectStatus(message = "") {
   projectSelectStatus.hidden = !message;
 }
 
+function clearProjectPdfDelivery() {
+  projectPdfDelivery?.dispose();
+  projectPdfDelivery = null;
+  projectPdfDeliveryRoot.hidden = true;
+  projectSharePdfButton.hidden = true;
+}
+
+function setProjectPdfDelivery(data, filename) {
+  clearProjectPdfDelivery();
+  projectPdfDelivery = createPdfDelivery(data, { filename });
+  projectPdfDeliveryRoot.hidden = false;
+  projectSharePdfButton.hidden = !projectPdfDelivery.canShareFile;
+}
+
+async function shareProjectPdf() {
+  const result = await projectPdfDelivery?.share();
+  if (result?.status === "cancelled") setProjectSelectStatus("PDF READY");
+  else if (result?.status === "failed") setProjectSelectStatus("PDF READY · DOWNLOAD PDF IS AVAILABLE");
+}
+
+function downloadProjectPdf() {
+  try {
+    projectPdfDelivery?.download();
+    setProjectSelectStatus("PDF READY · DOWNLOAD STARTED");
+  } catch {
+    setProjectSelectStatus("PDF READY · DOWNLOAD PDF IS AVAILABLE");
+  }
+}
+
 function selectLimitMessage(limit) {
   if (limit.workCount > CHAINED_SELECT_MAX_WORKS) return `SELECT TOO LARGE · ${limit.workCount} WORKS · MAX ${CHAINED_SELECT_MAX_WORKS}`;
   return `SELECT TOO LARGE · ${limit.imageCount} IMAGES · MAX ${CHAINED_SELECT_MAX_IMAGES}`;
@@ -495,7 +528,7 @@ function selectLimitMessage(limit) {
 async function runProjectChainedSelect(project) {
   if (!project || projectExportInProgress) return;
   projectExportInProgress = true;
-  if (projectExportResetTimer) window.clearTimeout(projectExportResetTimer);
+  clearProjectPdfDelivery();
   setProjectSelectStatus("RESOLVING SELECTOR");
   renderProjects();
   try {
@@ -534,7 +567,7 @@ async function runProjectChainedSelect(project) {
     } else if (result.status === "limit") {
       setProjectSelectStatus(selectLimitMessage(result.limit));
     } else if (result.status === "ready") {
-      projectExportResetTimer = window.setTimeout(() => setProjectSelectStatus(), 4000);
+      setProjectPdfDelivery(result.output.bytes, result.filename);
     }
   } catch (error) {
     setProjectSelectStatus(error instanceof PortfolioExportError ? error.message : "PDF GENERATION FAILED");
@@ -615,6 +648,7 @@ function renderProjects() {
       onConfirm: () => void runProjectChainedSelect(project)
     });
   } else {
+    clearProjectPdfDelivery();
     projectSelectButton.onclick = null;
     projectImageSelectionId = null;
     projectSelectWorks = [];
@@ -675,6 +709,7 @@ async function selectProject(projectId, { history = "push" } = {}) {
   const nextProjectId = projectId === null
     ? null
     : projects.some((project) => project.id === projectId) ? projectId : null;
+  if (nextProjectId !== selectedProjectId) clearProjectPdfDelivery();
   selectedProjectId = nextProjectId;
   if (history === "push") updateProjectLocation(nextProjectId, "push");
   if (history === "replace") updateProjectLocation(nextProjectId, "replace");
@@ -750,6 +785,9 @@ async function initialiseArchive() {
   repository = resolved.repository;
   searchInput.addEventListener("input", renderWorks);
   projectCloseButton.addEventListener("click", () => void selectProject(null));
+  projectSharePdfButton.addEventListener("click", () => void shareProjectPdf());
+  projectDownloadPdfButton.addEventListener("click", downloadProjectPdf);
+  window.addEventListener("beforeunload", clearProjectPdfDelivery);
   window.addEventListener("popstate", () => {
     void selectProject(resolveArchiveProjectId(window.location.search, projects), { history: "none" });
   });

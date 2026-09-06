@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderPortfolioPdf,
     PortfolioExportError
   } = await import("./data/portfolio-export.mjs");
-  const { downloadBlob } = await import("./data/browser-download.mjs");
+  const { createPdfDelivery } = await import("./data/pdf-delivery.mjs");
   const { createPortfolioSelectionState } = await import("./data/portfolio-selection-state.mjs");
   const { applyExportImageSelection, createExportImageSelectionState } = await import("./data/export-image-selection-state.mjs");
   const { openExportImageSelection } = await import("./data/export-image-selection-ui.mjs");
@@ -27,6 +27,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const statusElement = document.querySelector("#portfolio-export-status");
   const errorElement = document.querySelector("#portfolio-export-error");
   const imageDialog = document.querySelector("#portfolio-image-dialog");
+  const pdfDeliveryRoot = document.querySelector("#portfolio-pdf-delivery");
+  const sharePdfButton = document.querySelector("#portfolio-share-pdf");
+  const downloadPdfButton = document.querySelector("#portfolio-download-pdf");
   const fontUrl = "assets/fonts/CascadiaCode-Regular.ttf";
   let selection = createPortfolioSelectionState();
   let imageSelection = createExportImageSelectionState();
@@ -36,6 +39,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let fontBytesPromise = null;
   const idleExportLabel = "[ EXPORT PORTFOLIO ]";
   let progress = 0;
+  let pdfDelivery = null;
 
   function setError(message = "") {
     errorElement.textContent = message;
@@ -44,6 +48,35 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function setStatus(message = "") {
     statusElement.textContent = message;
+  }
+
+  function clearPdfDelivery() {
+    pdfDelivery?.dispose();
+    pdfDelivery = null;
+    pdfDeliveryRoot.hidden = true;
+    sharePdfButton.hidden = true;
+  }
+
+  function setPdfDelivery(data, filename) {
+    clearPdfDelivery();
+    pdfDelivery = createPdfDelivery(data, { filename });
+    pdfDeliveryRoot.hidden = false;
+    sharePdfButton.hidden = !pdfDelivery.canShareFile;
+  }
+
+  async function sharePdf() {
+    const result = await pdfDelivery?.share();
+    if (result?.status === "cancelled") setStatus("PDF READY");
+    else if (result?.status === "failed") setStatus("PDF READY · DOWNLOAD PDF IS AVAILABLE");
+  }
+
+  function downloadPdf() {
+    try {
+      pdfDelivery?.download();
+      setStatus("PDF READY · DOWNLOAD STARTED");
+    } catch {
+      setStatus("PDF READY · DOWNLOAD PDF IS AVAILABLE");
+    }
   }
 
   function setBusy(isBusy) {
@@ -276,6 +309,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!window.PDFLib || !window.fontkit) return setError("PDF GENERATION IS CURRENTLY UNAVAILABLE");
 
     let sourceCache = null;
+    clearPdfDelivery();
     setBusy(true);
     beginExportProgress();
     try {
@@ -311,10 +345,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
         }
       });
-      downloadBlob(result.bytes, { filename: portfolioFilename(artist.name, titleInput.value) });
+      setPdfDelivery(result.bytes, portfolioFilename(artist.name, titleInput.value));
       progress = 100;
       generateButton.textContent = "[ EXPORTING… 100% ]";
-      setStatus(`PORTFOLIO READY · ${(result.size / (1024 * 1024)).toFixed(1)} MB · ${result.tier.id.toUpperCase()}`);
+      setStatus(`PDF READY · ${(result.size / (1024 * 1024)).toFixed(1)} MB · ${result.tier.id.toUpperCase()}`);
     } catch (error) {
       setStatus();
       setError(error instanceof PortfolioExportError ? error.message : "PDF GENERATION FAILED");
@@ -342,6 +376,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   titlePage.addEventListener("change", updateTitleControl);
   generateButton.addEventListener("click", openPortfolioImagePicker);
+  sharePdfButton.addEventListener("click", () => void sharePdf());
+  downloadPdfButton.addEventListener("click", downloadPdf);
 
   try {
     const selected = await getWorkRepository();
@@ -375,5 +411,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     generateButton.disabled = true;
   }
 
-  window.addEventListener("beforeunload", () => repository?.media?.urls.revokeAll());
+  window.addEventListener("beforeunload", () => { clearPdfDelivery(); repository?.media?.urls.revokeAll(); });
 });

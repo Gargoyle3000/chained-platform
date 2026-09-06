@@ -27,6 +27,7 @@ test("Portfolio export owns progress at its action and resets safely", async () 
   ]);
   assert.match(page, /id="portfolio-generate"[^>]*>\[ EXPORT PORTFOLIO \]/);
   assert.match(page, /id="portfolio-export-status"/);
+  assert.match(page, /id="portfolio-pdf-delivery"[\s\S]*id="portfolio-share-pdf"[\s\S]*\[ SAVE \/ SHARE PDF \][\s\S]*id="portfolio-download-pdf"[\s\S]*\[ DOWNLOAD PDF \]/);
   assert.doesNotMatch(page, /portfolio-export-status[\s\S]*portfolio-export-section/);
   assert.match(script, /generateButton\.disabled = isBusy/);
   assert.match(script, /\[ EXPORTING… \$\{progress\}% \]/);
@@ -37,6 +38,11 @@ test("Portfolio export owns progress at its action and resets safely", async () 
   assert.match(page, /data-export-image-summary[\s\S]*data-export-image-cancel[\s\S]*\[ EXPORT PORTFOLIO \]/);
   assert.match(script, /createExportImageSelectionState\(works\)/);
   assert.match(script, /applyExportImageSelection\(selected, imageSelection\)/);
+  assert.match(script, /createPdfDelivery/);
+  assert.match(script, /setPdfDelivery\(result\.bytes, portfolioFilename/);
+  assert.match(script, /PDF READY/);
+  assert.doesNotMatch(script, /downloadBlob\(/);
+  assert.doesNotMatch(script, /window\.open|window\.location|target\s*=\s*["']_blank/);
   assert.match(script, /function openPortfolioImagePicker\(\)[\s\S]*openExportImageSelection\(imageDialog, selected, imageSelection/);
   assert.match(script, /resolveThumbnail:\s*\(image\)\s*=>\s*repository\.media\.privatePreview\(image\)/);
   assert.doesNotMatch(script, /thumbnail\.src\s*=\s*image\.privatePath/);

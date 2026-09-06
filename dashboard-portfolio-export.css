@@ -126,6 +126,17 @@
   font-size: var(--font-meta);
 }
 
+.portfolio-pdf-delivery {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 18px;
+}
+
+.portfolio-pdf-delivery[hidden] {
+  display: none;
+}
+
 .portfolio-export-empty {
   margin: 18px 0;
   font-size: var(--font-meta);

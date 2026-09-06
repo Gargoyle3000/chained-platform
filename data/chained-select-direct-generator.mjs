@@ -1,4 +1,3 @@
-import { downloadBlob } from "./browser-download.mjs";
 import { createPortfolioSourceCache, generateWithinBudget, PortfolioExportError } from "./portfolio-export.mjs";
 import { chainedSelectFilename, createChainedSelectPlan, renderChainedSelectPdf } from "./chained-select-export.mjs";
 import { chainedSelectLimit, revalidateProjectChainedSelect } from "./chained-select-direct-export.mjs";
@@ -97,9 +96,8 @@ export async function generateProjectChainedSelect({
         });
       }
     });
-    downloadBlob(output.bytes, { filename: chainedSelectFilename(project?.title), documentRef: environment.document, urlApi: environment.URL, setTimeoutFn: environment.setTimeout });
-    setStatus("READY · DOWNLOAD COMPLETE");
-    return Object.freeze({ status: "ready", output, works: selectedWorks });
+    setStatus("PDF READY");
+    return Object.freeze({ status: "ready", output, filename: chainedSelectFilename(project?.title), works: selectedWorks });
   } finally {
     try {
       await cache.clear();
