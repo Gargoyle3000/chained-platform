@@ -11,12 +11,18 @@ test("Agenda editor retains the draft-first state machine and exposes its explic
 
   assert.match(page, /id="agenda-publication"[\s\S]*type="button"/);
   assert.match(page, /\[ PUBLISH \]/);
+  assert.match(page, /id="agenda-visibility-note"/);
+  assert.match(page, /name="show-in-agenda"\s+checked/);
   assert.match(script, /publicationButton\.textContent = published[\s\S]*\[ UNPUBLISH \][\s\S]*\[ PUBLISH \]/);
   assert.match(script, /await saveAgendaItem\(\{ publish: true \}\)/);
   assert.match(script, /saved = await repository\.publishAgendaItem\([\s\S]*saved\.id,[\s\S]*saved\.updatedAt/);
   assert.match(script, /await repository\.unpublishAgendaItem\(/);
   assert.match(repository, /\.update\(\{ visibility: "published" \}\)/);
   assert.match(repository, /\.update\(\{ visibility: "draft" \}\)/);
+  assert.match(script, /PUBLISHED · HIDDEN FROM AGENDA/);
+  assert.match(script, /PUBLISHING WILL NOT SHOW THIS ITEM IN AGENDA/);
+  assert.match(script, /showInAgenda = item \? item\.showInAgenda !== false : true/);
+  assert.doesNotMatch(script, /show_in_agenda\s*=/);
 });
 
 test("Presentation Program saves omit the independent Agenda visibility flag", async () => {

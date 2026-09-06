@@ -16,6 +16,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const statusElement =
     document.querySelector("#agenda-form-status");
 
+  const visibilityNoteElement =
+    document.querySelector("#agenda-visibility-note");
+
   const headingElement =
     document.querySelector("#agenda-editor-heading");
 
@@ -208,6 +211,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     deleteButton.hidden = !editing;
 
     const published = item?.visibility === "published";
+    const showInAgenda = item ? item.showInAgenda !== false : true;
+    visibilityNoteElement.textContent = published && !showInAgenda
+      ? "PUBLISHED · HIDDEN FROM AGENDA"
+      : !published && item && !showInAgenda
+      ? "PUBLISHING WILL NOT SHOW THIS ITEM IN AGENDA"
+      : "";
+    visibilityNoteElement.hidden = !visibilityNoteElement.textContent;
     publicationButton.textContent = published
       ? "[ UNPUBLISH ]"
       : "[ PUBLISH ]";
@@ -484,6 +494,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     await saveAgendaItem({ publish: true });
+  });
+
+  field("show-in-agenda").addEventListener("change", () => {
+    updateEditorState({ visibility: currentVisibility, showInAgenda: field("show-in-agenda").checked });
   });
 
   form.addEventListener("submit", async (event) => {
