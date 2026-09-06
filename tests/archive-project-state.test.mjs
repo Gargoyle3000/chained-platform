@@ -7,7 +7,9 @@ import {
   orderedProjectWorks,
   projectChainedSelectSource,
   projectSelectWorkIds,
-  resolveArchiveProjectId
+  resolveArchiveProjectId,
+  toggleArchiveProjectId,
+  toggleArchiveTagId
 } from "../data/archive-project-state.mjs";
 
 const works = [
@@ -97,4 +99,17 @@ test("Archive Project URL state preserves unrelated parameters and clears only P
   const selected = archiveProjectLocation("https://chained.test/archive.html?view=grid#works", projectId);
   assert.equal(selected, `/archive.html?view=grid&project=${projectId}#works`);
   assert.equal(archiveProjectLocation(`https://chained.test${selected}`, null), "/archive.html?view=grid#works");
+});
+
+test("Archive Project selection toggles the active Project off without accepting an unknown Project", () => {
+  const projects = [{ id: "project-a" }, { id: "project-b" }];
+  assert.equal(toggleArchiveProjectId(null, "project-a", projects), "project-a");
+  assert.equal(toggleArchiveProjectId("project-a", "project-a", projects), null);
+  assert.equal(toggleArchiveProjectId("project-a", "project-b", projects), "project-b");
+  assert.equal(toggleArchiveProjectId("project-a", "unknown", projects), null);
+});
+
+test("Archive Tag selection toggles only the selected Tag", () => {
+  assert.deepEqual([...toggleArchiveTagId(new Set(["tag-a", "tag-b"]), "tag-a")], ["tag-b"]);
+  assert.deepEqual([...toggleArchiveTagId(new Set(["tag-a"]), "tag-b")], ["tag-a", "tag-b"]);
 });

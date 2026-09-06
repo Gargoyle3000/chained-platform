@@ -7,7 +7,9 @@ import {
   filterArchiveProjectWorks,
   orderedProjectWorks,
   projectSelectWorkIds,
-  resolveArchiveProjectId
+  resolveArchiveProjectId,
+  toggleArchiveProjectId,
+  toggleArchiveTagId
 } from "./data/archive-project-state.mjs";
 import { calculateAnchoredPopoverPosition } from "./data/anchored-popover.mjs";
 import { CHAINED_SELECT_MAX_IMAGES, CHAINED_SELECT_MAX_WORKS, resolveChainedSelectSelector } from "./data/chained-select-direct-export.mjs";
@@ -184,7 +186,8 @@ function createSupergridManagement(work) {
   close.setAttribute("aria-label", "Close Work management menu");
   close.addEventListener("click", () => closeWorkManagementMenu(true));
 
-  toggle.addEventListener("click", () => {
+  toggle.addEventListener("click", (event) => {
+    event.stopPropagation();
     const isOpen = menu.dataset.open === "true";
     closeWorkManagementMenu();
     if (isOpen) return;
@@ -192,6 +195,8 @@ function createSupergridManagement(work) {
     toggle.setAttribute("aria-expanded", "true");
     openWorkManagementMenu = { menu, toggle };
   });
+
+  menu.addEventListener("click", (event) => event.stopPropagation());
 
   menu.append(close);
   return { menu, toggle };
@@ -498,6 +503,15 @@ function clearProjectPdfDelivery() {
   projectSharePdfButton.hidden = true;
 }
 
+function clearProjectExportState() {
+  clearProjectPdfDelivery();
+  projectImageSelection = createExportImageSelectionState();
+  projectImageSelectionId = null;
+  projectSelectWorks = [];
+  projectImageSelectionLoading = false;
+  setProjectSelectStatus();
+}
+
 function setProjectPdfDelivery(data, filename) {
   clearProjectPdfDelivery();
   projectPdfDelivery = createPdfDelivery(data, { filename });
@@ -605,7 +619,7 @@ function renderTags() {
     name.classList.toggle("is-active", active);
     name.setAttribute("aria-pressed", String(active));
     name.addEventListener("click", () => {
-      if (activeTagIds.has(tag.id)) activeTagIds.delete(tag.id); else activeTagIds.add(tag.id);
+      activeTagIds = toggleArchiveTagId(activeTagIds, tag.id);
       renderTags(); renderWorks();
     });
     const remove = document.createElement("button");
@@ -648,11 +662,8 @@ function renderProjects() {
       onConfirm: () => void runProjectChainedSelect(project)
     });
   } else {
-    clearProjectPdfDelivery();
+    clearProjectExportState();
     projectSelectButton.onclick = null;
-    projectImageSelectionId = null;
-    projectSelectWorks = [];
-    setProjectSelectStatus();
   }
   projectList.replaceChildren();
   projects.forEach((entry) => {
@@ -662,7 +673,7 @@ function renderProjects() {
     button.textContent = entry.title;
     button.classList.toggle("is-active", entry.id === selectedProjectId);
     button.setAttribute("aria-pressed", String(entry.id === selectedProjectId));
-    button.addEventListener("click", () => void selectProject(entry.id));
+    button.addEventListener("click", () => void selectProject(toggleArchiveProjectId(selectedProjectId, entry.id, projects)));
     projectList.append(button);
   });
 }

@@ -26,6 +26,22 @@ export function archiveProjectLocation(href, projectId) {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
+/** Return the next owned Project selection; selecting the current Project clears it. */
+export function toggleArchiveProjectId(currentProjectId, clickedProjectId, projects) {
+  if (typeof clickedProjectId !== "string" || !projects.some((project) => project?.id === clickedProjectId)) {
+    return null;
+  }
+  return currentProjectId === clickedProjectId ? null : clickedProjectId;
+}
+
+/** Toggle one tag while preserving any unrelated active Archive filters. */
+export function toggleArchiveTagId(activeTagIds, tagId) {
+  const next = new Set(activeTagIds);
+  if (next.has(tagId)) next.delete(tagId);
+  else next.add(tagId);
+  return next;
+}
+
 export function orderedProjectWorks(works, projectItems, projectId) {
   if (!projectId) return [...works];
   const worksById = new Map(works.map((work) => [work.id, work]));

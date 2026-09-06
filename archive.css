@@ -769,6 +769,7 @@
 .archive-page[data-view="single"] .saved-grid {
   columns: 1;
   max-width: 1100px;
+  margin-inline: auto;
 }
 
 .archive-page[data-view="single"] .saved-work {
