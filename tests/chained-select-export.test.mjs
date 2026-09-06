@@ -55,7 +55,7 @@ test("CHAINED Select uses Select-specific PDF budget failure copy", async () => 
 
 test("CHAINED Select renders document provenance and artist attribution on every image page", async () => {
   const drawn = [];
-  const page = () => ({ drawText: (value) => drawn.push(value), drawImage() {} });
+  const page = () => ({ drawText: (value, options) => drawn.push({ value, color: options?.color }), drawImage() {} });
   const pdf = {
     registerFontkit() {},
     embedFont: async () => ({ widthOfTextAtSize: (value) => value.length * 6 }),
@@ -65,7 +65,7 @@ test("CHAINED Select renders document provenance and artist attribution on every
     save: async () => new Uint8Array([1])
   };
   await renderChainedSelectPdf({
-    PDFLib: { PDFDocument: { create: async () => pdf }, rgb: () => ({}) },
+    PDFLib: { PDFDocument: { create: async () => pdf }, rgb: (r, g, b) => `${r},${g},${b}` },
     fontkit: {},
     fontBytes: new Uint8Array([1]),
     plan: createChainedSelectPlan([work("one", "ARTIST A")]),
@@ -74,9 +74,13 @@ test("CHAINED Select renders document provenance and artist attribution on every
     tier: { id: "test" },
     loadPreparedImage: async () => ({ mimeType: "image/jpeg", bytes: new Uint8Array([1]) })
   });
-  assert.ok(drawn.includes("<CHAINED>"));
-  assert.ok(drawn.includes("SELECT"));
-  assert.ok(drawn.includes("SELECTED BY CURATOR"));
-  assert.ok(drawn.includes("01A · ARTIST A"));
-  assert.ok(drawn.includes("01B · ARTIST A"));
+  const values = drawn.map((entry) => entry.value);
+  assert.ok(values.includes("<CHAINED>"));
+  assert.ok(values.includes("SELECT"));
+  assert.ok(values.includes("SELECTED BY "));
+  assert.ok(values.includes("CURATOR"));
+  assert.ok(values.includes("01A · "));
+  assert.ok(values.includes("01B · "));
+  assert.equal(drawn.find((entry) => entry.value === "<CHAINED>").color, "0,0.831372549,0.133333333");
+  assert.equal(drawn.find((entry) => entry.value === "CURATOR").color, "0,0.831372549,0.133333333");
 });

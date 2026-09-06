@@ -10,6 +10,8 @@ function text(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+const CHAINED_GREEN = "#00D422";
+
 export function createChainedSelectPlan(works = []) {
   return createPortfolioPlan(works);
 }
@@ -61,8 +63,18 @@ export async function renderChainedSelectPdf({
     tier,
     loadPreparedImage,
     titlePageLines: ["<CHAINED>", "SELECT", text(title) || "UNTITLED SELECT", `SELECTED BY ${text(selectorName)}`],
-    imagePageCaption: (entry) => `${entry.reference} · ${text(entry.work.artistName) || "ARTIST"}`,
+    accentColor: CHAINED_GREEN,
+    titlePageTextColor: (value, index, black, accent) => index === 0 ? accent : black,
+    titlePageLineParts: (value, index, black, accent) => index === 3 ? [
+      { text: "SELECTED BY ", color: black },
+      { text: text(selectorName), color: accent }
+    ] : null,
+    imagePageCaptionParts: (entry, black, accent) => [
+      { text: `${entry.reference} · `, color: black },
+      { text: text(entry.work.artistName) || "ARTIST", color: accent }
+    ],
     indexHeading: "<CHAINED> SELECT",
-    metadataLines: chainedSelectMetadataLines
+    metadataLines: chainedSelectMetadataLines,
+    indexLineColor: (line, entry, black, accent) => line === (text(entry.work.artistName) || "ARTIST") ? accent : black
   });
 }

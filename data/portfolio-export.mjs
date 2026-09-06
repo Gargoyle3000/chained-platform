@@ -408,9 +408,15 @@ export async function renderPortfolioPdf({
   tier,
   loadPreparedImage,
   titlePageLines = null,
+  titlePageLineParts = null,
   imagePageCaption = (entry) => entry.reference,
+  imagePageCaptionParts = null,
   indexHeading = "INDEX",
-  metadataLines = portfolioMetadataLines
+  metadataLines = portfolioMetadataLines,
+  accentColor = null,
+  titlePageTextColor = () => null,
+  imagePageCaptionColor = () => null,
+  indexLineColor = () => null
 }) {
   if (!PDFLib?.PDFDocument || !fontkit || !fontBytes || !plan?.works?.length || typeof loadPreparedImage !== "function") {
     throw new PortfolioExportError("PDF GENERATION IS UNAVAILABLE");
@@ -421,6 +427,7 @@ export async function renderPortfolioPdf({
   pdf.registerFontkit(fontkit);
   const font = await pdf.embedFont(fontBytes, { subset: true });
   const black = rgb(0, 0, 0);
+  const accent = accentColor ? rgb(0, 0.831372549, 0.133333333) : black;
   const margin = 54;
   const contentWidth = A4_PAGE.width - margin * 2;
   const contentHeight = A4_PAGE.height - margin * 2;
@@ -431,8 +438,16 @@ export async function renderPortfolioPdf({
       let titleY = A4_PAGE.height / 2 + 44;
       titlePageLines.filter(Boolean).forEach((value, index) => {
         const size = index < 2 ? 18 : 12;
+        const parts = typeof titlePageLineParts === "function" ? titlePageLineParts(value, index, black, accent) : null;
+        if (Array.isArray(parts) && parts.length) {
+          let lineX = margin;
+          parts.forEach((part) => { const partValue = typeof part?.text === "string" ? part.text : ""; if (!partValue.trim()) return; page.drawText(partValue, { x: lineX, y: titleY, size, font, color: part.color || black }); lineX += font.widthOfTextAtSize(partValue, size); });
+          titleY -= index < 2 ? 27 : 20;
+          titleY -= 8;
+          return;
+        }
         wrapText(value, font, size, contentWidth).forEach((line) => {
-          page.drawText(line, { x: margin, y: titleY, size, font, color: black });
+          page.drawText(line, { x: margin, y: titleY, size, font, color: titlePageTextColor(value, index, black, accent) || black });
           titleY -= index < 2 ? 27 : 20;
         });
         titleY -= 8;
@@ -464,7 +479,13 @@ export async function renderPortfolioPdf({
       width: fitted.width,
       height: fitted.height
     });
-    page.drawText(text(imagePageCaption(imagePage)) || imagePage.reference, { x: margin, y: margin - 18, size: 9, font, color: black });
+    const captionParts = typeof imagePageCaptionParts === "function" ? imagePageCaptionParts(imagePage, black, accent) : null;
+    if (Array.isArray(captionParts) && captionParts.length) {
+      let captionX = margin;
+      captionParts.forEach((part) => { const value = typeof part?.text === "string" ? part.text : ""; if (!value.trim()) return; page.drawText(value, { x: captionX, y: margin - 18, size: 9, font, color: part.color || black }); captionX += font.widthOfTextAtSize(value, 9) + 4; });
+    } else {
+      page.drawText(text(imagePageCaption(imagePage)) || imagePage.reference, { x: margin, y: margin - 18, size: 9, font, color: imagePageCaptionColor(imagePage, black, accent) || black });
+    }
   }
 
   let indexPage = null;
@@ -483,7 +504,7 @@ export async function renderPortfolioPdf({
     indexPage.drawText(entry.number, { x: margin, y: cursor, size: 10, font, color: black });
     let lineY = cursor;
     lineGroups.forEach((lines) => lines.forEach((line) => {
-      indexPage.drawText(line, { x: margin + 42, y: lineY, size: 10, font, color: black });
+      indexPage.drawText(line, { x: margin + 42, y: lineY, size: 10, font, color: indexLineColor(line, entry, black, accent) || black });
       lineY -= 14;
     }));
     cursor = lineY - 14;
