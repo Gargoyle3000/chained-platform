@@ -335,7 +335,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       title: "SELECT IMAGES",
       onChange: renderComposition,
       onConfirm: () => void generatePortfolioFromPicker(),
-      resolveThumbnail: (image) => repository.media.privatePreview(image)
+      resolveThumbnail: (image) => repository.media.privatePreview(image),
+      disposeThumbnail: (url) => repository.media.urls.revoke(url)
     });
   }
 
