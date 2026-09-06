@@ -37,6 +37,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const saveButton =
     document.querySelector(".agenda-form-save");
 
+  const publicationButton =
+    document.querySelector("#agenda-publication");
+
   let repository;
   let currentAgendaItemId = null;
   let expectedUpdatedAt = null;
@@ -204,12 +207,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     deleteButton.hidden = !editing;
 
+    const published = item?.visibility === "published";
+    publicationButton.textContent = published
+      ? "[ UNPUBLISH ]"
+      : "[ PUBLISH ]";
+
     if (editing) {
       ownerSelect.disabled = true;
       activitySelect.disabled = true;
 
       saveButton.textContent =
-        item.visibility === "published"
+        published
           ? "[ SAVE CHANGES ]"
           : "[ SAVE DRAFT ]";
     } else {
@@ -347,9 +355,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   });
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
+  async function saveAgendaItem({ publish = false } = {}) {
     setError();
     setStatus();
 
@@ -359,7 +365,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       record = readRecord();
       validateRecord(record);
 
-      if (currentVisibility === "published") {
+      if (publish || currentVisibility === "published") {
         validatePublishedRecord(record);
       }
     } catch (error) {
@@ -375,15 +381,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     saveButton.disabled = true;
+    publicationButton.disabled = true;
 
     setStatus(
-      currentVisibility === "published"
+      publish
+        ? "SAVING BEFORE PUBLICATION"
+        : currentVisibility === "published"
         ? "SAVING CHANGES"
         : "SAVING DRAFT"
     );
 
     try {
-      const saved = currentAgendaItemId
+      let saved = currentAgendaItemId
         ? await repository.updateAgendaItem(
             record,
             expectedUpdatedAt
@@ -392,6 +401,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             record,
             ownerProfileId
           );
+
+      if (publish) {
+        setStatus("PUBLISHING AGENDA ITEM");
+        saved = await repository.publishAgendaItem(
+          saved.id,
+          saved.updatedAt
+        );
+      }
 
       currentAgendaItemId = saved.id;
       expectedUpdatedAt = saved.updatedAt;
@@ -416,7 +433,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
 
       setStatus(
-        saved.visibility === "published"
+        publish
+          ? "AGENDA ITEM PUBLISHED"
+          : saved.visibility === "published"
           ? "CHANGES SAVED"
           : "DRAFT SAVED"
       );
@@ -429,7 +448,47 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
     } finally {
       saveButton.disabled = false;
+      publicationButton.disabled = false;
     }
+  }
+
+  publicationButton.addEventListener("click", async () => {
+    if (currentVisibility === "published") {
+      setError();
+      setStatus("UNPUBLISHING AGENDA ITEM");
+      publicationButton.disabled = true;
+      saveButton.disabled = true;
+
+      try {
+        const saved = await repository.unpublishAgendaItem(
+          currentAgendaItemId,
+          expectedUpdatedAt
+        );
+
+        expectedUpdatedAt = saved.updatedAt;
+        currentVisibility = saved.visibility;
+        populateForm(saved);
+        updateEditorState(saved);
+        setStatus("AGENDA ITEM RETURNED TO DRAFT");
+      } catch (error) {
+        setStatus();
+        setError(
+          error?.message ||
+          "AGENDA ITEM STATUS COULD NOT BE CHANGED"
+        );
+      } finally {
+        publicationButton.disabled = false;
+        saveButton.disabled = false;
+      }
+      return;
+    }
+
+    await saveAgendaItem({ publish: true });
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await saveAgendaItem();
   });
 
   try {

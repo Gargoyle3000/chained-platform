@@ -335,6 +335,19 @@ try {
     update public.profile_activities
        set external_url = 'javascript:alert(1)'
      where id = '${unsafePresentationId}'::uuid;
+
+    insert into public.presentation_participants (
+      presentation_id, linked_profile_id, display_name, position
+    ) values (
+      '${presentationId}'::uuid, '${profileIds[0]}'::uuid,
+      'PUBLIC TEST ARTIST 1', 0
+    );
+
+    insert into public.presentation_works (
+      presentation_id, work_id, position, status, decided_at
+    ) values
+      ('${presentationId}'::uuid, '${workIds[0]}'::uuid, 0, 'accepted', now()),
+      ('${presentationId}'::uuid, '${workIds[1]}'::uuid, 1, 'accepted', now());
   `);
 
   stage = "creating generated local Storage fixtures";
@@ -449,18 +462,24 @@ try {
   await navigate(`presentation.html?id=${encodeURIComponent(presentationId)}`, "document.querySelector('.presentation-detail h1')?.textContent === 'PUBLIC PRESENTATION'");
   const browserPresentationState = await evaluate(`(() => ({
     title: document.querySelector('.presentation-detail h1')?.textContent,
-    artistHref: document.querySelector('.presentation-artist')?.getAttribute('href'),
+    participantHref: document.querySelector('.presentation-context a')?.getAttribute('href'),
     backHref: document.querySelector('.presentation-back')?.getAttribute('href'),
     description: document.querySelector('.presentation-description')?.textContent,
     externalHref: document.querySelector('.presentation-external')?.getAttribute('href'),
-    externalRel: document.querySelector('.presentation-external')?.getAttribute('rel')
+    externalRel: document.querySelector('.presentation-external')?.getAttribute('rel'),
+    headings: [...document.querySelectorAll('.presentation-detail > section > h2')].map((heading) => heading.textContent),
+    participantLinks: [...document.querySelectorAll('.presentation-context a')].filter((link) => link.textContent === 'PUBLIC TEST ARTIST 1').length,
+    workCount: document.querySelectorAll('.presentation-work-grid article').length
   }))()`);
   record("Presentation deep link renders the matching public record", browserPresentationState.title === "PUBLIC PRESENTATION"
-    && browserPresentationState.artistHref === `profile.html?slug=${slugs[0]}`
+    && browserPresentationState.participantHref === `profile.html?slug=${slugs[0]}`
     && browserPresentationState.backHref === `profile-presentations.html?slug=${slugs[0]}`
     && browserPresentationState.description === "PUBLIC PRESENTATION DESCRIPTION"
     && browserPresentationState.externalHref === "https://example.test/presentation"
     && browserPresentationState.externalRel === "noopener noreferrer");
+  record("Presentation renders a technical owner once as a participant before its public Works", browserPresentationState.headings.join(",") === "PARTICIPANTS,WORKS"
+    && browserPresentationState.participantLinks === 1
+    && browserPresentationState.workCount === 2);
 
   stage = "rendering a Presentation with an unsafe external URL in local mode";
   await navigate(`presentation.html?id=${encodeURIComponent(unsafePresentationId)}`, "document.querySelector('.presentation-detail h1')?.textContent === 'UNSAFE URL PRESENTATION'");
@@ -469,6 +488,7 @@ try {
   stage = "rendering a Presentation with no optional context in local mode";
   await navigate(`presentation.html?id=${encodeURIComponent(minimalPresentationId)}`, "document.querySelector('.presentation-detail h1')?.textContent === 'MINIMAL PRESENTATION'");
   record("absent optional Presentation context does not render placeholders", await evaluate("document.querySelector('.presentation-description, .presentation-external') === null"));
+  record("technical owner without a participant is not rendered as a public host", await evaluate("document.querySelector('.presentation-host, .presentation-artist') === null && !document.body.innerText.includes('PRESENTED BY')"));
 
   stage = "rendering an unavailable Presentation deep link in local mode";
   await navigate(`presentation.html?id=${encodeURIComponent(privatePresentationId)}`, "document.querySelector('.presentation-detail h1')?.textContent === 'PRESENTATION NOT AVAILABLE'");
@@ -514,13 +534,20 @@ try {
     const presentationLayout = await evaluate(`(() => {
       const header = document.querySelector('.site-header')?.getBoundingClientRect();
       const title = document.querySelector('.presentation-detail h1')?.getBoundingClientRect();
+      const works = [...document.querySelectorAll('.presentation-work-grid article')]
+        .map((work) => work.getBoundingClientRect());
       return {
         overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
         titleTop: title?.top || 0,
-        headerBottom: header?.bottom || 0
+        headerBottom: header?.bottom || 0,
+        workColumns: new Set(works.map((work) => Math.round(work.left))).size,
+        workCount: works.length
       };
     })()`);
-    record(`responsive Presentation detail ${width}`, !presentationLayout.overflow && presentationLayout.titleTop >= presentationLayout.headerBottom - 1);
+    record(`responsive Presentation detail ${width}`, !presentationLayout.overflow
+      && presentationLayout.titleTop >= presentationLayout.headerBottom - 1
+      && presentationLayout.workCount === 2
+      && (width === 1440 ? presentationLayout.workColumns > 1 : presentationLayout.workColumns === 1));
   }
 
   process.stdout.write(JSON.stringify({ ok: true, assertions: outcomes.length }));

@@ -49,6 +49,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const workParticipants = document.querySelector("#presentation-work-participants");
   const workState = document.querySelector("#presentation-work-state");
   const workGrid = document.querySelector("#presentation-work-grid");
+  const workProfileSearchForm = document.querySelector("#presentation-work-profile-search");
+  const workProfileSearchInput = workProfileSearchForm?.querySelector('[name="work-profile-search"]');
+  const workProfileSearchResults = document.querySelector("#presentation-work-profile-results");
   const programSection = document.querySelector("#presentation-program-section");
   const programList = document.querySelector("#presentation-program-list");
   const programAddForm = document.querySelector("#presentation-program-add");
@@ -66,7 +69,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   let managedProfiles = [];
   let currentPresentation = null;
   let isOwnerManager = false;
-  let selectedWorkParticipantProfileId = null;
+  let selectedWorkProfileId = null;
+  let selectedWorkProfile = null;
   let publicProfileRepository = null;
 
   function field(name) {
@@ -345,7 +349,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return association.status === "accepted" ? "ADDED" : association.status.toUpperCase();
   }
 
-  async function renderSelectedParticipantWorks(participant, associations) {
+  async function renderSelectedProfileWorks(profile, associations) {
     workState.textContent = "LOADING PUBLIC WORKS";
     workGrid.replaceChildren();
 
@@ -355,7 +359,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         publicProfileRepository = publicRuntime.repository;
       }
       const result = await publicProfileRepository?.getProfileById(
-        participant.linkedProfileId
+        profile.id
       );
       if (!result || result.kind !== "available") {
         workState.textContent = "PUBLIC WORKS ARE CURRENTLY UNAVAILABLE";
@@ -410,40 +414,56 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function renderWorksContext(participants, associations) {
-    const linkedParticipants = participants.filter(
-      (participant) => participant.linkedProfileId
-    );
+    const availableProfiles = new Map();
+
+    managedProfiles.forEach((profile) => {
+      availableProfiles.set(profile.id, {
+        id: profile.id,
+        displayName: profile.name || profile.slug || "CHAINED ARTIST",
+        slug: profile.slug || ""
+      });
+    });
+
+    participants.forEach((participant) => {
+      if (!participant.linkedProfileId || availableProfiles.has(participant.linkedProfileId)) return;
+      availableProfiles.set(participant.linkedProfileId, {
+        id: participant.linkedProfileId,
+        displayName: participant.displayName || "CHAINED ARTIST",
+        slug: ""
+      });
+    });
+
+    if (selectedWorkProfile && !availableProfiles.has(selectedWorkProfile.id)) {
+      availableProfiles.set(selectedWorkProfile.id, selectedWorkProfile);
+    }
+
+    const profiles = [...availableProfiles.values()];
     worksSection.hidden = false;
     workParticipants.replaceChildren();
     workGrid.replaceChildren();
 
-    if (!linkedParticipants.length) {
-      selectedWorkParticipantProfileId = null;
-      workState.textContent = "NO LINKED CHAINED PARTICIPANTS";
-      return;
-    }
-
-    const selectedParticipant = linkedParticipants.find(
-      (participant) => participant.linkedProfileId === selectedWorkParticipantProfileId
+    const selectedProfile = profiles.find(
+      (profile) => profile.id === selectedWorkProfileId
     );
-    workState.textContent = selectedParticipant
+    workState.textContent = selectedProfile
       ? ""
-      : "SELECT A LINKED CHAINED PARTICIPANT";
+      : "SELECT OR SEARCH A CHAINED ARTIST";
 
-    workParticipants.replaceChildren(...linkedParticipants.map((participant) => {
-      const select = action(participant.displayName || "CHAINED ARTIST", async () => {
-        selectedWorkParticipantProfileId = participant.linkedProfileId;
+    workParticipants.replaceChildren(...profiles.map((profile) => {
+      const select = action(profile.displayName, async () => {
+        selectedWorkProfileId = profile.id;
+        selectedWorkProfile = profile;
         await renderWorksContext(participants, associations);
       });
       select.classList.toggle(
         "is-selected",
-        participant.linkedProfileId === selectedWorkParticipantProfileId
+        profile.id === selectedWorkProfileId
       );
       return select;
     }));
 
-    if (selectedParticipant) {
-      await renderSelectedParticipantWorks(selectedParticipant, associations);
+    if (selectedProfile) {
+      await renderSelectedProfileWorks(selectedProfile, associations);
     }
   }
 
@@ -565,6 +585,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         inviteButton.disabled = false;
         setError("CO-OPERATOR COULD NOT BE INVITED");
       }
+    });
+  }
+
+  if (workProfileSearchInput && workProfileSearchResults) {
+    attachProfileSearch(workProfileSearchInput, workProfileSearchResults, async (profile) => {
+      selectedWorkProfileId = profile.id;
+      selectedWorkProfile = profile;
+      workProfileSearchInput.value = profile.displayName || profile.slug;
+      clearProfileResults(workProfileSearchResults);
+      await refreshContext();
     });
   }
 

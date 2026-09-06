@@ -470,6 +470,15 @@ test("Presentation program adapter uses the scoped visibility RPC and maps histo
     updatedAt: null
   });
   await repository.setPresentationProgramVisibility(IDS.occurrence, false);
+  await repository.updatePresentationProgramOccurrence({
+    ...occurrences[0],
+    titleOverride: "Updated opening",
+    showInAgenda: true
+  }, occurrences[0].updatedAt);
+
+  const programUpdate = client.calls.find((call) => call.update)?.update[1];
+  assert.equal(Object.hasOwn(programUpdate, "show_in_agenda"), false);
+  assert.equal(programUpdate.title_override, "Updated opening");
 
   assert.deepEqual(client.calls.filter((call) => call.rpc), [{
     rpc: ["set_presentation_occurrence_visibility", {

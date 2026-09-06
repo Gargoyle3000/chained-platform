@@ -51,10 +51,6 @@ function appendLine(fragment, value, className = "") {
   fragment.append(line);
 }
 
-function profileLink(profile) {
-  return createPublicProfileLink(profile.slug) || "profile.html";
-}
-
 function presentationsLink(profile) {
   return `profile-presentations.html?slug=${encodeURIComponent(profile.slug)}`;
 }
@@ -68,6 +64,17 @@ function validExternalUrl(value) {
   } catch {
     return null;
   }
+}
+
+function uniqueParticipants(participants) {
+  const seenProfiles = new Set();
+
+  return participants.filter((participant) => {
+    if (!participant.profileSlug) return true;
+    if (seenProfiles.has(participant.profileSlug)) return false;
+    seenProfiles.add(participant.profileSlug);
+    return true;
+  });
 }
 
 function renderUnavailable(connectionError = false) {
@@ -84,13 +91,10 @@ function renderUnavailable(connectionError = false) {
 
 function renderPresentation(result) {
   const { presentation, profile, participants = [], program = [], works = [] } = result;
+  const visibleParticipants = uniqueParticipants(participants);
   const fragment = document.createDocumentFragment();
-  const artist = document.createElement("a");
   const title = document.createElement("h1");
 
-  artist.className = "presentation-artist";
-  artist.href = profileLink(profile);
-  artist.textContent = profile.displayName;
   title.textContent = presentation.title;
   fragment.append(title);
   appendLine(fragment, formatType(presentation.activityType), "presentation-type");
@@ -102,7 +106,6 @@ function renderPresentation(result) {
       .join(", "),
     "presentation-location"
   );
-  fragment.append(artist);
   appendLine(fragment, presentation.description, "presentation-description");
 
   const externalUrl = validExternalUrl(presentation.externalUrl);
@@ -114,6 +117,25 @@ function renderPresentation(result) {
     external.rel = "noopener noreferrer";
     external.textContent = "EXTERNAL LINK ↗";
     fragment.append(external);
+  }
+
+  if (visibleParticipants.length) {
+    const section = document.createElement("section");
+    const heading = document.createElement("h2");
+    const list = document.createElement("p");
+    section.className = "presentation-context";
+    heading.textContent = "PARTICIPANTS";
+    visibleParticipants.forEach((participant, index) => {
+      if (index) list.append(document.createTextNode(" · "));
+      if (participant.profileSlug) {
+        const link = document.createElement("a");
+        link.href = createPublicProfileLink(participant.profileSlug);
+        link.textContent = participant.displayName;
+        list.append(link);
+      } else list.append(document.createTextNode(participant.displayName));
+    });
+    section.append(heading, list);
+    fragment.append(section);
   }
 
   if (works.length) {
@@ -138,25 +160,6 @@ function renderPresentation(result) {
       grid.append(article);
     });
     section.append(heading, grid);
-    fragment.append(section);
-  }
-
-  if (participants.length) {
-    const section = document.createElement("section");
-    const heading = document.createElement("h2");
-    const list = document.createElement("p");
-    section.className = "presentation-context";
-    heading.textContent = "PARTICIPANTS";
-    participants.forEach((participant, index) => {
-      if (index) list.append(document.createTextNode(" · "));
-      if (participant.profileSlug) {
-        const link = document.createElement("a");
-        link.href = createPublicProfileLink(participant.profileSlug);
-        link.textContent = participant.displayName;
-        list.append(link);
-      } else list.append(document.createTextNode(participant.displayName));
-    });
-    section.append(heading, list);
     fragment.append(section);
   }
 

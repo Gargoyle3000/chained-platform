@@ -126,6 +126,25 @@ test("the detail page is a direct canonical deep-link route", async () => {
   assert.match(script, /repository\.getPresentation\(id\)/);
 });
 
+test("technical ownership is not public host context and participants render before the broad Works grid", async () => {
+  const [script, css, repository] = await Promise.all([
+    readFile(new URL("../presentation.js", import.meta.url), "utf8"),
+    readFile(new URL("../presentation.css", import.meta.url), "utf8"),
+    readFile(new URL("../data/public-presentation-repository.mjs", import.meta.url), "utf8")
+  ]);
+
+  assert.match(script, /function uniqueParticipants\(/);
+  assert.doesNotMatch(script, /PRESENTED BY|presentation-host|presentation-artist|profileLink\(/);
+  assert.equal(script.includes("MANAGER"), false);
+  assert.doesNotMatch(repository, /presentation_cooperators|host_profile|presenter|organizer/i);
+  assert.ok(
+    script.indexOf("if (visibleParticipants.length)") < script.indexOf("if (works.length)"),
+    "participants are rendered before Works"
+  );
+  assert.match(css, /\.presentation-works \{[\s\S]*1280px/);
+  assert.match(css, /grid-template-columns:repeat\(auto-fit,minmax\(min\(100%, 280px\),1fr\)\)/);
+});
+
 test("profile Presentation history uses the canonical safe summary RPC for owned and accepted participation rows", async () => {
   const requests = [];
   const participatingPresentation = presentation({

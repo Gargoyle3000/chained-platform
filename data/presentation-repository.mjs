@@ -341,8 +341,7 @@ function presentationProgramToDatabase(record) {
     end_time: cleanText(record.endTime),
     time_zone: cleanText(record.timeZone),
     venue_name_override: cleanText(record.venueNameOverride),
-    city_override: cleanText(record.cityOverride),
-    show_in_agenda: false
+    city_override: cleanText(record.cityOverride)
   };
 }
 

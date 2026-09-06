@@ -19,6 +19,9 @@ test("Presentation editor wires profile-only context management without a client
   assert.match(page, /<div class="presentation-context-add" id="presentation-participant-add">/);
   assert.match(page, /<div class="presentation-context-add" id="presentation-cooperator-invite">/);
   assert.match(page, /<div class="presentation-context-add" id="presentation-program-add">/);
+  assert.match(page, /id="presentation-work-profile-search"/);
+  assert.match(page, /id="presentation-work-profile-results"/);
+  assert.match(page, /PUBLIC WORKS BY CHAINED ARTISTS/);
   assert.match(page, /name="show-in-presentations"/);
   assert.match(page, /name="include-in-cv"/);
 
@@ -45,8 +48,9 @@ test("Presentation editor wires profile-only context management without a client
   assert.match(script, /getPublicProfileRepository/);
   assert.match(script, /getProfileById\(/);
   assert.match(script, /proposePresentationWork\(currentPresentationId, work\.id\)/);
-  assert.match(script, /NO LINKED CHAINED PARTICIPANTS/);
-  assert.match(script, /SELECT A LINKED CHAINED PARTICIPANT/);
+  assert.match(script, /SELECT OR SEARCH A CHAINED ARTIST/);
+  assert.match(script, /selectedWorkProfile = profile/);
+  assert.match(script, /availableProfiles\.set\(profile\.id/);
   assert.match(script, /WORK COULD NOT BE ADDED/);
   assert.match(script, /listPresentationProgramOccurrences\(currentPresentationId\)/);
   assert.match(script, /createPresentationProgramOccurrence\(/);
@@ -60,5 +64,6 @@ test("Presentation editor wires profile-only context management without a client
   assert.match(page, /id="presentation-cooperator-invite"/);
   assert.match(page, /id="presentation-cooperator-results"/);
   assert.doesNotMatch(script, /listPresentationCooperators\(|invitePresentationCooperator\(|invitedAccountId|accountId|from\("accounts"\)/);
-  assert.doesNotMatch(script, /listWorks\(|getDiscoverWorks\(|search.*work/i);
+  assert.doesNotMatch(script, /listWorks\(|getDiscoverWorks\(/);
+  assert.doesNotMatch(script, /selectedWorkParticipantProfileId/);
 });

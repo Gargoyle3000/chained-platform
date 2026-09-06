@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(22);
 
 
 -- Test accounts
@@ -389,6 +389,16 @@ select results_eq(
 
 select results_eq(
   $$
+    select visibility, published_at
+      from public.activity_occurrences
+     where title_override = 'OPEN STUDIO PEER VINK'
+  $$,
+  $$values ('draft'::public.publication_status, null::timestamptz)$$,
+  'new authorized Agenda item starts as an unpublished draft'
+);
+
+select results_eq(
+  $$
     update public.activity_occurrences
        set visibility = 'published'
      where title_override = 'OPEN STUDIO PEER VINK'
@@ -396,6 +406,15 @@ select results_eq(
   $$,
   $$values ('OPEN STUDIO PEER VINK'::varchar)$$,
   'artist can publish a complete independent Agenda item'
+);
+
+select ok(
+  (
+    select published_at is not null
+      from public.activity_occurrences
+     where title_override = 'OPEN STUDIO PEER VINK'
+  ),
+  'authorized publication writes the Agenda publication timestamp'
 );
 
 
@@ -417,6 +436,15 @@ select results_eq(
   $$,
   $$values ('OPEN STUDIO PEER VINK'::varchar)$$,
   'guest can read a published independent Agenda item'
+);
+
+select is_empty(
+  $$
+    select id
+      from public.activity_occurrences
+     where id = '94100000-0000-4000-8000-000000000001'
+  $$,
+  'draft Agenda item remains absent publicly even when its Agenda flag is set'
 );
 
 
@@ -481,6 +509,46 @@ select results_eq(
   $$,
   $$select null::uuid where false$$,
   'unrelated artist cannot update another artist Agenda item'
+);
+
+
+-- A published item can be hidden from the global Agenda without changing
+-- its publication lifecycle.
+
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"91100000-0000-4000-8000-000000000001","role":"authenticated"}',
+  true
+);
+
+select results_eq(
+  $$
+    update public.activity_occurrences
+       set show_in_agenda = false
+     where title_override = 'OPEN STUDIO PEER VINK'
+     returning visibility, published_at is not null
+  $$,
+  $$values ('published'::public.publication_status, true)$$,
+  'Agenda visibility can be hidden without unpublishing the occurrence'
+);
+
+reset role;
+set local role anon;
+select set_config(
+  'request.jwt.claims',
+  '{"role":"anon"}',
+  true
+);
+
+select is_empty(
+  $$
+    select id
+      from public.activity_occurrences
+     where title_override = 'OPEN STUDIO PEER VINK'
+  $$,
+  'published item hidden from Agenda remains unavailable publicly'
 );
 
 

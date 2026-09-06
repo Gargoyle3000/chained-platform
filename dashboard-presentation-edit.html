@@ -235,9 +235,13 @@
         </section>
 
         <section class="work-form-section presentation-context-section" id="presentation-works-section" hidden>
-          <header class="work-form-section-header"><p>06</p><div><h3>WORKS</h3><p>PUBLIC WORKS BY LINKED CHAINED PARTICIPANTS</p></div></header>
+          <header class="work-form-section-header"><p>06</p><div><h3>WORKS</h3><p>PUBLIC WORKS BY CHAINED ARTISTS</p></div></header>
           <div class="presentation-work-participants" id="presentation-work-participants"></div>
-          <p class="dashboard-empty-state" id="presentation-work-state">SELECT A LINKED CHAINED PARTICIPANT</p>
+          <div class="presentation-context-add" id="presentation-work-profile-search">
+            <label class="work-form-field"><span>CHAINED ARTIST</span><input name="work-profile-search" maxlength="100" placeholder="SEARCH ARTIST PROFILE" autocomplete="off"></label>
+            <div class="presentation-profile-results" id="presentation-work-profile-results" hidden></div>
+          </div>
+          <p class="dashboard-empty-state" id="presentation-work-state">SELECT OR SEARCH A CHAINED ARTIST</p>
           <div class="presentation-work-grid" id="presentation-work-grid"></div>
         </section>
 

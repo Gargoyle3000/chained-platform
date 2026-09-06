@@ -26,16 +26,8 @@ body.presentation-page {
   line-height: 1.45;
 }
 
-.presentation-artist,
 .presentation-external {
   color: var(--accent);
-}
-
-.presentation-artist {
-  display: inline-block;
-  margin-top: 20px;
-
-  font-size: var(--font-meta);
 }
 
 .presentation-type,
@@ -66,7 +58,14 @@ body.presentation-page {
 .presentation-context h2 { margin:0 0 18px; font-size:var(--font-meta); font-weight:400; }
 .presentation-context p { white-space:pre-line; }
 .presentation-context a { color:var(--accent); }
-.presentation-work-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:32px 24px; }
+.presentation-works {
+  width: min(calc(100vw - (2 * var(--page-gutter))), 1280px);
+}
+.presentation-work-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%, 280px),1fr));
+  gap:52px 40px;
+}
 .presentation-work-grid article { min-width:0; }
 .presentation-work-grid a { display:block; color:inherit; }
 .presentation-work-grid img { display:block; width:100%; height:auto; }
@@ -82,5 +81,6 @@ body.presentation-page {
     padding-top: calc(var(--header-height) + 22px);
     padding-bottom: 80px;
   }
-  .presentation-work-grid { grid-template-columns:1fr; gap:28px; }
+  .presentation-works { width:100%; }
+  .presentation-work-grid { grid-template-columns:1fr; gap:36px; }
 }
