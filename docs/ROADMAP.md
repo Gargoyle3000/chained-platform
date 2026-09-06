@@ -5,7 +5,6 @@ Last updated: 2026-09-06
 ## POLISH
 
 - Archive SINGLE / GRID should gain the same proven swipe interaction as Discover and Following, while preserving existing view behavior, image ratios, and layout.
-- Archive SINGLE should be horizontally centered like Following / Discover SINGLE. The horizontal scrollbar should become roughly twice as thick and support genuine click-drag. Clicking the active Project or Tag should toggle it off, and the Work `[...]` action menu should remain open until an action, outside click or explicit close.
 - Implement circular media-carousel navigation: last → next returns to first, and first → previous returns to last.
 - Add Agenda `[ ALL ]` and `[ FOLLOWING ]` views.
 - Use normal prose capitalization and conjunctions for user-facing metadata values, rather than system-style uppercase conjunctions.
@@ -26,11 +25,9 @@ Last updated: 2026-09-06
 
 ## PRESENTATIONS + AGENDA
 
-- Fix the Agenda occurrence publication regression: new occurrences start draft by design, but the UI needs a clear working publish path and must preserve independent `show_in_agenda` / `show_in_presentation` settings.
-- Work association must not require its maker to first become a Presentation participant. Work association, participant history and co-operator/manager access remain independent concepts.
-- Clarify public role semantics: `HOST / PRESENTED BY` is organizational/contextual; `PARTICIPANTS` are artists actually participating; `MANAGER / OWNER` is a technical CHAINED role and must not become a prominent public identity. Avoid duplicate public people caused only by overlapping internal roles.
-- Move PARTICIPANTS above WORKS on public Presentation pages: TITLE / CONTEXT → HOST / PRESENTED BY → PARTICIPANTS → WORKS → PROGRAM.
-- Rework public Presentation Works from the narrow left column into a broader responsive CHAINED GRID / SUPERGRID treatment: retain approximate image scale, use more page width and space between Works, collapse responsively, and add no cards/dividers/SaaS styling.
+- Agenda occurrence publication is live with explicit PUBLISH / UNPUBLISH and independent `show_in_agenda` / `show_in_presentation` behavior.
+- Presentation Work association, participant history and co-operator/manager access are independent; public role semantics distinguish contextual HOST/PRESENTED BY from PARTICIPANTS and technical management roles.
+- Public Presentation detail order is TITLE / CONTEXT → PARTICIPANTS → WORKS → PROGRAM, with the broader responsive Works grid live.
 - Complete remaining Presentation ↔ Agenda ↔ Works crosslinks and attachments; standalone Agenda entries remain supported.
 
 ## PRIVATE PREVIEW DERIVATIVES — DEPLOYED

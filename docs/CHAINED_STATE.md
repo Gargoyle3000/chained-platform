@@ -39,6 +39,13 @@ Current focus: complete and polish core product surfaces before broader rollout.
 - SELECT uses CHAINED green only for its cover identity, selector name and artist names. Its index no longer prints raw Work URLs.
 - Portfolio uses the same export-local picker principle while retaining its separate authorized private-original `pdf_export` path and neutral PDF styling. Picker previews use authorized private previews, are cached for the lifetime of the picker, and are revoked when it closes.
 
+### Recently completed interaction and delivery work
+
+- Agenda occurrences now link eligible public parent Presentations through `presentation.html?id=<activity_id>`; standalone or ineligible occurrences remain unlinked and external URLs remain separate.
+- Presentation Work associations are reversible from Presentation edit through the existing trusted removal contract; removal affects only the association and leaves Work, media, publication, Archive, Portfolio, participants and Agenda/Program state intact.
+- Mobile SELECT and Portfolio PDF delivery is explicit and browser-local: PDF READY precedes user-triggered SAVE / SHARE or DOWNLOAD, with no forced viewer/new-tab behavior.
+- Archive interaction polish is live: SINGLE is centered, active Projects toggle off through the normal cleanup path, Tag toggle behavior is covered, and Work management menus retain explicit event boundaries. No horizontal Archive browsing or scrollbar architecture was introduced.
+
 ## DONE — IMPORTANT INFRASTRUCTURE
 
 - Production auth / accounts / RLS operational.
@@ -65,9 +72,8 @@ Current focus: complete and polish core product surfaces before broader rollout.
 
 ## NEXT
 
-- Fix the Agenda occurrence publication regression before expanding Agenda/Presentation work.
-- Continue the Presentation/Agenda product round: independent Work association, participant and manager roles; clarified public role semantics; and the next public Presentation layout pass.
-- Compact pre-tester security and usability pass.
+- WORKS / MEDIA LIFECYCLE HARDENING: investigate the confirmed state where a published Work returned to draft can lose image/preview availability. Trace publish → draft transitions, private original/preview preservation, and public/private derivative lifecycle. This requires SOL HIGH because it touches Storage and private/public media trust.
+- Continue the compact pre-tester security and usability pass.
 - First 1–2 external testers.
 
 ## LATER

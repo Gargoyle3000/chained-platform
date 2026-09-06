@@ -2,11 +2,11 @@
 
 Last updated: 2026-09-06
 
-## Agenda occurrence publication regression
+## Work / media lifecycle regression
 
-- Gothic Summer remains a published occurrence but has `show_in_agenda = false`, so it no longer appears in Agenda.
-- Newly created finissage occurrences can retain `show_in_agenda = true` but remain `draft`; the current Agenda UI has no clear working publish action.
-- Authenticated occurrence insertion intentionally begins `draft`. The likely regression area is the frontend occurrence publish/state-machine path and/or an unintended `show_in_agenda` update while editing Presentation Program entries.
-- Agenda visibility and Presentation Program visibility remain independent: `show_in_agenda` is not `show_in_presentation`.
+- Published Work → return to draft can leave an image/preview unavailable (`preview unavailable`).
+- Investigate the publish → draft media-state transition, preservation/restoration of private original and private preview references, and interaction with the public/private derivative lifecycle.
 
-Do not mark this resolved without a production-validated occurrence publish flow.
+## Resolved incidents
+
+- Agenda occurrence publication regression: explicit PUBLISH / UNPUBLISH and independent `show_in_agenda` / `show_in_presentation` behavior are implemented and validated; the prior Gothic Summer state was historic data plus UX ambiguity, not a public query defect.
