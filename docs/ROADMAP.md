@@ -97,6 +97,7 @@ Implementation should verify the largest real preview display and HiDPI needs be
 - Provide a permanent privacy-friendly error/incident view without sensitive content, secrets or tokens.
 - Remove temporary early-tester analytics when that phase ends.
 - Complete final RLS, Storage, Auth and security audit before broader rollout, including appropriate rate-limit and abuse-protection review.
+- After the primary SOL HIGH pre-beta security audit is fixed and validated, consider a separate independent ASTRA adversarial audit once ASTRA is sufficiently mature, stable and cost-effective for CHAINED; ASTRA is not yet a standard coding model or a replacement for SOL.
 
 ## PRODUCT LANGUAGE
 
