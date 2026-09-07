@@ -514,6 +514,17 @@ try {
           pathname,
           "document.querySelectorAll('.profile-work').length === 3"
         );
+        await evaluate(`(() => {
+          for (const id of [
+            "profile-works-link",
+            "profile-presentations-link",
+            "profile-agenda-link",
+            "profile-cv-link"
+          ]) {
+            const link = document.getElementById(id);
+            if (link) link.hidden = false;
+          }
+        })()`);
       }
       const layout = await evaluate(`(() => {
         const header = document.querySelector('.site-header')?.getBoundingClientRect();
@@ -521,18 +532,23 @@ try {
           .map((element) => element.getBoundingClientRect().top)
           .filter((value) => Number.isFinite(value)));
         const profileNavigation = document.querySelector('.artist-navigation');
-        const visibleProfileLinks = profileNavigation
-          ? [...profileNavigation.querySelectorAll('a')].filter((link) => !link.hidden)
-          : [];
+        const profileNavigationLinks = [
+          "profile-works-link",
+          "profile-presentations-link",
+          "profile-agenda-link",
+          "profile-cv-link"
+        ].map((id) => document.getElementById(id)).filter(Boolean);
         return {
           overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
           headerBottom: header?.bottom || 0,
           contentTop,
           focusable: [...document.querySelectorAll('a,button')].every((element) => !element.hasAttribute('tabindex') || Number(element.getAttribute('tabindex')) >= 0),
-          profileNavigationVertical: !profileNavigation || (
+          profileNavigationVertical: profileNavigationLinks.length === 4 && (
             getComputedStyle(profileNavigation).flexDirection === 'column'
-            && visibleProfileLinks.every((link, index) => (
-              index === 0 || link.getBoundingClientRect().top > visibleProfileLinks[index - 1].getBoundingClientRect().top
+            && profileNavigationLinks.every((link, index) => (
+              !link.hidden && (
+                index === 0 || link.getBoundingClientRect().top > profileNavigationLinks[index - 1].getBoundingClientRect().top
+              )
             ))
           )
         };
