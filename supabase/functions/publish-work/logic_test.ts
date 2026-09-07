@@ -53,6 +53,40 @@ Deno.test("publish surfaces no-image, missing-cover, and unready-image rejection
   }
 });
 
+Deno.test("publish maps only an authoritative processing race to media_processing", async () => {
+  let readinessReads = 0;
+  const response = await handlePublishWork(post({ work_id: WORK_ID }), dependencies({
+    rpc: async () => { throw new MediaError(422, "workflow_rejected"); },
+    publicationReadiness: async (_request, workId) => {
+      readinessReads += 1;
+      assert(workId === WORK_ID);
+      return { state: "processing" };
+    },
+  }));
+  const body = await responseJson(response);
+  assert(response.status === 422 && body.error === "media_processing" && readinessReads === 1);
+});
+
+Deno.test("publish keeps unrelated workflow rejection distinct from processing", async () => {
+  for (const state of ["prerequisite_invalid", "failed", "ready"]) {
+    const response = await handlePublishWork(post({ work_id: WORK_ID }), dependencies({
+      rpc: async () => { throw new MediaError(422, "workflow_rejected"); },
+      publicationReadiness: async () => ({ state }),
+    }));
+    const body = await responseJson(response);
+    assert(response.status === 422 && body.error === "workflow_rejected");
+  }
+});
+
+Deno.test("publish fails closed when processing readiness cannot be confirmed", async () => {
+  const response = await handlePublishWork(post({ work_id: WORK_ID }), dependencies({
+    rpc: async () => { throw new MediaError(422, "workflow_rejected"); },
+    publicationReadiness: async () => { throw new MediaError(500, "workflow_state_invalid"); },
+  }));
+  const body = await responseJson(response);
+  assert(response.status === 422 && body.error === "workflow_rejected");
+});
+
 Deno.test("publish succeeds sequentially for a direct owner", async () => {
   const calls: string[] = [];
   const response = await handlePublishWork(post({ work_id: WORK_ID }), dependencies({

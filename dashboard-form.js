@@ -10,6 +10,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     isValidWorkId
   } = await import("./data/work-mapping.mjs");
   const { validateImageFile } = await import("./data/work-media-service.mjs");
+  const {
+    createPublicationReadinessWatcher,
+    publicationReadinessUiState,
+    workOperationFailureUiState
+  } = await import("./data/work-publication-readiness.mjs");
   const { normalizeHttpUrl } = await import("./data/url-normalization.mjs");
   const { materialDisplayValues } = await import("./data/material-terms.mjs");
 
@@ -51,8 +56,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   let unsavedChanges = false;
   let imageOperationBusy = false;
   let currentWorkPublished = false;
+  let editorBusy = false;
+  let managedPublicationState = currentWorkId ? "unknown" : "new";
+  let announceReadiness = false;
+  let lastAuthoritativeWork = null;
   const publishAttempt = createIdempotencyState();
   const unpublishAttempt = createIdempotencyState();
+
+  const readinessWatcher = createPublicationReadinessWatcher({
+    read: (workId) => workStore.publicationReadiness(workId),
+    onState: (readiness) => applyManagedPublicationReadiness(readiness),
+    onError: () => {
+      managedPublicationState = "unknown";
+      updatePublishAvailability();
+      if (announceReadiness) showFormStatus("WORK SAVED · PUBLICATION READINESS UNAVAILABLE", true);
+    }
+  });
 
   function populateFormatDisciplines() {
     if (!(formatSelect instanceof HTMLSelectElement)) return;
@@ -131,14 +150,56 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
+  function updatePublishAvailability() {
+    if (!publishButton) return;
+    const hasPendingImageUpload = selectedImages.some((image) => !image.serverRecord && image.blob);
+    const readinessBlocksPublish = ["unknown", "checking", "processing", "failed"].includes(managedPublicationState);
+    const managedDraftBlocked = localSupabaseMode && currentWorkId && !currentWorkPublished && readinessBlocksPublish && !hasPendingImageUpload;
+    publishButton.disabled = editorBusy || managedDraftBlocked;
+  }
+
+
+  function prerequisiteMessage() {
+    const readiness = publicationReadiness(lastAuthoritativeWork || buildWorkRecord("draft"));
+    if (readiness.reasons.includes("unready_image")) return "ALL IMAGES MUST BE READY BEFORE PUBLISHING";
+    if (readiness.reasons.includes("missing_cover")) return "ONE COVER IMAGE IS REQUIRED";
+    return "REQUIRED WORK DETAILS AND ONE IMAGE ARE NEEDED";
+  }
+
+
+  function applyManagedPublicationReadiness(readiness) {
+    managedPublicationState = readiness.state;
+    updatePublishAvailability();
+    if (!announceReadiness) return;
+    const state = publicationReadinessUiState(readiness, prerequisiteMessage());
+    showFormStatus(state.message, state.isError);
+  }
+
+
+  async function refreshPublicationReadiness({ announce = true } = {}) {
+    if (!localSupabaseMode || !currentWorkId || currentWorkPublished) return null;
+    announceReadiness = announce;
+    managedPublicationState = "checking";
+    updatePublishAvailability();
+    await readinessWatcher.start(currentWorkId);
+    return managedPublicationState;
+  }
+
+
+  function invalidatePublicationReadiness() {
+    readinessWatcher.stop();
+    if (localSupabaseMode && currentWorkId && !currentWorkPublished) managedPublicationState = "unknown";
+    updatePublishAvailability();
+  }
+
+
   function setEditorBusy(isBusy) {
+    editorBusy = isBusy;
     if (saveDraftButton) {
       saveDraftButton.disabled = isBusy;
     }
 
-    if (publishButton) {
-      publishButton.disabled = isBusy;
-    }
+    updatePublishAvailability();
     if (unpublishButton) unpublishButton.disabled = isBusy;
     if (deleteWorkButton) deleteWorkButton.disabled = isBusy;
     if (imageInput) imageInput.disabled = isBusy || currentWorkPublished;
@@ -429,6 +490,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     showImageValidation(validationMessages);
     renderImagePreviews();
+    invalidatePublicationReadiness();
     if (files.length > validationMessages.length) unsavedChanges = true;
 
     if (imageInput) {
@@ -601,6 +663,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
   function setEditMode(workId) {
+    if (currentWorkId && currentWorkId !== workId) readinessWatcher.stop();
     currentWorkId = workId;
     editorHeading.textContent = "EDIT WORK";
     editorContext.textContent = "WORKS / EDIT WORK";
@@ -657,6 +720,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
   async function populateForm(work) {
+    lastAuthoritativeWork = work;
     const values = {
       "work-type": work.workType,
       title: work.title,
@@ -703,6 +767,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (published) publicWorkLink.href = `artwork.html?id=${encodeURIComponent(work.id)}`;
     }
     if (publishButton) publishButton.hidden = published;
+    if (published) {
+      readinessWatcher.stop();
+      managedPublicationState = "published";
+    }
+    updatePublishAvailability();
   }
 
 
@@ -751,6 +820,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     setEditorBusy(true);
+    let phase = "saving";
+    let metadataPersisted = false;
 
     try {
       if (!localSupabaseMode) {
@@ -762,27 +833,35 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      showFormStatus(visibility === "published" ? "PREPARING" : "SAVING DRAFT");
+      showFormStatus("SAVING WORK");
       await persistMetadata(record);
+      metadataPersisted = true;
+      phase = "uploading";
       if (selectedImages.some((image) => !image.serverRecord && image.blob)) await uploadPendingImages(currentWorkId);
+      phase = "loading";
       let authoritative = await workStore.getWork(currentWorkId);
       await populateForm(authoritative);
       if (visibility === "published") {
-        const readiness = publicationReadiness(authoritative);
-        if (!readiness.ready) {
-          const message = readiness.reasons.includes("unready_image") ? "ALL IMAGES MUST BE READY BEFORE PUBLISHING" : readiness.reasons.includes("missing_cover") ? "ONE COVER IMAGE IS REQUIRED" : "REQUIRED WORK DETAILS AND ONE IMAGE ARE NEEDED";
-          showFormStatus(message, true);
-          return;
-        }
+        phase = "readiness";
+        await refreshPublicationReadiness({ announce: true });
+        if (managedPublicationState !== "ready") return;
+        phase = "publishing";
         showFormStatus("PUBLISHING");
         await workStore.media.publish(currentWorkId, publishAttempt.current());
         publishAttempt.reset();
+        readinessWatcher.stop();
         authoritative = await workStore.getWork(currentWorkId);
         await populateForm(authoritative);
-        showFormStatus("PUBLISHED");
-      } else showFormStatus("DRAFT SAVED");
+        showFormStatus("WORK PUBLISHED");
+      } else {
+        showFormStatus("DRAFT SAVED");
+        phase = "readiness";
+        await refreshPublicationReadiness({ announce: false });
+      }
     } catch (error) {
-      showFormStatus(error?.code === "conflict" ? "THIS WORK CHANGED ELSEWHERE · RELOAD BEFORE SAVING" : error?.message === "YEAR MUST BE BETWEEN 1900 AND 2100" ? error.message : "WORK COULD NOT BE SAVED", true);
+      const failure = workOperationFailureUiState({ phase, metadataPersisted, error });
+      showFormStatus(failure.message, failure.isError);
+      if (failure.restartReadiness) await refreshPublicationReadiness({ announce: true });
     } finally {
       setEditorBusy(false);
     }
@@ -793,6 +872,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const work = await workStore.getWork(currentWorkId);
     if (!work) throw new Error("Work unavailable.");
     await populateForm(work);
+    if (!currentWorkPublished) await refreshPublicationReadiness({ announce: false });
     return work;
   }
 
@@ -856,6 +936,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (profileSelect) profileSelect.value = selectedOwnerProfileId;
       if (localSupabaseMode) profileSelect.disabled = true;
       await populateForm(work);
+      if (!currentWorkPublished) await refreshPublicationReadiness({ announce: true });
     } catch {
       renderDashboardAccountIdentity([], "error");
       showFormStatus(
@@ -924,6 +1005,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   window.addEventListener("beforeunload", (event) => {
+    readinessWatcher.dispose();
     releaseAllPreviewUrls();
     workStore?.media?.urls.revokeAll();
     if (unsavedChanges) { event.preventDefault(); event.returnValue = ""; }

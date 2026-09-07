@@ -34,6 +34,7 @@ export function post(body: unknown, token = "valid"): Request {
 export type StubOptions = {
   authenticate?: (request: Request) => Promise<Caller>;
   authorize?: (request: Request, targetKind: TargetKind, targetId: string) => Promise<Caller>;
+  publicationReadiness?: (request: Request, workId: string) => Promise<Record<string, unknown>>;
   rpc?: (name: string, body: Record<string, unknown>) => Promise<unknown>;
   download?: (bucket: string, path: string) => Promise<StoredObject>;
   upload?: (bucket: string, path: string, object: StoredObject) => Promise<void>;
@@ -58,6 +59,7 @@ export function dependencies(options: StubOptions = {}): MediaDependencies {
       if (token === "unrelated" || token === "revoked") throw new MediaError(403, "not_authorized");
       return caller;
     }),
+    publicationReadiness: options.publicationReadiness ?? (async () => ({ state: "ready" })),
     rpc: options.rpc ?? (async () => ({})),
     download: options.download ?? (async (_bucket, path) => path.endsWith(".webp")
       ? { bytes: new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]), mimeType: "image/webp", size: 12 }

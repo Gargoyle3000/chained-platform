@@ -7,7 +7,7 @@ import { selectWorkRepository } from "../data/work-repository.mjs";
 import { INDEXEDDB_BOUNDARY } from "../data/indexeddb-work-repository.mjs";
 import { createSupabaseWorkRepository } from "../data/supabase-work-repository.mjs";
 import { createPrivateImagePreview, createWorkMediaService, MAX_IMAGE_BYTES, MAX_PRIVATE_PREVIEW_BYTES, PRIVATE_PREVIEW_LONGEST_EDGE, UPLOAD_STAGES, validateImageFile } from "../data/work-media-service.mjs";
-import { createIdempotencyState, createObjectUrlRegistry, databaseToWork, derivativeLargePublicPath, formToDatabase, isValidWorkId, mapPublicArtworkRows, publicationReadiness, resolveManagedProfileState, WORK_COLUMNS, WORK_SELECT } from "../data/work-mapping.mjs";
+import { createIdempotencyState, createObjectUrlRegistry, databaseToWork, derivativeLargePublicPath, formToDatabase, isValidWorkId, mapManagedPublicationReadiness, mapPublicArtworkRows, publicationReadiness, resolveManagedProfileState, WORK_COLUMNS, WORK_SELECT } from "../data/work-mapping.mjs";
 import { sanitizeWorkError, WorkError, WORK_ERROR_CODES } from "../data/work-errors.mjs";
 
 const ID = "11111111-1111-4111-8111-111111111111";
@@ -675,6 +675,65 @@ test("publication readiness denies missing, unready, and coverless images", () =
   assert.ok(publicationReadiness({ ...work, images: [{ uploadStatus: "reserved", isCover: true }] }).reasons.includes("unready_image"));
   assert.ok(publicationReadiness({ ...work, images: [{ uploadStatus: "ready", isCover: false }] }).reasons.includes("missing_cover"));
   assert.equal(publicationReadiness({ ...work, images: [{ uploadStatus: "ready", isCover: true }] }).ready, true);
+});
+
+test("managed publication readiness maps only the safe state and aggregate counts", () => {
+  assert.deepEqual(mapManagedPublicationReadiness({
+    state: "processing",
+    total_images: 3,
+    ready_images: 2,
+    processing_images: 1,
+    failed_images: 0,
+    private_object_path: "must-not-propagate"
+  }), { state: "processing", totalImages: 3, readyImages: 2, processingImages: 1, failedImages: 0 });
+  assert.throws(() => mapManagedPublicationReadiness({ state: "unknown", total_images: 1, ready_images: 0, processing_images: 0, failed_images: 0 }), /READINESS IS UNAVAILABLE/);
+  assert.throws(() => mapManagedPublicationReadiness({ state: "ready", total_images: 1, ready_images: 2, processing_images: 0, failed_images: 0 }), /READINESS IS UNAVAILABLE/);
+});
+
+test("Supabase repository reads publication readiness through the managed RPC only", async () => {
+  const calls = [];
+  const client = {
+    rpc: async (name, body) => {
+      calls.push({ name, body });
+      return { data: [{ state: "ready", total_images: 2, ready_images: 2, processing_images: 0, failed_images: 0 }], error: null };
+    }
+  };
+  const readiness = await createSupabaseWorkRepository(client, {}).publicationReadiness(ID);
+  assert.deepEqual(calls, [{ name: "get_managed_work_publication_readiness", body: { target_work_id: ID } }]);
+  assert.deepEqual(readiness, { state: "ready", totalImages: 2, readyImages: 2, processingImages: 0, failedImages: 0 });
+});
+
+test("publish preserves the stable media_processing Edge contract without raw payload leakage", async () => {
+  const service = createWorkMediaService({
+    functions: {
+      invoke: async () => ({
+        data: null,
+        error: { context: new Response(JSON.stringify({ ok: false, error: "media_processing", detail: "private/path?token=secret" }), { status: 422 }) }
+      })
+    }
+  }, {});
+  await assert.rejects(() => service.publish(ID, IMAGE_TWO), (error) => {
+    assert.equal(error.code, WORK_ERROR_CODES.MEDIA_PROCESSING);
+    assert.equal(error.message, "WORK SAVED · PROCESSING IMAGES");
+    assert.equal(error.message.includes("private/path"), false);
+    return true;
+  });
+});
+
+test("unrelated publish 422 remains a publication-specific unavailable error", async () => {
+  const service = createWorkMediaService({
+    functions: {
+      invoke: async () => ({
+        data: null,
+        error: { context: new Response(JSON.stringify({ ok: false, error: "workflow_rejected" }), { status: 422 }) }
+      })
+    }
+  }, {});
+  await assert.rejects(() => service.publish(ID, IMAGE_TWO), (error) => {
+    assert.equal(error.code, WORK_ERROR_CODES.UNAVAILABLE);
+    assert.equal(error.message, "WORK COULD NOT BE PUBLISHED");
+    return true;
+  });
 });
 
 test("idempotency key is reused until reset", () => {

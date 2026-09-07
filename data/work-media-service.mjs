@@ -75,9 +75,15 @@ export async function createPrivateImagePreview(file, {
   }
 }
 
-async function invoke(client, name, body) {
+async function invoke(client, name, body, fallback = "WORK IS CURRENTLY UNAVAILABLE") {
   const { data, error } = await client.functions.invoke(name, { body });
-  if (error || data?.ok !== true) throw sanitizeWorkError(error || new Error("Function failed."));
+  if (error || data?.ok !== true) {
+    const code = typeof data?.error === "string" ? data.error : await functionFailureCode(error);
+    if (code === "media_processing") {
+      throw new WorkError(WORK_ERROR_CODES.MEDIA_PROCESSING, "WORK SAVED · PROCESSING IMAGES", error);
+    }
+    throw sanitizeWorkError(error || new Error("Function failed."), fallback);
+  }
   return data;
 }
 
@@ -104,6 +110,17 @@ async function gatewayFailureCode(value) {
     return body?.ok === false && body?.error === "media_unavailable"
       ? "media_unavailable"
       : "";
+  } catch {
+    return "";
+  }
+}
+
+async function functionFailureCode(value) {
+  const response = value?.context;
+  if (!response || typeof response.clone !== "function") return "";
+  try {
+    const body = await response.clone().json();
+    return body?.ok === false && typeof body?.error === "string" ? body.error : "";
   } catch {
     return "";
   }
@@ -404,7 +421,7 @@ export function createWorkMediaService(client, config = {}, {
     },
     publicUrl(path) { return path ? client.storage.from("work-public").getPublicUrl(path).data.publicUrl : ""; },
     finalize: (id) => invoke(client, "finalize-work-image-upload", { work_image_id: id }),
-    publish: (id, key) => invoke(client, "publish-work", { work_id: id, idempotency_key: key }),
+    publish: (id, key) => invoke(client, "publish-work", { work_id: id, idempotency_key: key }, "WORK COULD NOT BE PUBLISHED"),
     unpublish: (id, key) => invoke(client, "unpublish-work", { work_id: id, idempotency_key: key }),
     async deletePublishedWork(id, key) {
       const result = await invoke(client, "unpublish-work", { work_id: id, idempotency_key: key, delete_after_unpublish: true });

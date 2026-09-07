@@ -1,0 +1,159 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import {
+  createPublicationReadinessWatcher,
+  publicationReadinessUiState,
+  PUBLICATION_READINESS_BOUND_MS,
+  PUBLICATION_READINESS_INTERVAL_MS,
+  workOperationFailureUiState
+} from "../data/work-publication-readiness.mjs";
+
+function harness(states, { intervalMs = 50, boundMs = 100 } = {}) {
+  let time = 0;
+  const timers = [];
+  const cleared = [];
+  const observed = [];
+  let reads = 0;
+  const watcher = createPublicationReadinessWatcher({
+    read: async () => states[Math.min(reads++, states.length - 1)],
+    onState: (state) => observed.push(state),
+    now: () => time,
+    intervalMs,
+    boundMs,
+    setTimer(callback, delay) {
+      const timer = { callback, delay };
+      timers.push(timer);
+      return timer;
+    },
+    clearTimer(timer) { cleared.push(timer); }
+  });
+  return {
+    watcher,
+    observed,
+    timers,
+    cleared,
+    reads: () => reads,
+    async runNext() {
+      const timer = timers.shift();
+      assert.ok(timer);
+      time += timer.delay;
+      timer.callback();
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+  };
+}
+
+test("processing readiness polls once at a time and stops when ready", async () => {
+  const session = harness([{ state: "processing" }, { state: "ready" }]);
+  await session.watcher.start("work-a");
+  assert.equal(session.timers.length, 1);
+  await session.runNext();
+  assert.deepEqual(session.observed.map(({ state }) => state), ["processing", "ready"]);
+  assert.equal(session.reads(), 2);
+  assert.equal(session.watcher.isActive(), false);
+  assert.equal(session.timers.length, 0);
+});
+
+test("terminal failure stops polling immediately", async () => {
+  const session = harness([{ state: "failed" }]);
+  await session.watcher.start("work-a");
+  assert.equal(session.reads(), 1);
+  assert.equal(session.watcher.isActive(), false);
+  assert.equal(session.timers.length, 0);
+});
+
+test("bounded processing performs a final read and reports delayed without false failure", async () => {
+  const session = harness([{ state: "processing" }]);
+  await session.watcher.start("work-a");
+  await session.runNext();
+  await session.runNext();
+  assert.equal(session.reads(), 3);
+  assert.equal(session.observed.at(-1).state, "processing");
+  assert.equal(session.observed.at(-1).delayed, true);
+  assert.equal(session.watcher.isActive(), false);
+});
+
+test("dispose clears the one scheduled timer", async () => {
+  const session = harness([{ state: "processing" }]);
+  await session.watcher.start("work-a");
+  const scheduled = session.timers[0];
+  session.watcher.dispose();
+  assert.deepEqual(session.cleared, [scheduled]);
+  assert.equal(session.watcher.isActive(), false);
+});
+
+test("work changes never overlap requests or apply stale readiness", async () => {
+  let resolveFirst;
+  let active = 0;
+  let peak = 0;
+  const reads = [];
+  const observed = [];
+  const watcher = createPublicationReadinessWatcher({
+    read: async (workId) => {
+      reads.push(workId);
+      active += 1;
+      peak = Math.max(peak, active);
+      if (workId === "work-a") await new Promise((resolve) => { resolveFirst = resolve; });
+      active -= 1;
+      return { state: "ready", workId };
+    },
+    onState: (state) => observed.push(state),
+    setTimer: () => 1,
+    clearTimer: () => {}
+  });
+  const first = watcher.start("work-a");
+  await Promise.resolve();
+  await watcher.start("work-b");
+  assert.deepEqual(reads, ["work-a"]);
+  resolveFirst();
+  await first;
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(reads, ["work-a", "work-b"]);
+  assert.equal(peak, 1);
+  assert.deepEqual(observed.map(({ workId }) => workId), ["work-b"]);
+});
+
+test("readiness UI states control Publish with truthful stage copy", () => {
+  assert.deepEqual(publicationReadinessUiState({ state: "processing" }), {
+    message: "WORK SAVED · PROCESSING IMAGES", isError: false, publishEnabled: false
+  });
+  assert.deepEqual(publicationReadinessUiState({ state: "processing", delayed: true }), {
+    message: "WORK SAVED · IMAGES STILL PROCESSING", isError: false, publishEnabled: false
+  });
+  assert.deepEqual(publicationReadinessUiState({ state: "ready" }), {
+    message: "READY TO PUBLISH", isError: false, publishEnabled: true
+  });
+  assert.deepEqual(publicationReadinessUiState({ state: "failed" }), {
+    message: "IMAGE PROCESSING FAILED", isError: true, publishEnabled: false
+  });
+  assert.deepEqual(publicationReadinessUiState({ state: "prerequisite_invalid" }, "ONE COVER IMAGE IS REQUIRED"), {
+    message: "ONE COVER IMAGE IS REQUIRED", isError: true, publishEnabled: false
+  });
+});
+
+test("save and Publish failures remain semantically separate", () => {
+  assert.equal(workOperationFailureUiState({ phase: "saving", metadataPersisted: false, error: new Error("raw") }).message, "WORK COULD NOT BE SAVED");
+  assert.deepEqual(workOperationFailureUiState({ phase: "publishing", metadataPersisted: true, error: { code: "media_processing" } }), {
+    message: "WORK SAVED · PROCESSING IMAGES", isError: false, restartReadiness: true
+  });
+  assert.equal(workOperationFailureUiState({ phase: "publishing", metadataPersisted: true, error: new Error("raw") }).message, "WORK COULD NOT BE PUBLISHED");
+  assert.equal(workOperationFailureUiState({ phase: "uploading", metadataPersisted: true, error: new Error("raw") }).message, "WORK SAVED · IMAGE UPLOAD FAILED");
+});
+
+test("editor copy and boundaries distinguish save, processing, publication, and teardown", async () => {
+  const source = await readFile(new URL("../dashboard-form.js", import.meta.url), "utf8");
+  const readinessSource = await readFile(new URL("../data/work-publication-readiness.mjs", import.meta.url), "utf8");
+  assert.match(source, /showFormStatus\("SAVING WORK"\)/);
+  assert.match(readinessSource, /WORK SAVED · PROCESSING IMAGES/);
+  assert.match(readinessSource, /READY TO PUBLISH/);
+  assert.match(readinessSource, /IMAGE PROCESSING FAILED/);
+  assert.match(readinessSource, /WORK SAVED · IMAGES STILL PROCESSING/);
+  assert.match(readinessSource, /WORK COULD NOT BE PUBLISHED/);
+  assert.match(readinessSource, /WORK COULD NOT BE SAVED/);
+  assert.match(readinessSource, /WORK_ERROR_CODES\.MEDIA_PROCESSING/);
+  assert.match(source, /\["unknown", "checking", "processing", "failed"\]\.includes\(managedPublicationState\)/);
+  assert.match(source, /readinessWatcher\.dispose\(\)/);
+  assert.equal(PUBLICATION_READINESS_INTERVAL_MS, 5_000);
+  assert.equal(PUBLICATION_READINESS_BOUND_MS, 120_000);
+});

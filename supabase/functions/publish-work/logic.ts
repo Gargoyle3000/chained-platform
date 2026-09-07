@@ -20,13 +20,14 @@ export async function handlePublishWork(
 ): Promise<Response> {
   let operationId: string | null = null;
   let actorAccountId: string | null = null;
+  let workId: string | null = null;
   let operationImages: Record<string, unknown>[] = [];
   const createdPaths: string[] = [];
 
   try {
     requirePost(request);
     const body = await parseStrictJson(request, ["work_id", "idempotency_key"]);
-    const workId = requireUuid(body.work_id, "work_id");
+    workId = requireUuid(body.work_id, "work_id");
     const idempotencyKey = optionalUuid(body.idempotency_key, "idempotency_key");
     const caller = await dependencies.authorize(request, "work", workId);
     actorAccountId = caller.accountId;
@@ -111,6 +112,15 @@ export async function handlePublishWork(
         // The durable operation remains running/cleanup-pending for a trusted retry.
       }
     }
-    return errorResponse(error);
+    let responseError = error;
+    if (!operationId && workId && error instanceof MediaError && error.code === "workflow_rejected") {
+      try {
+        const readiness = await dependencies.publicationReadiness(request, workId);
+        if (readiness.state === "processing") responseError = new MediaError(422, "media_processing");
+      } catch {
+        // Preserve the original safe publication rejection if readiness cannot be confirmed.
+      }
+    }
+    return errorResponse(responseError);
   }
 }

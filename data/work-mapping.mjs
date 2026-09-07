@@ -186,6 +186,27 @@ export function publicationReadiness(work) {
   return Object.freeze({ ready: reasons.length === 0, reasons });
 }
 
+const MANAGED_PUBLICATION_STATES = new Set(["ready", "processing", "failed", "prerequisite_invalid"]);
+
+export function mapManagedPublicationReadiness(row) {
+  const state = typeof row?.state === "string" ? row.state : "";
+  const counts = ["total_images", "ready_images", "processing_images", "failed_images"]
+    .map((key) => Number(row?.[key]));
+  if (!MANAGED_PUBLICATION_STATES.has(state) || counts.some((value) => !Number.isSafeInteger(value) || value < 0)) {
+    throw new WorkError(WORK_ERROR_CODES.UNAVAILABLE, "PUBLICATION READINESS IS UNAVAILABLE");
+  }
+  const [totalImages, readyImages, processingImages, failedImages] = counts;
+  if (readyImages + processingImages + failedImages > totalImages) {
+    throw new WorkError(WORK_ERROR_CODES.UNAVAILABLE, "PUBLICATION READINESS IS UNAVAILABLE");
+  }
+  if ((state === "ready" && (readyImages !== totalImages || processingImages !== 0 || failedImages !== 0))
+    || (state === "processing" && processingImages === 0)
+    || (state === "failed" && failedImages === 0)) {
+    throw new WorkError(WORK_ERROR_CODES.UNAVAILABLE, "PUBLICATION READINESS IS UNAVAILABLE");
+  }
+  return Object.freeze({ state, totalImages, readyImages, processingImages, failedImages });
+}
+
 export function createIdempotencyState(factory = () => crypto.randomUUID()) {
   let key = null;
   return Object.freeze({ current: () => key || (key = factory()), reset: () => { key = null; } });

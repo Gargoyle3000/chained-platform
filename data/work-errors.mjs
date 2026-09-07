@@ -1,6 +1,7 @@
 export const WORK_ERROR_CODES = Object.freeze({
   CONFLICT: "conflict",
   INVALID: "invalid",
+  MEDIA_PROCESSING: "media_processing",
   NOT_FOUND: "not_found",
   UNAVAILABLE: "unavailable",
   UNAUTHORIZED: "unauthorized"
@@ -30,4 +31,3 @@ export function sanitizeWorkError(error, fallback = "WORK IS CURRENTLY UNAVAILAB
   }
   return new WorkError(WORK_ERROR_CODES.UNAVAILABLE, fallback, error);
 }
-

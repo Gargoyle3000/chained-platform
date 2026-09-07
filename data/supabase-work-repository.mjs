@@ -1,4 +1,4 @@
-import { databaseImageToClient, databaseToWork, formToDatabase, isValidWorkId, mapPublicArtworkRows, PUBLIC_IMAGE_SELECT, WORK_SELECT } from "./work-mapping.mjs";
+import { databaseImageToClient, databaseToWork, formToDatabase, isValidWorkId, mapManagedPublicationReadiness, mapPublicArtworkRows, PUBLIC_IMAGE_SELECT, WORK_SELECT } from "./work-mapping.mjs";
 import { sanitizeWorkError, WorkError, WORK_ERROR_CODES } from "./work-errors.mjs";
 import { createWorkMediaService } from "./work-media-service.mjs";
 import { compareArtistWorkCuration } from "./artist-work-ordering.mjs";
@@ -79,6 +79,12 @@ export function createSupabaseWorkRepository(client, config, mediaDependencies) 
       const { error } = await client.rpc("reorder_work_images", { target_work_id: requireId(workId), ordered_image_ids: imageIds, cover_image_id: coverImageId });
       if (error) throw sanitizeWorkError(error, "IMAGE ORDER COULD NOT BE SAVED");
       return listImages(workId);
+    },
+    async publicationReadiness(id) {
+      const { data, error } = await client.rpc("get_managed_work_publication_readiness", { target_work_id: requireId(id) });
+      const rows = requireResult(error, data, "PUBLICATION READINESS IS UNAVAILABLE");
+      if (!Array.isArray(rows) || rows.length !== 1) throw new WorkError(WORK_ERROR_CODES.UNAVAILABLE, "PUBLICATION READINESS IS UNAVAILABLE");
+      return mapManagedPublicationReadiness(rows[0]);
     },
     async reorderArtistProfileWorks(profileId, yearSort, workIds) {
       requireId(profileId);

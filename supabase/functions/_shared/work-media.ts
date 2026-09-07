@@ -30,6 +30,7 @@ export type SignedStoredObject = {
 export type MediaDependencies = {
   authenticate(request: Request): Promise<Caller>;
   authorize(request: Request, targetKind: TargetKind, targetId: string): Promise<Caller>;
+  publicationReadiness(request: Request, workId: string): Promise<Record<string, unknown>>;
   rpc(name: string, body: Record<string, unknown>): Promise<unknown>;
   download(bucket: string, path: string): Promise<StoredObject>;
   upload(bucket: string, path: string, object: StoredObject): Promise<void>;
@@ -364,6 +365,24 @@ export function createMediaDependencies(): MediaDependencies {
       if (targets.length !== 1) throw new MediaError(403, "not_authorized");
 
       return caller;
+    },
+
+    async publicationReadiness(request, workId) {
+      const authorization = request.headers.get("authorization");
+      if (!authorization) throw new MediaError(401, "authentication_required");
+      const response = await fetch(`${apiUrl}/rest/v1/rpc/get_managed_work_publication_readiness`, {
+        method: "POST",
+        headers: userScopedHeaders(apiKeys.publishable, authorization, {
+          "content-type": "application/json",
+        }),
+        body: JSON.stringify({ target_work_id: workId }),
+      });
+      if (!response.ok) throw new MediaError(response.status === 401 ? 401 : 403, "not_authorized");
+      const value = await response.json();
+      if (!Array.isArray(value) || value.length !== 1 || !value[0] || typeof value[0] !== "object" || Array.isArray(value[0])) {
+        throw new MediaError(500, "workflow_state_invalid");
+      }
+      return value[0] as Record<string, unknown>;
     },
 
     async rpc(name, body) {

@@ -8,6 +8,12 @@ export function createIndexedDbWorkRepository(store = globalThis.ChainedWorkStor
     listManagedProfiles: async () => [],
     listWorks: () => store.getAllWorks(),
     getWork: (id) => store.getWork(id),
+    async publicationReadiness(id) {
+      const work = await store.getWork(id);
+      const images = work?.images || [];
+      const ready = images.length > 0 && images.every((image) => image.uploadStatus === "ready") && images.filter((image) => image.isCover).length === 1;
+      return Object.freeze({ state: ready ? "ready" : "prerequisite_invalid", totalImages: images.length, readyImages: ready ? images.length : 0, processingImages: 0, failedImages: 0 });
+    },
     createWork: (record) => store.createWork(record),
     updateWork: (record) => store.updateWork(record),
     deleteWork: (id) => store.deleteWork(id),
@@ -17,4 +23,3 @@ export function createIndexedDbWorkRepository(store = globalThis.ChainedWorkStor
     }
   });
 }
-
