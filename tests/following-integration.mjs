@@ -402,6 +402,9 @@ try {
         : "document.querySelector('#profile-follow-action') && !document.querySelector('#profile-follow-control').hidden";
       stage = `checking responsive ${pathname.startsWith("following") ? "feed" : "profile"} at ${width}`;
       await navigate(pathname, ready);
+      if (pathname.startsWith("following")) {
+        await evaluate("document.querySelector('.view-button[data-view=\"grid\"]').click()");
+      }
       const layout = await evaluate(`(() => {
         const header = document.querySelector('.site-header').getBoundingClientRect();
         const contentTop = Math.min(...[...document.querySelectorAll('.discover-toolbar, .discover-work, .artist-sidebar-inner, .profile-work')]

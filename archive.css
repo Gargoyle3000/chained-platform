@@ -687,7 +687,7 @@
   .archive-layout {
     display: block;
 
-    padding-top: calc(var(--header-height) + 44px);
+    padding-top: var(--mobile-content-start);
   }
 
   .archive-sidebar-inner {
@@ -704,7 +704,7 @@
   }
 
   .archive-content {
-    margin-top: 70px;
+    margin-top: var(--mobile-sidebar-to-content);
   }
 
   .archive-content-header {

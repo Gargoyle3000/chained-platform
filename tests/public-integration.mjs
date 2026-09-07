@@ -508,6 +508,7 @@ try {
 
       if (isDiscover) {
         await loadDiscoverFixtures(slugs);
+        await evaluate("document.querySelector('.view-button[data-view=\"grid\"]').click()");
       } else {
         await navigate(
           pathname,

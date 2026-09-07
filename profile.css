@@ -262,7 +262,7 @@
   .artist-profile {
     display: block;
 
-    padding-top: calc(var(--header-height) + 22px);
+    padding-top: var(--mobile-content-start);
   }
 
   .artist-sidebar-inner {
@@ -294,7 +294,7 @@
   }
 
   .artist-profile-links {
-    margin: 32px 0 96px;
+    margin: 32px 0 var(--mobile-profile-links-to-work);
   }
 
 .profile-work {

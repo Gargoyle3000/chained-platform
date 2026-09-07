@@ -1202,8 +1202,20 @@ footer {
 }
 
 @media (max-width: 700px) {
+  :root {
+    --mobile-content-start: 28px;
+    --mobile-nav-to-controls: 22px;
+    --mobile-controls-to-content: 28px;
+    --mobile-sidebar-to-content: 48px;
+    --mobile-profile-links-to-work: 56px;
+  }
+
   .discover-toolbar {
     position: static;
+  }
+
+  .discover-page[data-view="grid"] .discover-stream {
+    padding-top: var(--mobile-controls-to-content);
   }
 
   .discover-page[data-view="single"] .discover-work {
@@ -1375,8 +1387,8 @@ footer {
   }
 }
 @media (max-width: 700px) {
-  .discover-toolbar {
-    padding-top: 32px;
+  .discover-page[data-view="grid"] .discover-toolbar {
+    padding-top: var(--mobile-nav-to-controls);
   }
 }
 
