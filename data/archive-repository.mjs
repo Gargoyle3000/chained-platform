@@ -13,7 +13,7 @@ import { derivativeLargePublicPath } from "./work-mapping.mjs";
 export const ARCHIVE_DATA_SOURCE = "supabase-only";
 
 function archiveError() {
-  return new Error("ARCHIVE IS CURRENTLY UNAVAILABLE");
+  return new Error("SELECT IS CURRENTLY UNAVAILABLE");
 }
 
 function validWorkIds(values) {

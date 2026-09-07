@@ -4,6 +4,30 @@ import { access, readFile } from "node:fs/promises";
 
 const read = (file) => readFile(new URL(`../${file}`, import.meta.url), "utf8");
 
+test("SELECT is the user-facing private workspace while Archive stays internal and CHAINED SELECT stays the export", async () => {
+  const [page, projectPage, action, repository, discover] = await Promise.all([
+    read("archive.html"),
+    read("archive-project.html"),
+    read("data/archive-work-action.mjs"),
+    read("data/archive-repository.mjs"),
+    read("discover.html")
+  ]);
+
+  assert.match(page, /<title>Select — CHAINED<\/title>/);
+  assert.match(page, /href="archive\.html">SELECT<\/a>/);
+  assert.match(page, /<h1>SELECT<\/h1>[\s\S]*?PRIVATE WORKSPACE \/ ARCHIVE/);
+  assert.match(page, /placeholder="SEARCH SELECT"/);
+  assert.match(page, /aria-label="Choose Select view"/);
+  assert.match(projectPage, /<title>Select Project — CHAINED<\/title>/);
+  assert.match(projectPage, /\[ BACK TO SELECT \]/);
+  assert.match(discover, /<template data-authenticated-navigation>[\s\S]*?href="archive\.html">SELECT<\/a>/);
+  assert.match(action, /\$\{isSaved \? "Remove" : "Save"\}[\s\S]*?Select/);
+  assert.match(action, /SELECT IS CURRENTLY UNAVAILABLE/);
+  assert.match(page, /\[ EXPORT CHAINED SELECT \]/);
+  assert.match(repository, /ARCHIVE_DATA_SOURCE = "supabase-only"/);
+  assert.match(repository, /\.from\("archive_items"\)/);
+});
+
 test("Archive renders direct Project SELECT export only from active Project state", async () => {
   const [page, script] = await Promise.all([read("archive.html"), read("archive.js")]);
   assert.match(page, /archive-project-context-actions[\s\S]*archive-select-project[^>]*>\[ EXPORT CHAINED SELECT \]/);

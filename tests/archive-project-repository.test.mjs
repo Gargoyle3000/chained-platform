@@ -79,8 +79,8 @@ test("Project mutations use bounded project RPCs and preserve one Work in many P
 test("Project input and private failures are sanitized before or after a request", async () => {
   const supabase = client({ rpcError: { message: "private database detail" } });
   const repository = createArchiveRepository(supabase, {});
-  await assert.rejects(() => repository.createProject("   "), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
-  await assert.rejects(() => repository.reorderProjectWorks(IDS.project, [IDS.workA, "not-a-work"]), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
-  await assert.rejects(() => repository.addProjectWork(IDS.project, IDS.workA), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => repository.createProject("   "), /SELECT IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => repository.reorderProjectWorks(IDS.project, [IDS.workA, "not-a-work"]), /SELECT IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => repository.addProjectWork(IDS.project, IDS.workA), /SELECT IS CURRENTLY UNAVAILABLE/);
   assert.deepEqual(supabase.calls, [{ rpc: ["add_archive_project_item", { target_project_id: IDS.project, target_work_id: IDS.workA }] }]);
 });

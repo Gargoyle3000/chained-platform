@@ -14,11 +14,11 @@ function repository(failures = {}) {
     calls,
     async saveWork(workId) {
       calls.push({ saveWork: workId });
-      if (failures.save) throw new Error("ARCHIVE IS CURRENTLY UNAVAILABLE");
+      if (failures.save) throw new Error("SELECT IS CURRENTLY UNAVAILABLE");
     },
     async removeWork(workId) {
       calls.push({ removeWork: workId });
-      if (failures.remove) throw new Error("ARCHIVE IS CURRENTLY UNAVAILABLE");
+      if (failures.remove) throw new Error("SELECT IS CURRENTLY UNAVAILABLE");
     }
   };
 }
@@ -64,8 +64,8 @@ test("removing restores the unsaved Discover state", async () => {
 test("failed Archive mutations leave Discover state unchanged", async () => {
   const save = createDiscoverArchiveState(repository({ save: true }));
   const remove = createDiscoverArchiveState(repository({ remove: true }), [IDS.saved]);
-  await assert.rejects(() => save.toggle(IDS.unsaved), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
-  await assert.rejects(() => remove.toggle(IDS.saved), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => save.toggle(IDS.unsaved), /SELECT IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => remove.toggle(IDS.saved), /SELECT IS CURRENTLY UNAVAILABLE/);
   assert.equal(save.isSaved(IDS.unsaved), false);
   assert.equal(remove.isSaved(IDS.saved), true);
 });

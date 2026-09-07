@@ -253,15 +253,15 @@ test("save and remove send only the Work identity and sanitize failures", async 
   ]);
 
   const failing = createArchiveRepository(archiveClient([], { save: true, remove: true }), config);
-  await assert.rejects(() => failing.saveWork(IDS.workA), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
-  await assert.rejects(() => failing.removeWork(IDS.workA), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => failing.saveWork(IDS.workA), /SELECT IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => failing.removeWork(IDS.workA), /SELECT IS CURRENTLY UNAVAILABLE/);
 });
 
 test("invalid work identities do not reach Archive mutations", async () => {
   const client = archiveClient();
   const repository = createArchiveRepository(client, config);
-  await assert.rejects(() => repository.saveWork("not-a-work"), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
-  await assert.rejects(() => repository.removeWork("not-a-work"), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => repository.saveWork("not-a-work"), /SELECT IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => repository.removeWork("not-a-work"), /SELECT IS CURRENTLY UNAVAILABLE/);
   assert.deepEqual(client.calls, []);
 });
 
@@ -297,15 +297,15 @@ test("Archive tag mutations send only normalized names and identifiers", async (
 test("Archive tag validation and private failures are sanitized", async () => {
   const client = tagClient();
   const repository = createArchiveRepository(client, config);
-  await assert.rejects(() => repository.createTag("   "), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
-  await assert.rejects(() => repository.deleteTag("not-a-tag"), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
-  await assert.rejects(() => repository.assignTag(IDS.workA, "not-a-tag"), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
-  await assert.rejects(() => repository.removeTag("not-a-work", IDS.tagA), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => repository.createTag("   "), /SELECT IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => repository.deleteTag("not-a-tag"), /SELECT IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => repository.assignTag(IDS.workA, "not-a-tag"), /SELECT IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => repository.removeTag("not-a-work", IDS.tagA), /SELECT IS CURRENTLY UNAVAILABLE/);
   assert.deepEqual(client.calls, []);
 
   const failing = createArchiveRepository(tagClient([], [], { createTag: true, deleteTag: true, assignTag: true, removeTag: true }), config);
-  await assert.rejects(() => failing.createTag("Ritual"), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
-  await assert.rejects(() => failing.deleteTag(IDS.tagA), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
-  await assert.rejects(() => failing.assignTag(IDS.workA, IDS.tagA), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
-  await assert.rejects(() => failing.removeTag(IDS.workA, IDS.tagA), /ARCHIVE IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => failing.createTag("Ritual"), /SELECT IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => failing.deleteTag(IDS.tagA), /SELECT IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => failing.assignTag(IDS.workA, IDS.tagA), /SELECT IS CURRENTLY UNAVAILABLE/);
+  await assert.rejects(() => failing.removeTag(IDS.workA, IDS.tagA), /SELECT IS CURRENTLY UNAVAILABLE/);
 });

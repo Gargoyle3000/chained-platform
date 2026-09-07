@@ -30,6 +30,8 @@ Last updated: 2026-09-06
 
 \- WORKSPACE = private Archive.
 
+\- SELECT is the reversible user-facing trial name for the private workspace. Its subtitle is `PRIVATE WORKSPACE / ARCHIVE`; routes, modules, data and storage remain Archive internally. `CHAINED SELECT` remains the contextual PDF export generated from a Project.
+
 
 
 \- Archive is private.

@@ -175,7 +175,7 @@ function createSupergridManagement(work) {
   toggle.textContent = "[ ... ]";
   toggle.setAttribute("aria-haspopup", "menu");
   toggle.setAttribute("aria-expanded", "false");
-  toggle.setAttribute("aria-label", `Manage ${work.title} in Archive`);
+  toggle.setAttribute("aria-label", `Manage ${work.title} in Select`);
 
   const menu = document.createElement("div");
   menu.className = "archive-supergrid-menu";
@@ -461,12 +461,12 @@ function createSavedWork(work) {
   const remove = document.createElement("button");
   remove.className = "text-action archive-remove";
   remove.type = "button";
-  remove.textContent = "[ REMOVE FROM ARCHIVE ]";
-  remove.setAttribute("aria-label", `Remove ${work.title} from Archive`);
+  remove.textContent = "[ REMOVE FROM SELECT ]";
+  remove.setAttribute("aria-label", `Remove ${work.title} from Select`);
   remove.addEventListener("click", async () => {
     remove.disabled = true;
     try { await repository.removeWork(work.id); await loadArchive(); }
-    catch { remove.disabled = false; emptyMessage.textContent = "ARCHIVE COULD NOT BE UPDATED"; emptyMessage.hidden = false; }
+    catch { remove.disabled = false; emptyMessage.textContent = "SELECT COULD NOT BE UPDATED"; emptyMessage.hidden = false; }
   });
   const tagAssignment = createTagAssignment(work);
   const projectAssignment = createProjectAssignment(work);
@@ -728,7 +728,7 @@ async function loadArchive() {
     await hydrateProjectImageSelection(selectedProject());
   } catch {
     setResultCount(0);
-    emptyMessage.textContent = "ARCHIVE IS CURRENTLY UNAVAILABLE";
+    emptyMessage.textContent = "SELECT IS CURRENTLY UNAVAILABLE";
     emptyMessage.hidden = false;
     grid.setAttribute("aria-busy", "false");
   }

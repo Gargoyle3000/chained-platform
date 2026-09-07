@@ -22,7 +22,7 @@ export function updateArchiveWorkAction(button, work, isSaved) {
   button.setAttribute("aria-pressed", String(isSaved));
   button.setAttribute(
     "aria-label",
-    `${isSaved ? "Remove" : "Save"} ${work.title} ${isSaved ? "from" : "to"} Archive`
+    `${isSaved ? "Remove" : "Save"} ${work.title} ${isSaved ? "from" : "to"} Select`
   );
 }
 
@@ -44,7 +44,7 @@ export function createArchiveWorkAction(work, archiveState, announce = () => {},
       const isSaved = await archiveState.toggle(work.id);
       updateArchiveWorkAction(button, work, isSaved);
     } catch {
-      announce("ARCHIVE IS CURRENTLY UNAVAILABLE");
+      announce("SELECT IS CURRENTLY UNAVAILABLE");
     } finally {
       button.disabled = false;
       button.removeAttribute("aria-busy");
