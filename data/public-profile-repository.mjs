@@ -102,7 +102,7 @@ export function createPublicProfileRepository(
         owner_profile_id: `eq.${profiles[0].id}`,
         visibility: "eq.published",
         published_at: "not.is.null",
-        order: "year_sort.desc.nullslast,updated_at.desc,id.asc",
+        order: "year_sort.desc.nullslast,profile_order.asc,id.asc",
         limit: String(PROFILE_WORK_PAGE_SIZE),
         offset: String(offset)
       });

@@ -3,7 +3,7 @@ import { materialDisplayValues, materialSearchTerms } from "./material-terms.mjs
 import { normalizeHttpUrl } from "./url-normalization.mjs";
 
 export const WORK_COLUMNS = Object.freeze([
-  "id", "owner_profile_id", "title", "year_sort", "year_label", "work_type",
+  "id", "owner_profile_id", "title", "year_sort", "profile_order", "year_label", "work_type",
   "format_discipline", "primary_medium", "support_base", "additional_materials",
   "height", "width", "depth", "dimension_unit", "duration_text", "edition_text",
   "description", "collaborator_name", "collaborator_url", "photo_credit_name",
@@ -136,6 +136,7 @@ export function databaseToWork(row, images = []) {
     title: row.title || "",
     year: row.year_label || "",
     yearSort: row.year_sort ?? null,
+    profileOrder: row.profile_order ?? null,
     workType: row.work_type || "",
     format: row.format_discipline || "",
     materials: materialValues.join(", "),

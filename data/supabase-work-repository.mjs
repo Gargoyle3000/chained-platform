@@ -1,6 +1,7 @@
 import { databaseImageToClient, databaseToWork, formToDatabase, isValidWorkId, mapPublicArtworkRows, PUBLIC_IMAGE_SELECT, WORK_SELECT } from "./work-mapping.mjs";
 import { sanitizeWorkError, WorkError, WORK_ERROR_CODES } from "./work-errors.mjs";
 import { createWorkMediaService } from "./work-media-service.mjs";
+import { compareArtistWorkCuration } from "./artist-work-ordering.mjs";
 
 function requireId(id) {
   if (!isValidWorkId(id)) throw new WorkError(WORK_ERROR_CODES.INVALID, "THIS WORK IS NOT AVAILABLE");
@@ -48,8 +49,8 @@ export function createSupabaseWorkRepository(client, config, mediaDependencies) 
     },
     async listWorks(profileIds = []) {
       if (!profileIds.length) return [];
-      const { data, error } = await client.from("works").select(WORK_SELECT).in("owner_profile_id", profileIds).order("year_sort", { ascending: false, nullsFirst: false }).order("updated_at", { ascending: false }).order("id", { ascending: true });
-      return attachImages(requireResult(error, data, "WORKS ARE UNAVAILABLE"));
+      const { data, error } = await client.from("works").select(WORK_SELECT).in("owner_profile_id", profileIds).order("year_sort", { ascending: false, nullsFirst: false }).order("profile_order", { ascending: true }).order("id", { ascending: true });
+      return attachImages(requireResult(error, data, "WORKS ARE UNAVAILABLE")).then((works) => works.sort(compareArtistWorkCuration));
     },
     async getWork(id) {
       const { data, error } = await client.from("works").select(WORK_SELECT).eq("id", requireId(id)).maybeSingle();
@@ -78,6 +79,19 @@ export function createSupabaseWorkRepository(client, config, mediaDependencies) 
       const { error } = await client.rpc("reorder_work_images", { target_work_id: requireId(workId), ordered_image_ids: imageIds, cover_image_id: coverImageId });
       if (error) throw sanitizeWorkError(error, "IMAGE ORDER COULD NOT BE SAVED");
       return listImages(workId);
+    },
+    async reorderArtistProfileWorks(profileId, yearSort, workIds) {
+      requireId(profileId);
+      const validYear = yearSort == null || (Number.isInteger(yearSort) && yearSort >= -10000 && yearSort <= 10000);
+      if (!validYear || !Array.isArray(workIds) || !workIds.length || workIds.some((workId) => !isValidWorkId(workId))) {
+        throw new WorkError(WORK_ERROR_CODES.INVALID, "THIS WORK ORDER IS NOT AVAILABLE");
+      }
+      const { error } = await client.rpc("reorder_artist_profile_works", {
+        target_profile_id: profileId,
+        target_year_sort: yearSort,
+        ordered_work_ids: workIds
+      });
+      if (error) throw sanitizeWorkError(error, "WORK ORDER COULD NOT BE SAVED");
     },
     async deleteWork(id, { published = false, idempotencyKey } = {}) {
       const workId = requireId(id);

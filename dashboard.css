@@ -718,6 +718,23 @@
   border-top: 0;
 }
 
+.dashboard-work-year-group {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboard-work-year-heading {
+  margin: 0;
+
+  font-size: var(--font-meta);
+  font-weight: 400;
+}
+
+.dashboard-work-year-list {
+  display: grid;
+  gap: 18px;
+}
+
 .dashboard-work-row {
   padding: 0;
 

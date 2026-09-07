@@ -51,6 +51,31 @@ test("draft deletion keeps the browser RPC while published deletion uses the tru
   ]);
 });
 
+test("artist Work reordering uses the complete server-authorized year bucket contract", async () => {
+  const calls = [];
+  const client = {
+    rpc: async (name, body) => { calls.push({ name, body }); return { data: true, error: null }; },
+    storage: { from: () => ({ getPublicUrl: () => ({ data: {} }) }) }
+  };
+  const repository = createSupabaseWorkRepository(client, {});
+  await repository.reorderArtistProfileWorks(ID, 2026, [IMAGE_TWO, IMAGE_THREE]);
+  assert.deepEqual(calls, [{
+    name: "reorder_artist_profile_works",
+    body: { target_profile_id: ID, target_year_sort: 2026, ordered_work_ids: [IMAGE_TWO, IMAGE_THREE] }
+  }]);
+});
+
+test("artist Work reordering rejects malformed client bucket input before an RPC", async () => {
+  const client = {
+    rpc: async () => { throw new Error("must not call RPC"); },
+    storage: { from: () => ({ getPublicUrl: () => ({ data: {} }) }) }
+  };
+  await assert.rejects(
+    createSupabaseWorkRepository(client, {}).reorderArtistProfileWorks(ID, 2026.5, [IMAGE_TWO]),
+    (error) => error instanceof WorkError && error.code === WORK_ERROR_CODES.INVALID
+  );
+});
+
 test("a hidden Work with a resumable cleanup contract resumes the trusted deletion lifecycle", async () => {
   const calls = [];
   const client = {

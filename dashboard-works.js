@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const { getWorkRepository } = await import("./data/work-repository.mjs");
   const { renderDashboardAccountIdentity } = await import("./data/dashboard-context.mjs");
+  const { groupArtistWorksByYear, moveWorkWithinYear } = await import("./data/artist-work-ordering.mjs");
   const workList = document.querySelector("#dashboard-work-list");
   const totalElement = document.querySelector("#dashboard-works-total");
   const breakdownElement = document.querySelector("#dashboard-works-breakdown");
@@ -99,7 +100,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return container;
   }
 
-  async function createWorkRow(work, reload, privatePreviewResult) {
+  async function createWorkRow(work, reload, privatePreviewResult, ordering) {
     const row = document.createElement("article");
     const information = document.createElement("div");
     const title = document.createElement("h3");
@@ -128,6 +129,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     edit.textContent = "[ EDIT ]";
     edit.setAttribute("aria-label", `Edit ${work.title || "untitled work"}`);
     remove.addEventListener("click", () => { confirmation.hidden = false; confirmation.querySelector("button:not([disabled])")?.focus(); });
+    if (ordering) {
+      const moveUp = createTextAction("MOVE UP", `Move ${work.title || "untitled work"} up within ${ordering.label}`);
+      const moveDown = createTextAction("MOVE DOWN", `Move ${work.title || "untitled work"} down within ${ordering.label}`);
+      moveUp.disabled = ordering.index === 0;
+      moveDown.disabled = ordering.index === ordering.workIds.length - 1;
+      moveUp.addEventListener("click", () => ordering.move(-1));
+      moveDown.addEventListener("click", () => ordering.move(1));
+      actions.append(moveUp, moveDown);
+    }
     information.append(title, metadata, imageState);
     actions.append(edit, remove);
     statusArea.append(status, actions, confirmation);
@@ -158,7 +168,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     totalElement.textContent = `${works.length} ${works.length === 1 ? "WORK" : "WORKS"}`;
   }
 
-  async function renderWorks(profileIds = []) {
+  async function renderWorks(profiles = []) {
+    const profileIds = profiles.map((profile) => profile.id);
     const works = await repository.listWorks(profileIds);
     releaseUrls();
     setError();
@@ -172,7 +183,47 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (repository.mode === "supabase") {
       privatePreviewResult = await repository.media.privatePreviewBatchResult(privateCovers);
     }
-    workList.replaceChildren(...await Promise.all(works.map((work) => createWorkRow(work, () => renderWorks(profileIds), privatePreviewResult))));
+    const profileNames = new Map(profiles.map((profile) => [profile.id, profile.name]));
+    const groups = groupArtistWorksByYear(works, profileNames);
+    const showProfileNames = new Set(groups.map((group) => group.profileId)).size > 1;
+    const sections = await Promise.all(groups.map(async (group) => {
+      const section = document.createElement("section");
+      const heading = document.createElement("h3");
+      const rows = document.createElement("div");
+      const yearLabel = group.year == null ? "UNKNOWN" : String(group.year);
+      const label = showProfileNames && group.profileName ? `${group.profileName.toUpperCase()} · ${yearLabel}` : yearLabel;
+      section.className = "dashboard-work-year-group";
+      heading.className = "dashboard-work-year-heading";
+      heading.textContent = label;
+      rows.className = "dashboard-work-year-list";
+      const orderedIds = group.works.map((work) => work.id);
+      const renderedRows = await Promise.all(group.works.map((work, index) => createWorkRow(
+        work,
+        () => renderWorks(profiles),
+        privatePreviewResult,
+        {
+          index,
+          label: yearLabel,
+          workIds: orderedIds,
+          move: async (direction) => {
+            const moved = moveWorkWithinYear(orderedIds.map((id) => ({ id })), work.id, direction);
+            if (!moved) return;
+            setError();
+            try {
+              await repository.reorderArtistProfileWorks(group.profileId, group.year, moved.map((item) => item.id));
+              await renderWorks(profiles);
+            } catch {
+              try { await renderWorks(profiles); } catch {}
+              setError("WORK ORDER COULD NOT BE SAVED");
+            }
+          }
+        }
+      )));
+      rows.append(...renderedRows);
+      section.append(heading, rows);
+      return section;
+    }));
+    workList.replaceChildren(...sections);
   }
 
   try {
@@ -190,7 +241,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         workList.replaceChildren(emptyState("ARTIST PROFILE SETUP REQUIRED"));
         return;
       }
-      await renderWorks(profiles.map((profile) => profile.id));
+      await renderWorks(profiles);
     } else {
       renderDashboardAccountIdentity([], "prototype");
       await renderWorks();

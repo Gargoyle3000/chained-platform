@@ -148,14 +148,24 @@ test("a published profile supports an empty Works state", () => {
   assert.deepEqual(mapped.works, []);
 });
 
-test("profile Works order by year, nulls last, update time, and stable ID", () => {
+test("profile Works mirror Dashboard curation by year, manual position, and UNKNOWN", () => {
   const rows = [
-    work(IDS.workA3, IDS.profileA, "2026-08-03T00:00:00Z", { year_sort: null }),
-    work(IDS.workA2, IDS.profileA, "2026-08-02T00:00:00Z", { year_sort: 2025 }),
-    work(IDS.workA1, IDS.profileA, "2026-08-01T00:00:00Z", { year_sort: 2026 })
+    work(IDS.workA3, IDS.profileA, "2026-08-03T00:00:00Z", { year_sort: null, profile_order: 0 }),
+    work(IDS.workA2, IDS.profileA, "2026-08-02T00:00:00Z", { year_sort: 2026, profile_order: 1 }),
+    work(IDS.workA1, IDS.profileA, "2026-08-01T00:00:00Z", { year_sort: 2026, profile_order: 0 })
   ];
   const mapped = mapPublicProfileResult(profile(), rows, rows.map((row) => cover(row.id)), publicUrl);
   assert.deepEqual(mapped.works.map((entry) => entry.id), [IDS.workA1, IDS.workA2, IDS.workA3]);
+});
+
+test("profile filtering retains a draft's stored artist-curation position", () => {
+  const draft = work(IDS.workA2, IDS.profileA, "2026-08-02T00:00:00Z", { visibility: "draft", profile_order: 1 });
+  const first = work(IDS.workA1, IDS.profileA, "2026-08-01T00:00:00Z", { profile_order: 0 });
+  const third = work(IDS.workA3, IDS.profileA, "2026-08-03T00:00:00Z", { profile_order: 2 });
+  const current = mapPublicProfileResult(profile(), [third, draft, first], [cover(third.id), cover(draft.id), cover(first.id)], publicUrl);
+  assert.deepEqual(current.works.map((entry) => entry.id), [first.id, third.id]);
+  const published = mapPublicProfileResult(profile(), [third, { ...draft, visibility: "published" }, first], [cover(third.id), cover(draft.id), cover(first.id)], publicUrl);
+  assert.deepEqual(published.works.map((entry) => entry.id), [first.id, draft.id, third.id]);
 });
 
 test("only an active public cover produces a public profile Work", () => {

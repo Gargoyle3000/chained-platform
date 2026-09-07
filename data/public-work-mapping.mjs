@@ -1,4 +1,5 @@
 import { materialDisplayValues, materialSearchTerms } from "./material-terms.mjs";
+import { compareArtistWorkCuration } from "./artist-work-ordering.mjs";
 
 export const PUBLIC_PROFILE_COLUMNS = Object.freeze([
   "id",
@@ -27,6 +28,7 @@ export const PUBLIC_WORK_COLUMNS = Object.freeze([
   "owner_profile_id",
   "title",
   "year_sort",
+  "profile_order",
   "year_label",
   "work_type",
   "format_discipline",
@@ -161,21 +163,7 @@ export function mapPublishedArtistProfile(row) {
 }
 
 export function compareProfileWorks(first, second) {
-  const firstYear = first.year_sort != null && Number.isFinite(Number(first.year_sort))
-    ? Number(first.year_sort)
-    : null;
-  const secondYear = second.year_sort != null && Number.isFinite(Number(second.year_sort))
-    ? Number(second.year_sort)
-    : null;
-
-  if (firstYear !== secondYear) {
-    if (firstYear == null) return 1;
-    if (secondYear == null) return -1;
-    return secondYear - firstYear;
-  }
-
-  const updatedDifference = timestamp(second.updated_at) - timestamp(first.updated_at);
-  return updatedDifference || stableIdCompare(first, second);
+  return compareArtistWorkCuration(first, second);
 }
 
 export function compareDiscoverChronology(first, second) {

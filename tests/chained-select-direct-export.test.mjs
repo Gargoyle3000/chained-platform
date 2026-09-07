@@ -27,6 +27,14 @@ test("Project membership is canonically grouped by artist, year, title, then sta
   assert.deepEqual(source.map((entry) => entry.id), ["z", "d", "c", "b", "a", "e"]);
 });
 
+test("SELECT deliberately ignores artist-profile curation positions", () => {
+  const source = [
+    { ...work("late-title", "Artist A", "2026", "Zulu"), profileOrder: 0 },
+    { ...work("early-title", "Artist A", "2026", "Alpha"), profileOrder: 99 }
+  ];
+  assert.deepEqual(canonicalChainedSelectWorks(source).map((entry) => entry.id), ["early-title", "late-title"]);
+});
+
 test("direct Select limits reject Project sources without trimming them", () => {
   assert.equal(chainedSelectLimit(Array.from({ length: CHAINED_SELECT_MAX_WORKS + 1 }, (_, index) => work(String(index), "A", "2026", "W"))).valid, false);
   assert.equal(chainedSelectLimit([work("one", "A", "2026", "W", CHAINED_SELECT_MAX_IMAGES + 1)]).valid, false);
