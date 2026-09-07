@@ -130,8 +130,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     edit.setAttribute("aria-label", `Edit ${work.title || "untitled work"}`);
     remove.addEventListener("click", () => { confirmation.hidden = false; confirmation.querySelector("button:not([disabled])")?.focus(); });
     if (ordering) {
-      const moveUp = createTextAction("MOVE UP", `Move ${work.title || "untitled work"} up within ${ordering.label}`);
-      const moveDown = createTextAction("MOVE DOWN", `Move ${work.title || "untitled work"} down within ${ordering.label}`);
+      const moveUp = createTextAction("↑", `Move ${work.title || "untitled work"} up within ${ordering.label}`);
+      const moveDown = createTextAction("↓", `Move ${work.title || "untitled work"} down within ${ordering.label}`);
       moveUp.disabled = ordering.index === 0;
       moveDown.disabled = ordering.index === ordering.workIds.length - 1;
       moveUp.addEventListener("click", () => ordering.move(-1));

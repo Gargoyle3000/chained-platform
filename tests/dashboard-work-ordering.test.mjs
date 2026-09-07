@@ -6,8 +6,12 @@ test("Dashboard Works groups curation by year and provides restrained keyboard m
   const source = await readFile(new URL("../dashboard-works.js", import.meta.url), "utf8");
   assert.match(source, /groupArtistWorksByYear/);
   assert.match(source, /const yearLabel = group\.year == null \? "UNKNOWN" : String\(group\.year\)/);
-  assert.match(source, /createTextAction\("MOVE UP"/);
-  assert.match(source, /createTextAction\("MOVE DOWN"/);
+  assert.match(source, /createTextAction\("↑"/);
+  assert.match(source, /createTextAction\("↓"/);
+  assert.doesNotMatch(source, /createTextAction\("MOVE UP"/);
+  assert.doesNotMatch(source, /createTextAction\("MOVE DOWN"/);
+  assert.match(source, /Move .* up within/);
+  assert.match(source, /Move .* down within/);
   assert.match(source, /reorderArtistProfileWorks\(group\.profileId, group\.year/);
   assert.doesNotMatch(source, /draggable\s*=/);
 });
