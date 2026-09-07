@@ -58,7 +58,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentWorkPublished = false;
   let editorBusy = false;
   let managedPublicationState = currentWorkId ? "unknown" : "new";
-  let announceReadiness = false;
   let lastAuthoritativeWork = null;
   const publishAttempt = createIdempotencyState();
   const unpublishAttempt = createIdempotencyState();
@@ -69,7 +68,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     onError: () => {
       managedPublicationState = "unknown";
       updatePublishAvailability();
-      if (announceReadiness) showFormStatus("WORK SAVED · PUBLICATION READINESS UNAVAILABLE", true);
+      showFormStatus("WORK SAVED · PUBLICATION READINESS UNAVAILABLE", true);
     }
   });
 
@@ -170,17 +169,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   function applyManagedPublicationReadiness(readiness) {
     managedPublicationState = readiness.state;
     updatePublishAvailability();
-    if (!announceReadiness) return;
     const state = publicationReadinessUiState(readiness, prerequisiteMessage());
     showFormStatus(state.message, state.isError);
   }
 
 
-  async function refreshPublicationReadiness({ announce = true } = {}) {
+  async function refreshPublicationReadiness() {
     if (!localSupabaseMode || !currentWorkId || currentWorkPublished) return null;
-    announceReadiness = announce;
     managedPublicationState = "checking";
     updatePublishAvailability();
+    showFormStatus("CHECKING IMAGE PROCESSING");
     await readinessWatcher.start(currentWorkId);
     return managedPublicationState;
   }
@@ -843,7 +841,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       await populateForm(authoritative);
       if (visibility === "published") {
         phase = "readiness";
-        await refreshPublicationReadiness({ announce: true });
+        await refreshPublicationReadiness();
         if (managedPublicationState !== "ready") return;
         phase = "publishing";
         showFormStatus("PUBLISHING");
@@ -856,12 +854,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       } else {
         showFormStatus("DRAFT SAVED");
         phase = "readiness";
-        await refreshPublicationReadiness({ announce: false });
+        await refreshPublicationReadiness();
       }
     } catch (error) {
       const failure = workOperationFailureUiState({ phase, metadataPersisted, error });
       showFormStatus(failure.message, failure.isError);
-      if (failure.restartReadiness) await refreshPublicationReadiness({ announce: true });
+      if (failure.restartReadiness) await refreshPublicationReadiness();
     } finally {
       setEditorBusy(false);
     }
@@ -872,7 +870,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const work = await workStore.getWork(currentWorkId);
     if (!work) throw new Error("Work unavailable.");
     await populateForm(work);
-    if (!currentWorkPublished) await refreshPublicationReadiness({ announce: false });
+    if (!currentWorkPublished) await refreshPublicationReadiness();
     return work;
   }
 
@@ -936,7 +934,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (profileSelect) profileSelect.value = selectedOwnerProfileId;
       if (localSupabaseMode) profileSelect.disabled = true;
       await populateForm(work);
-      if (!currentWorkPublished) await refreshPublicationReadiness({ announce: true });
+      if (!currentWorkPublished) await refreshPublicationReadiness();
     } catch {
       renderDashboardAccountIdentity([], "error");
       showFormStatus(

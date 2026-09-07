@@ -132,6 +132,37 @@ test("readiness UI states control Publish with truthful stage copy", () => {
   });
 });
 
+test("SAVE DRAFT readiness sequence visibly progresses from processing to ready", async () => {
+  const session = harness([{ state: "processing" }, { state: "ready" }]);
+  await session.watcher.start("saved-draft-work");
+  assert.deepEqual(
+    publicationReadinessUiState(session.observed.at(-1)),
+    { message: "WORK SAVED · PROCESSING IMAGES", isError: false, publishEnabled: false }
+  );
+  await session.runNext();
+  assert.deepEqual(
+    publicationReadinessUiState(session.observed.at(-1)),
+    { message: "READY TO PUBLISH", isError: false, publishEnabled: true }
+  );
+  assert.equal(session.watcher.isActive(), false);
+});
+
+test("reopening a saved draft presents every authoritative readiness outcome", async () => {
+  const cases = [
+    ["processing", "WORK SAVED · PROCESSING IMAGES", false, true],
+    ["ready", "READY TO PUBLISH", true, false],
+    ["failed", "IMAGE PROCESSING FAILED", false, false]
+  ];
+  for (const [state, message, publishEnabled, staysActive] of cases) {
+    const session = harness([{ state }]);
+    await session.watcher.start(`reopened-draft-${state}`);
+    assert.deepEqual(publicationReadinessUiState(session.observed.at(-1)), {
+      message, isError: state === "failed", publishEnabled
+    });
+    assert.equal(session.watcher.isActive(), staysActive);
+  }
+});
+
 test("save and Publish failures remain semantically separate", () => {
   assert.equal(workOperationFailureUiState({ phase: "saving", metadataPersisted: false, error: new Error("raw") }).message, "WORK COULD NOT BE SAVED");
   assert.deepEqual(workOperationFailureUiState({ phase: "publishing", metadataPersisted: true, error: { code: "media_processing" } }), {
@@ -145,6 +176,10 @@ test("editor copy and boundaries distinguish save, processing, publication, and 
   const source = await readFile(new URL("../dashboard-form.js", import.meta.url), "utf8");
   const readinessSource = await readFile(new URL("../data/work-publication-readiness.mjs", import.meta.url), "utf8");
   assert.match(source, /showFormStatus\("SAVING WORK"\)/);
+  assert.match(source, /showFormStatus\("CHECKING IMAGE PROCESSING"\)/);
+  assert.match(source, /showFormStatus\("DRAFT SAVED"\);\s*phase = "readiness";\s*await refreshPublicationReadiness\(\);/s);
+  assert.match(source, /await populateForm\(work\);\s*if \(!currentWorkPublished\) await refreshPublicationReadiness\(\);/s);
+  assert.doesNotMatch(source, /announceReadiness|refreshPublicationReadiness\(\{\s*announce:\s*false\s*\}\)/);
   assert.match(readinessSource, /WORK SAVED · PROCESSING IMAGES/);
   assert.match(readinessSource, /READY TO PUBLISH/);
   assert.match(readinessSource, /IMAGE PROCESSING FAILED/);
