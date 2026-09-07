@@ -271,7 +271,7 @@
 
   .artist-intro h1 {
     font-size: 34px;
-    margin-bottom: 4px;
+    margin-bottom: 10px;
   }
 
   .artist-intro p {
@@ -279,8 +279,8 @@
   }
 
   .profile-follow {
-    margin-top: 8px;
-    margin-bottom: 8px;
+    margin-top: 14px;
+    margin-bottom: 18px;
   }
 
   .profile-follow-status {
@@ -288,9 +288,8 @@
   }
 
   .artist-navigation {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 10px 18px;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .artist-profile-links {

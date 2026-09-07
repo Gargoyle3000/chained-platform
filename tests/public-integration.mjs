@@ -520,14 +520,25 @@ try {
         const contentTop = Math.min(...[...document.querySelectorAll('.discover-toolbar, .discover-work, .artist-sidebar-inner, .profile-work')]
           .map((element) => element.getBoundingClientRect().top)
           .filter((value) => Number.isFinite(value)));
+        const profileNavigation = document.querySelector('.artist-navigation');
+        const visibleProfileLinks = profileNavigation
+          ? [...profileNavigation.querySelectorAll('a')].filter((link) => !link.hidden)
+          : [];
         return {
           overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
           headerBottom: header?.bottom || 0,
           contentTop,
-          focusable: [...document.querySelectorAll('a,button')].every((element) => !element.hasAttribute('tabindex') || Number(element.getAttribute('tabindex')) >= 0)
+          focusable: [...document.querySelectorAll('a,button')].every((element) => !element.hasAttribute('tabindex') || Number(element.getAttribute('tabindex')) >= 0),
+          profileNavigationVertical: !profileNavigation || (
+            getComputedStyle(profileNavigation).flexDirection === 'column'
+            && visibleProfileLinks.every((link, index) => (
+              index === 0 || link.getBoundingClientRect().top > visibleProfileLinks[index - 1].getBoundingClientRect().top
+            ))
+          )
         };
       })()`);
       record(`responsive ${pageLabel} ${width}`, !layout.overflow && layout.contentTop >= layout.headerBottom - 1 && layout.focusable);
+      if (!isDiscover) record(`responsive Profile local navigation ${width}`, layout.profileNavigationVertical);
     }
 
     stage = `checking responsive Presentation detail at ${width}`;
