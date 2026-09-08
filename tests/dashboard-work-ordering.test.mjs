@@ -28,11 +28,18 @@ test("Dashboard Works uses pointer drag only inside one rendered year bucket", a
   assert.match(source, /window\.addEventListener\("pointermove", session\.onMove/);
   assert.match(source, /event\.pointerType === "touch"/);
   assert.match(source, /dashboard-work-reorder-grip/);
+  assert.match(source, /thumbnail\.classList\.add\("dashboard-work-reorder-thumbnail"\)/);
+  assert.match(source, /thumbnail\.addEventListener\("pointerdown"/);
+  assert.doesNotMatch(source, /row\.addEventListener\("pointerdown"/);
+  assert.match(source, /coarsePointer && !fromGrip/);
   assert.match(source, /Reorder \$\{work\.title/);
   assert.match(source, /workOrderSaving/);
   assert.match(source, /await repository\.reorderArtistProfileWorks\(group\.profileId, group\.year, nextWorkIds\)/);
   assert.match(styles, /\.dashboard-work-row\.is-work-drop-before::before[\s\S]*background: var\(--accent\)/);
   assert.match(styles, /\.dashboard-work-reorder-grip[\s\S]*width: 44px[\s\S]*height: 44px[\s\S]*touch-action: none/);
+  assert.match(styles, /\.dashboard-work-reorder-thumbnail\s*\{\s*cursor: grab/);
+  assert.match(styles, /\.dashboard-work-row\.is-work-reordering \.dashboard-work-reorder-thumbnail\s*\{\s*cursor: grabbing/);
+  assert.doesNotMatch(styles, /\.dashboard-work-row\s*\{\s*cursor: grab/);
   assert.doesNotMatch(styles, /\.dashboard-work-row\s*\{[^}]*touch-action/s);
 });
 

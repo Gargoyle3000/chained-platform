@@ -451,7 +451,7 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .dashboard-work-row {
+  .dashboard-work-reorder-thumbnail {
     cursor: grab;
   }
 
@@ -460,7 +460,7 @@
     cursor: pointer;
   }
 
-  .dashboard-work-row.is-work-reordering {
+  .dashboard-work-row.is-work-reordering .dashboard-work-reorder-thumbnail {
     cursor: grabbing;
   }
 }

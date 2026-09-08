@@ -196,8 +196,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.addEventListener("pointercancel", session.onCancel);
   }
 
-  function attachWorkReorderInteraction(row, grip, ordering) {
-    row.addEventListener("pointerdown", (event) => {
+  function attachWorkReorderInteraction(row, thumbnail, grip, ordering) {
+    thumbnail.addEventListener("pointerdown", (event) => {
       startWorkDrag(event, row, grip, ordering, false);
     });
     grip.addEventListener("pointerdown", (event) => {
@@ -250,8 +250,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     information.append(title, metadata, imageState);
     actions.append(edit, remove);
     statusArea.append(status, actions, confirmation);
-    row.append(await createWorkImage(work, privatePreviewResult), information, statusArea);
-    if (ordering) attachWorkReorderInteraction(row, grip, ordering);
+    const thumbnail = await createWorkImage(work, privatePreviewResult);
+    if (ordering) thumbnail.classList.add("dashboard-work-reorder-thumbnail");
+    row.append(thumbnail, information, statusArea);
+    if (ordering) attachWorkReorderInteraction(row, thumbnail, grip, ordering);
     return row;
   }
 
