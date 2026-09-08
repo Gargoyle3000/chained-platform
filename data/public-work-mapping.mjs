@@ -1,5 +1,6 @@
 import { materialDisplayValues, materialSearchTerms } from "./material-terms.mjs";
 import { compareArtistWorkCuration } from "./artist-work-ordering.mjs";
+import { createPublicImageRendition } from "./public-image-renditions.mjs";
 
 export const PUBLIC_PROFILE_COLUMNS = Object.freeze([
   "id",
@@ -194,14 +195,7 @@ function coverByWork(imageRows) {
 }
 
 function mapCover(row, publicUrl) {
-  const source = publicUrl(row.public_object_path);
-  if (!source) return null;
-
-  return Object.freeze({
-    src: source,
-    width: Number(row.pixel_width) > 0 ? Number(row.pixel_width) : null,
-    height: Number(row.pixel_height) > 0 ? Number(row.pixel_height) : null
-  });
+  return createPublicImageRendition(row, publicUrl);
 }
 
 function isPublishedWork(row) {

@@ -4,6 +4,7 @@ import {
   isValidProfileSlug,
   isValidPublicWorkId
 } from "./public-work-mapping.mjs";
+import { createPublicImageRendition } from "./public-image-renditions.mjs";
 
 export const FOLLOWING_FEED_FIELDS = Object.freeze([
   "work_id",
@@ -47,10 +48,10 @@ export function mapFollowingFeedRow(row, publicUrl) {
     !cleanText(row.public_object_path)
   ) return null;
 
-  const imageSource = publicUrl(row.public_object_path);
+  const image = createPublicImageRendition(row, publicUrl);
   const artworkHref = createPublicArtworkLink(row.work_id);
   const profileHref = createPublicProfileLink(row.artist_slug);
-  if (!imageSource || !artworkHref || !profileHref) return null;
+  if (!image || !artworkHref || !profileHref) return null;
 
   return Object.freeze({
     id: row.work_id,
@@ -61,11 +62,7 @@ export function mapFollowingFeedRow(row, publicUrl) {
     artistSlug: row.artist_slug,
     artworkHref,
     profileHref,
-    image: Object.freeze({
-      src: imageSource,
-      width: Number(row.pixel_width) > 0 ? Number(row.pixel_width) : null,
-      height: Number(row.pixel_height) > 0 ? Number(row.pixel_height) : null
-    })
+    image
   });
 }
 

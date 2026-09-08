@@ -9,6 +9,10 @@ import {
 } from "./data/public-work-mapping.mjs";
 import { createPublicWorkImageLoader } from "./data/public-work-images.mjs";
 import { attachPublicWorkCarousel } from "./public-work-carousel.mjs";
+import {
+  createPublicResponsiveImage,
+  updatePublicResponsiveImage
+} from "./data/public-image-renditions.mjs";
 
 const worksContainer = document.querySelector("#works");
 const profileName = document.querySelector("#profile-name");
@@ -167,11 +171,11 @@ function createWorkArticle(work, carousel = null) {
   imageLink.className = "profile-image-link";
   imageLink.href = work.artworkHref;
   imageLink.setAttribute("aria-label", `View ${work.title} by ${work.artistName}`);
-  image.src = work.image.src;
   image.alt = `${work.title} by ${work.artistName}`;
   image.addEventListener("error", () => replaceBrokenImage(imageLink), { once: true });
   applyOrientation(article, image, work.image);
-  imageLink.append(image);
+  const picture = createPublicResponsiveImage(document, image, work.image);
+  imageLink.append(picture);
   carousel?.attach({
     link: imageLink,
     image,
@@ -179,7 +183,8 @@ function createWorkArticle(work, carousel = null) {
     workId: work.id,
     coverImage: work.image,
     loadImages: carousel.loadImages,
-    label: `View ${work.title} by ${work.artistName}`
+    label: `View ${work.title} by ${work.artistName}`,
+    onImageChange: (current) => updatePublicResponsiveImage(image, picture, current)
   });
 
   metadata.className = "profile-work-meta";

@@ -1,4 +1,8 @@
 import { rememberWorkFeedOrigin } from "./data/work-feed-return.mjs";
+import {
+  createPublicResponsiveImage,
+  updatePublicResponsiveImage
+} from "./data/public-image-renditions.mjs";
 
 document.addEventListener("DOMContentLoaded", () => {
   const page = document.body;
@@ -148,10 +152,10 @@ document.addEventListener("DOMContentLoaded", () => {
     imageLink.className = "discover-image-link";
     imageLink.href = work.artworkHref;
     imageLink.setAttribute("aria-label", `View ${work.title} by ${work.artistName}`);
-    image.src = work.image.src;
     image.alt = `${work.title} by ${work.artistName}`;
     image.addEventListener("error", () => replaceBrokenImage(imageLink), { once: true });
-    imageLink.append(image);
+    const picture = createPublicResponsiveImage(document, image, work.image);
+    imageLink.append(picture);
     carousel?.attach({
       link: imageLink,
       image,
@@ -159,7 +163,8 @@ document.addEventListener("DOMContentLoaded", () => {
       workId: work.id,
       coverImage: work.image,
       loadImages: carousel.loadImages,
-      label: `View ${work.title} by ${work.artistName}`
+      label: `View ${work.title} by ${work.artistName}`,
+      onImageChange: (current) => updatePublicResponsiveImage(image, picture, current)
     });
     article.append(metadata, imageLink);
     return article;

@@ -1,5 +1,6 @@
 import { FRONTEND_MODES } from "./auth/config.mjs";
 import { getPublicPresentationRepository } from "./data/public-presentation-repository.mjs";
+import { createPublicResponsiveImage } from "./data/public-image-renditions.mjs";
 import {
   createPublicPresentationLink,
   createPublicProfileLink,
@@ -151,10 +152,8 @@ function renderPresentation(result) {
       const image = document.createElement("img");
       const metadata = document.createElement("p");
       link.href = work.artworkHref;
-      image.src = work.image;
       image.alt = `${work.title} by ${work.artistName}`;
-      image.loading = "lazy";
-      link.append(image);
+      link.append(createPublicResponsiveImage(document, image, work.image));
       metadata.textContent = [work.title, work.yearLabel, work.workType].filter(Boolean).join(" · ");
       article.append(link, metadata);
       grid.append(article);

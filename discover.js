@@ -1,4 +1,8 @@
 import { rememberWorkFeedOrigin } from "./data/work-feed-return.mjs";
+import {
+  createPublicResponsiveImage,
+  updatePublicResponsiveImage
+} from "./data/public-image-renditions.mjs";
 
 const page = document.body;
 const stream = document.querySelector(".discover-stream");
@@ -170,11 +174,10 @@ function createCuratedCollection(collection) {
   const firstWork = collection.works[0];
   if (firstWork) {
     const image = document.createElement("img");
-    image.src = firstWork.image.src;
     image.alt = `${collection.title}: ${firstWork.title}`;
     if (firstWork.image.width) image.width = firstWork.image.width;
     if (firstWork.image.height) image.height = firstWork.image.height;
-    preview.append(image);
+    preview.append(createPublicResponsiveImage(document, image, firstWork.image));
   } else {
     const empty = document.createElement("span");
     empty.className = "discover-curated-preview-empty";
@@ -264,10 +267,10 @@ function createDiscoverWork(
   imageLink.className = "discover-image-link";
   imageLink.href = work.artworkHref;
   imageLink.setAttribute("aria-label", `View ${work.title} by ${work.artistName}`);
-  image.src = work.image.src;
   image.alt = `${work.title} by ${work.artistName}`;
   image.addEventListener("error", () => replaceBrokenImage(imageLink), { once: true });
-  imageLink.append(image);
+  const picture = createPublicResponsiveImage(document, image, work.image);
+  imageLink.append(picture);
   registerContainedImageHitArea(imageLink, image, work.image);
   carousel?.attach({
     link: imageLink,
@@ -276,7 +279,8 @@ function createDiscoverWork(
     workId: work.id,
     coverImage: work.image,
     loadImages: carousel.loadImages,
-    label: `View ${work.title} by ${work.artistName}`
+    label: `View ${work.title} by ${work.artistName}`,
+    onImageChange: (current) => updatePublicResponsiveImage(image, picture, current)
   });
 
   article.append(metadata, imageLink);

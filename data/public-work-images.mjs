@@ -3,6 +3,7 @@ import {
   requestPublicRows
 } from "./public-data-request.mjs";
 import { isValidPublicWorkId } from "./public-work-mapping.mjs";
+import { createPublicImageRendition } from "./public-image-renditions.mjs";
 
 export const PUBLIC_WORK_IMAGE_SELECT = [
   "id",
@@ -43,13 +44,11 @@ export function mapPublicWorkImages(rows, workId, coverImage, publicUrl) {
   const images = [...(rows || [])]
     .filter((row) => validImage(row, workId))
     .map((row) => {
-      const src = publicUrl(row.public_object_path);
-      if (!src) return null;
+      const rendition = createPublicImageRendition(row, publicUrl);
+      if (!rendition) return null;
       return Object.freeze({
         id: row.id,
-        src,
-        width: Number(row.pixel_width) > 0 ? Number(row.pixel_width) : null,
-        height: Number(row.pixel_height) > 0 ? Number(row.pixel_height) : null,
+        ...rendition,
         sortOrder: Number.isFinite(Number(row.sort_order)) ? Number(row.sort_order) : 0,
         isCover: row.is_cover === true
       });
@@ -58,7 +57,7 @@ export function mapPublicWorkImages(rows, workId, coverImage, publicUrl) {
 
   const cover = images.find((image) => image.isCover) || Object.freeze({
     id: "cover",
-    src: coverImage.src,
+    ...coverImage,
     width: coverImage.width || null,
     height: coverImage.height || null,
     sortOrder: -1,
