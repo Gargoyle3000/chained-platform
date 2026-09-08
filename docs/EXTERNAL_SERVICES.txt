@@ -140,6 +140,22 @@ registrar or DNS arrangement is used. Cloudflare Pages is roadmap-only and is
 not active.
 
 
+OPENAI API
+STATUS: LOCAL PROTOTYPE / BENCHMARK
+
+PURPOSE:
+Provider candidate extraction and structured text transformation for future CV Import.
+
+CURRENT MODEL / API:
+`gpt-5.6-luna` via the Responses API.
+
+PRIVACY / TRUST BOUNDARY:
+Requests explicitly use `store:false`. Private CV input may only be sent after intentional user action in a future production flow. OpenAI returns untrusted candidates only; CHAINED validates them and requires human review before any write. OpenAI never writes directly to the CHAINED database.
+
+PROVIDER / SECRET:
+The provider is not permanently locked in and will be benchmarked against alternatives. Secrets are process/server-side only: never browser, public, or repository values.
+
+
 MAINTENANCE
 
 Whenever a production external service is added, materially changed, or removed,

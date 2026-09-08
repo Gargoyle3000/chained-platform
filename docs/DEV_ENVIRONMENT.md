@@ -40,3 +40,15 @@ Important agent rule: failure to resolve `docker` from PATH does not mean Docker
 
 - Supabase CLI 2.111.0 `db query --output-format json` returns a root JSON array. Operator helpers must accept that machine-readable shape and reject mixed stdout.
 - Production server/operator REST access uses current `sb_secret_` API keys. They are server/operator-only and must never enter browser/frontend code; session-local production guards and secrets must not be committed or printed.
+
+### OpenAI / CV Import local development
+
+- Current use is the local CV Import prototype/benchmark in the CHAINED OpenAI API project.
+- The restricted Project API key is stored for the current Windows user in Credential Manager as `OPENAI_CHAINED_CV_IMPORT` (username: `CHAINED`). The local launcher injects it only as process-scoped `OPENAI_API_KEY`.
+- Secret values never belong in Git, documentation, plaintext `.env` files, CLI arguments, browser code, or logs. The current key requires Responses write permission.
+- The local development key and any future production key are separate credentials. A future production integration should use server-side secret handling, likely Supabase Edge Function secrets.
+- The API project currently uses prepaid development billing with auto-reload disabled.
+
+### Sensitive local development secrets
+
+When practical, sensitive local development secrets such as API keys, private tokens, and credentials should live in the current Windows user's Credential Manager. Documentation may name the secret identifier, required permission, runtime variable, and setup instructions, but never its value. This convention does not apply to ordinary non-secret configuration.
