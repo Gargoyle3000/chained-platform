@@ -52,6 +52,10 @@ export function formatBenchmarkReport(artifact, artifactPath) {
   lines.push(`NEEDS REVIEW     ${candidates.filter((candidate) => candidate.needsReview).length}`);
   lines.push(`WARNINGS         ${artifact.result.warnings.length}`);
   for (const warning of artifact.result.warnings) lines.push(`WARNING          ${warning}`);
+  lines.push(`UNSUPPORTED SECTIONS ${artifact.result.unsupportedSections.length}`);
+  for (const section of artifact.result.unsupportedSections) {
+    lines.push(`UNSUPPORTED      ${section.heading} | ${section.reason} | ${section.entryCount}`);
+  }
   for (const candidate of candidates) {
     const summary = [candidate.title, candidate.organization, candidate.locationText].filter(Boolean).join(" · ");
     lines.push(`CANDIDATE        ${candidate.categoryType} | ${candidate.yearLabel ?? ""} | ${summary}`);

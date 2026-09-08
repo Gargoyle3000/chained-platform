@@ -29,6 +29,7 @@ const metadata = {
 };
 const result = {
   source: { documentKind: "pdf", pageCount: 2, extractedCharacterCount: 0 },
+  unsupportedSections: [],
   warnings: ["Unsupported Press section omitted"],
   candidates: [{
     candidateId: "candidate-1", categoryType: "education", yearLabel: "2024", title: "Example Academy",
@@ -97,6 +98,7 @@ test("document hashing is deterministic and the offline report summarizes withou
   assert.match(report, /CATEGORY         education: 1/);
   assert.match(report, /NEEDS REVIEW     0/);
   assert.match(report, /REQUEST TIMEOUT MS 180000/);
+  assert.match(report, /UNSUPPORTED SECTIONS 0/);
   assert.equal(readerSource.includes("fetch("), false);
 });
 

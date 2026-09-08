@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  CV_CATEGORY_TYPES,
   benchmarkCvImport,
   candidatePersistenceShape,
   normalizeCvImportResult,
@@ -25,7 +26,8 @@ const candidate = (overrides = {}) => ({
 const result = (candidates = [candidate()]) => ({
   source: { documentKind: "text", pageCount: 1, extractedCharacterCount: 20 },
   candidates,
-  warnings: []
+  warnings: [],
+  unsupportedSections: []
 });
 
 test("valid candidate is accepted and optional empty values normalize safely", () => {
@@ -40,8 +42,53 @@ test("valid candidate is accepted and optional empty values normalize safely", (
 
 test("unsupported category, missing title and invalid URL are rejected", () => {
   assert.throws(() => validateCvImportResult(result([candidate({ categoryType: "unsupported" })])), /unsupported/);
+  for (const categoryType of ["publication", "other", "legacy_category"]) {
+    assert.throws(() => validateCvImportResult(result([candidate({ categoryType })])), /unsupported/);
+  }
   assert.throws(() => validateCvImportResult(result([candidate({ title: "" })])), /title/);
   assert.throws(() => validateCvImportResult(result([candidate({ url: "javascript:alert(1)" })])), /HTTP/);
+});
+
+test("only the ten fixed Dashboard CV categories are importable", () => {
+  assert.deepEqual(CV_CATEGORY_TYPES, [
+    "education", "solo_exhibition", "duo_exhibition", "group_presentation", "award",
+    "grant", "collection", "residency", "teaching", "curatorial"
+  ]);
+  const candidates = CV_CATEGORY_TYPES.map((categoryType, index) => candidate({
+    candidateId: `fixed-${index}`, categoryType, title: `Fixed category ${index}`
+  }));
+  assert.equal(normalizeCvImportResult(result(candidates)).candidates.length, 10);
+});
+
+test("unsupported Press and Sideline sections remain bounded review data, never candidates", () => {
+  const importResult = result([]);
+  importResult.unsupportedSections = [
+    { heading: "PRESS", reason: "unsupported_category", entryCount: 5 },
+    { heading: "SIDELINE ACTIVITY", reason: "unsupported_category", entryCount: 1 }
+  ];
+  const normalized = normalizeCvImportResult(importResult);
+  assert.deepEqual(normalized.unsupportedSections, importResult.unsupportedSections);
+  assert.equal(normalized.candidates.length, 0);
+  assert.equal(JSON.stringify(normalized.candidates.map(candidatePersistenceShape)).includes("PRESS"), false);
+  assert.throws(() => validateCvImportResult({ ...importResult, unsupportedSections: [{ heading: "x".repeat(121), reason: "unsupported_category", entryCount: 1 }] }), /heading/);
+  assert.throws(() => validateCvImportResult({ ...importResult, unsupportedSections: [{ heading: "PRESS", reason: "closest_category", entryCount: 1 }] }), /reason/);
+  assert.throws(() => validateCvImportResult({ ...importResult, unsupportedSections: [{ heading: "PRESS", reason: "unsupported_category", entryCount: 0 }] }), /entryCount/);
+  assert.throws(() => validateCvImportResult({ ...importResult, unsupportedSections: [{ heading: "PRESS", reason: "unsupported_category", entryCount: 1, excerpt: "no" }] }), /unsupported field/);
+});
+
+test("Archive candidates and no-year Collections remain valid without creating profile metadata", () => {
+  const archive = candidate({ categoryType: "group_presentation", needsReview: true, warnings: ["Listed under Archive"] });
+  const collection = candidate({ candidateId: "collection", categoryType: "collection", yearLabel: null, title: "Private collection" });
+  const normalized = normalizeCvImportResult(result([archive, collection]));
+  assert.equal(normalized.candidates[0].needsReview, true);
+  assert.equal(normalized.candidates[1].yearLabel, null);
+  assert.equal(normalized.unsupportedSections.length, 0);
+});
+
+test("bio and contact metadata need no candidate or unsupported-section representation", () => {
+  const normalized = normalizeCvImportResult(result([]));
+  assert.deepEqual(normalized.candidates, []);
+  assert.deepEqual(normalized.unsupportedSections, []);
 });
 
 test("year and title database limits are enforced", () => {
@@ -56,6 +103,7 @@ test("unknown provider fields never enter the persistence projection", () => {
   assert.equal("confidence" in persistence, false);
   assert.equal("source" in persistence, false);
   assert.equal("providerSecret" in persistence, false);
+  assert.equal("unsupportedSections" in persistence, false);
 });
 
 test("benchmark detects exact matches, missed entries, invented entries, and field corrections", () => {

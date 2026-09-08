@@ -14,13 +14,12 @@ export const CV_CATEGORY_TYPES = Object.freeze([
   "collection",
   "residency",
   "teaching",
-  "curatorial",
-  "publication",
-  "other"
+  "curatorial"
 ]);
 
 const CONFIDENCES = new Set(["high", "medium", "low"]);
 const DUPLICATE_STATES = new Set(["new", "possible", "duplicate"]);
+const UNSUPPORTED_SECTION_REASONS = new Set(["unsupported_category"]);
 const CANDIDATE_KEYS = new Set([
   "candidateId", "categoryType", "yearLabel", "title", "organization",
   "locationText", "url", "source", "confidence", "needsReview",
@@ -28,7 +27,9 @@ const CANDIDATE_KEYS = new Set([
 ]);
 const SOURCE_KEYS = new Set(["pageNumber", "sectionHeading", "excerpt", "sequence"]);
 const DOCUMENT_KEYS = new Set(["documentKind", "pageCount", "extractedCharacterCount"]);
+const UNSUPPORTED_SECTION_KEYS = new Set(["heading", "reason", "entryCount"]);
 const MAX_CANDIDATES = 500;
+const MAX_UNSUPPORTED_SECTIONS = 50;
 
 function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -57,7 +58,7 @@ function optionalText(value) {
 
 export function validateCvImportResult(input) {
   if (!isPlainObject(input)) throw new Error("CV import result must be an object");
-  assertExactKeys(input, new Set(["source", "candidates", "warnings"]), "result");
+  assertExactKeys(input, new Set(["source", "candidates", "warnings", "unsupportedSections"]), "result");
   if (!isPlainObject(input.source)) throw new Error("source must be an object");
   assertExactKeys(input.source, DOCUMENT_KEYS, "source");
   if (input.source.documentKind !== "pdf" && input.source.documentKind !== "text") {
@@ -74,6 +75,21 @@ export function validateCvImportResult(input) {
   if (!Array.isArray(input.warnings) || input.warnings.some((warning) => typeof warning !== "string")) {
     throw new Error("warnings must be an array of strings");
   }
+  if (!Array.isArray(input.unsupportedSections) || input.unsupportedSections.length > MAX_UNSUPPORTED_SECTIONS) {
+    throw new Error(`unsupportedSections must be an array of at most ${MAX_UNSUPPORTED_SECTIONS}`);
+  }
+  input.unsupportedSections.forEach((section, index) => {
+    const label = `unsupportedSections[${index}]`;
+    if (!isPlainObject(section)) throw new Error(`${label} must be an object`);
+    assertExactKeys(section, UNSUPPORTED_SECTION_KEYS, label);
+    if (typeof section.heading !== "string" || section.heading.trim() === "" || section.heading.length > 120) {
+      throw new Error(`${label}.heading is invalid`);
+    }
+    if (!UNSUPPORTED_SECTION_REASONS.has(section.reason)) throw new Error(`${label}.reason is invalid`);
+    if (!Number.isInteger(section.entryCount) || section.entryCount < 1 || section.entryCount > MAX_CANDIDATES) {
+      throw new Error(`${label}.entryCount is invalid`);
+    }
+  });
   input.candidates.forEach((candidate, index) => {
     const label = `candidates[${index}]`;
     if (!isPlainObject(candidate)) throw new Error(`${label} must be an object`);
@@ -110,6 +126,11 @@ export function normalizeCvImportResult(input) {
   return {
     source: { ...input.source },
     warnings: input.warnings.map(normalizeWhitespace),
+    unsupportedSections: input.unsupportedSections.map((section) => ({
+      heading: normalizeWhitespace(section.heading),
+      reason: section.reason,
+      entryCount: section.entryCount
+    })),
     candidates: input.candidates.map((candidate) => ({
       candidateId: normalizeWhitespace(candidate.candidateId),
       categoryType: candidate.categoryType,

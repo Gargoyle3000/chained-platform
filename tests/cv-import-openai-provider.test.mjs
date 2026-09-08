@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  CV_IMPORT_RESULT_SCHEMA,
   CV_IMPORT_MODEL,
   CV_IMPORT_MAX_REQUEST_TIMEOUT_MS,
   CV_IMPORT_TIMEOUT_MS,
@@ -9,6 +10,7 @@ import {
   extractCvCandidatesWithMetadata,
   validateCvPdfInput
 } from "../scripts/cv-import-openai-provider.mjs";
+import { CV_CATEGORY_TYPES, normalizeCvImportResult } from "../scripts/cv-import-prototype.mjs";
 
 const payload = {
   source: { documentKind: "text", pageCount: 1, extractedCharacterCount: 20 },
@@ -18,7 +20,8 @@ const payload = {
     source: { pageNumber: 1, sectionHeading: "EDUCATION", excerpt: "2024 Example Academy", sequence: 0 },
     confidence: "high", needsReview: false, duplicateState: "new", warnings: []
   }],
-  warnings: []
+  warnings: [],
+  unsupportedSections: []
 };
 
 const response = (body, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => body });
@@ -42,8 +45,32 @@ test("provider requests Responses structured output with mandatory privacy and m
   assert.equal(body.text.format.type, "json_schema");
   assert.equal(body.text.format.strict, true);
   assert.equal(body.text.format.schema.additionalProperties, false);
+  assert.deepEqual(body.text.format.schema.properties.candidates.items.properties.categoryType.enum, CV_CATEGORY_TYPES);
+  assert.equal(body.text.format.schema.properties.candidates.items.properties.categoryType.enum.includes("publication"), false);
+  assert.equal(body.text.format.schema.properties.candidates.items.properties.categoryType.enum.includes("other"), false);
+  assert.deepEqual(body.text.format.schema.properties.unsupportedSections.items.properties.reason.enum, ["unsupported_category"]);
   assert.equal(body.tools, undefined);
   assert.equal(request.options.headers.Authorization, "Bearer test-key");
+});
+
+test("strict provider schema and CHAINED validation require bounded unsupported review sections", () => {
+  assert.equal(CV_IMPORT_RESULT_SCHEMA.required.includes("unsupportedSections"), true);
+  assert.equal(CV_IMPORT_RESULT_SCHEMA.properties.unsupportedSections.maxItems, 50);
+  const withPress = structuredClone(payload);
+  withPress.unsupportedSections = [{ heading: "PRESS", reason: "unsupported_category", entryCount: 5 }];
+  assert.equal(withPress.candidates.length, 1);
+  assert.equal(normalizeCvImportResult(withPress).unsupportedSections[0].heading, "PRESS");
+});
+
+test("provider-side validation rejects legacy candidate destinations even when response JSON is well formed", async () => {
+  const legacy = structuredClone(payload);
+  legacy.candidates[0].categoryType = "publication";
+  await assert.rejects(
+    () => extractCvCandidatesWithMetadata({ text: "Synthetic", apiKey: "test-key", fetchImpl: async () => response(completed(JSON.stringify(legacy))) }),
+    (error) => error instanceof CvImportProviderError
+      && error.failure?.phase === "chained_schema_validation"
+      && error.failure?.code === "SCHEMA_INVALID"
+  );
 });
 
 test("successful structured output reaches the existing CHAINED validator and returns safe usage metadata", async () => {

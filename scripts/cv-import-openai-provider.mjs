@@ -45,7 +45,7 @@ const sourceSchema = {
 export const CV_IMPORT_RESULT_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["source", "candidates", "warnings"],
+  required: ["source", "candidates", "warnings", "unsupportedSections"],
   properties: {
     source: {
       type: "object",
@@ -84,6 +84,20 @@ export const CV_IMPORT_RESULT_SCHEMA = {
         }
       }
     },
+    unsupportedSections: {
+      type: "array",
+      maxItems: 50,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["heading", "reason", "entryCount"],
+        properties: {
+          heading: { type: "string", minLength: 1, maxLength: 120 },
+          reason: { type: "string", enum: ["unsupported_category"] },
+          entryCount: { type: "integer", minimum: 1, maximum: 500 }
+        }
+      }
+    },
     warnings: { type: "array", items: { type: "string" } }
   }
 };
@@ -92,7 +106,8 @@ const INSTRUCTIONS = [
   "Translate the supplied CV content into CHAINED manual CV candidates only.",
   "Preserve source wording, names, punctuation, and year/period text.",
   "Do not embellish, infer missing venue/city/country, rewrite institutions, or fabricate facts.",
-  "Use only the supplied category enum. If an entry is ambiguous, retain it only when supported by source text and set needsReview true.",
+  "Candidates may use only the supplied fixed category enum. If a source section cannot map clearly to one of those categories, do not create a candidate or choose a closest category; add one bounded unsupportedSections entry with reason unsupported_category and its entryCount instead.",
+  "Do not add bio, contact, birth, lives/works, or other profile metadata to candidates or unsupportedSections. Archive is a source-organizational heading: retain an Archive entry only when its exhibition context supports an allowed category, and set needsReview true.",
   "Confidence describes extraction confidence only. Include concise source provenance for human review.",
   "Never create Presentations, activities, IDs, database relationships, or sourceActivityId values. Output the schema only."
 ].join(" ");
