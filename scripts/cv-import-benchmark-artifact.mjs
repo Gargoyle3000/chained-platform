@@ -6,7 +6,8 @@ import { normalizeCvImportResult } from "./cv-import-prototype.mjs";
 
 export const CV_BENCHMARK_ARTIFACT_VERSION = 1;
 const ARTIFACT_FILE_NAME = "result.json";
-const TOP_LEVEL_KEYS = new Set(["version", "createdAt", "outcome", "source", "provider", "result"]);
+const TOP_LEVEL_KEYS = new Set(["version", "createdAt", "outcome", "source", "provider", "failure", "result"]);
+const FAILURE_KEYS = new Set(["phase", "category", "code"]);
 const SOURCE_KEYS = new Set(["fileName", "fileSize", "pageCount", "documentSha256"]);
 const PROVIDER_KEYS = new Set([
   "requestedModel", "returnedModel", "httpStatus", "responseStatus", "latencyMs", "maxOutputTokens",
@@ -80,7 +81,20 @@ function normalizeProvider(provider, outcome) {
   };
 }
 
-export function createBenchmarkArtifact({ source, metadata, result = null, outcome = "completed", createdAt = new Date().toISOString() } = {}) {
+function normalizeFailure(failure, outcome) {
+  if (outcome === "completed") {
+    if (failure !== null) throw new Error("completed artifacts cannot contain failure diagnostics");
+    return null;
+  }
+  if (failure === null) return null;
+  assertExactKeys(failure, FAILURE_KEYS, "failure");
+  if (!new Set(["credential_retrieval", "source_file_validation", "request_construction", "fetch_started", "response_body_parse", "provider_response_validation", "chained_schema_validation", "artifact_write"]).has(failure.phase)) throw new Error("failure.phase is invalid");
+  if (!new Set(["credential", "file", "network", "timeout", "http", "response_parse", "provider", "chained_validation", "artifact"]).has(failure.category)) throw new Error("failure.category is invalid");
+  if (failure.code !== null && !new Set(["AbortError", "TypeError", "ECONNRESET", "ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT", "UND_ERR_CONNECT_TIMEOUT", "UND_ERR_HEADERS_TIMEOUT", "HTTP_ERROR", "INVALID_JSON", "SCHEMA_INVALID", "UNKNOWN"]).has(failure.code)) throw new Error("failure.code is invalid");
+  return { ...failure };
+}
+
+export function createBenchmarkArtifact({ source, metadata, failure = null, result = null, outcome = "completed", createdAt = new Date().toISOString() } = {}) {
   if (!Number.isInteger(CV_BENCHMARK_ARTIFACT_VERSION)) throw new Error("artifact version is invalid");
   if (!Object.hasOwn({ completed: true, incomplete: true, failed: true }, outcome)) throw new Error("artifact outcome is invalid");
   if (typeof createdAt !== "string" || Number.isNaN(Date.parse(createdAt))) throw new Error("createdAt must be an ISO timestamp");
@@ -109,6 +123,7 @@ export function createBenchmarkArtifact({ source, metadata, result = null, outco
     outcome,
     source: normalizeSource(source),
     provider,
+    failure: normalizeFailure(failure, outcome),
     result: result === null ? null : normalizeCvImportResult(result)
   };
 }
@@ -126,6 +141,7 @@ export function validateBenchmarkArtifact(artifact) {
       totalTokens: artifact.provider?.usage?.totalTokens
     },
     result: artifact.result,
+    failure: artifact.failure,
     outcome: artifact.outcome,
     createdAt: artifact.createdAt
   });

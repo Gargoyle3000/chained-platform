@@ -7,15 +7,19 @@ export const MAX_CV_PDF_BYTES = 20 * 1024 * 1024;
 export const CV_IMPORT_DEFAULT_MAX_OUTPUT_TOKENS = 4_000;
 
 export class CvImportProviderError extends Error {
-  constructor(message, { status = null, code = null, type = null, diagnostics = null } = {}) {
+  constructor(message, { status = null, code = null, type = null, diagnostics = null, failure = null } = {}) {
     super(message);
     this.name = "CvImportProviderError";
     this.status = status;
     this.code = code;
     this.type = type;
     this.diagnostics = diagnostics;
+    this.failure = failure;
   }
 }
+
+const SAFE_NETWORK_CODES = new Set(["ECONNRESET", "ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT", "UND_ERR_CONNECT_TIMEOUT", "UND_ERR_HEADERS_TIMEOUT"]);
+function failure(phase, category, code = null) { return { phase, category, code: SAFE_NETWORK_CODES.has(code) || code === "AbortError" || code === "TypeError" || code === "HTTP_ERROR" || code === "INVALID_JSON" || code === "SCHEMA_INVALID" ? code : "UNKNOWN" }; }
 
 const nullableString = (maxLength) => ({ type: ["string", "null"], maxLength });
 const sourceSchema = {
@@ -208,9 +212,11 @@ export async function extractCvCandidatesWithMetadata({
   endpoint = OPENAI_RESPONSES_ENDPOINT,
   timeoutMs = CV_IMPORT_TIMEOUT_MS
 } = {}) {
-  if (typeof apiKey !== "string" || apiKey.trim() === "") throw new CvImportProviderError("OpenAI API key is unavailable");
-  if (typeof fetchImpl !== "function") throw new CvImportProviderError("Fetch is unavailable for OpenAI CV extraction");
-  const request = createCvImportRequest({ text, source, pdfBytes, filename, maxOutputTokens });
+  if (typeof apiKey !== "string" || apiKey.trim() === "") throw new CvImportProviderError("OpenAI API key is unavailable", { failure: failure("credential_retrieval", "credential") });
+  if (typeof fetchImpl !== "function") throw new CvImportProviderError("Fetch is unavailable for OpenAI CV extraction", { failure: failure("fetch_started", "network") });
+  let request;
+  try { request = createCvImportRequest({ text, source, pdfBytes, filename, maxOutputTokens }); }
+  catch (error) { throw new CvImportProviderError("OpenAI CV request construction failed", { failure: failure("request_construction", "file") }); }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const startedAt = performance.now();
@@ -225,23 +231,23 @@ export async function extractCvCandidatesWithMetadata({
       });
     }
     catch (error) {
-      const message = error?.name === "AbortError" ? "OpenAI CV extraction timed out" : "OpenAI CV extraction network request failed";
-      throw new CvImportProviderError(message);
+      const timedOut = error?.name === "AbortError";
+      throw new CvImportProviderError(timedOut ? "OpenAI CV extraction timed out" : "OpenAI CV extraction network request failed", { failure: failure("fetch_started", timedOut ? "timeout" : "network", timedOut ? "AbortError" : error?.code || error?.name) });
     }
     let body;
     try { body = await response.json(); }
-    catch { throw new CvImportProviderError(`OpenAI CV extraction returned invalid JSON (HTTP ${response.status})`, { status: response.status }); }
-    if (!response.ok) throw safeApiError(response.status, body);
+    catch { throw new CvImportProviderError(`OpenAI CV extraction returned invalid JSON (HTTP ${response.status})`, { status: response.status, failure: failure("response_body_parse", "response_parse", "INVALID_JSON") }); }
+    if (!response.ok) { const error = safeApiError(response.status, body); error.failure = failure("fetch_started", "http", "HTTP_ERROR"); throw error; }
     const metadata = usageMetadata(body, Math.round(performance.now() - startedAt), response.status, request.max_output_tokens);
     let payload;
     try { payload = JSON.parse(responseText(body, metadata)); }
     catch (error) {
       if (error instanceof CvImportProviderError) throw error;
-      throw new CvImportProviderError("OpenAI CV extraction structured output was invalid JSON");
+      throw new CvImportProviderError("OpenAI CV extraction structured output was invalid JSON", { failure: failure("provider_response_validation", "provider", "INVALID_JSON") });
     }
     let result;
     try { result = normalizeCvImportResult(payload); }
-    catch { throw new CvImportProviderError("OpenAI CV extraction failed CHAINED schema validation"); }
+    catch { throw new CvImportProviderError("OpenAI CV extraction failed CHAINED schema validation", { failure: failure("chained_schema_validation", "chained_validation", "SCHEMA_INVALID") }); }
     return { result, metadata };
   }
   finally {

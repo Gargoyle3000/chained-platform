@@ -72,7 +72,7 @@ async function main() {
       incompleteReason: null
     };
     const outcome = diagnostics.responseStatus === "incomplete" ? "incomplete" : "failed";
-    artifactPath = await writeBenchmarkArtifact(createBenchmarkArtifact({ source, metadata: diagnostics, outcome }));
+    artifactPath = await writeBenchmarkArtifact(createBenchmarkArtifact({ source, metadata: diagnostics, failure: error?.failure || { phase: "fetch_started", category: "network", code: "UNKNOWN" }, outcome }));
     error.artifactPath = artifactPath;
     throw error;
   }

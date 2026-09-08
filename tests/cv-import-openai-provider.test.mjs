@@ -114,6 +114,17 @@ test("incomplete reasons remain distinguishable without accepting partial candid
   );
 });
 
+test("network and timeout failures retain safe phase diagnostics without raw errors", async () => {
+  await assert.rejects(
+    () => extractCvCandidatesWithMetadata({ text: "Synthetic", apiKey: "test-key", fetchImpl: async () => { const error = new TypeError("private endpoint"); error.code = "UND_ERR_CONNECT_TIMEOUT"; throw error; } }),
+    (error) => error.failure?.phase === "fetch_started" && error.failure?.category === "network" && error.failure?.code === "UND_ERR_CONNECT_TIMEOUT" && !JSON.stringify(error.failure).includes("private")
+  );
+  await assert.rejects(
+    () => extractCvCandidatesWithMetadata({ text: "Synthetic", apiKey: "test-key", fetchImpl: async () => { const error = new Error(); error.name = "AbortError"; throw error; } }),
+    (error) => error.failure?.category === "timeout" && error.failure?.code === "AbortError"
+  );
+});
+
 test("malformed, presentation-shaped, and incomplete outputs fail closed", async () => {
   await assert.rejects(() => extractCvCandidatesWithMetadata({ text: "Synthetic", apiKey: "test-key", fetchImpl: async () => response(completed("not-json")) }), CvImportProviderError);
   const unsafe = structuredClone(payload);

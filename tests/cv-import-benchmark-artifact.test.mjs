@@ -75,6 +75,13 @@ test("incomplete artifacts contain safe diagnostics and never partial candidates
   assert.equal(raw.includes("max_output_tokens"), true);
 });
 
+test("failure artifacts retain only a bounded phase/category/code classification", () => {
+  const artifact = createBenchmarkArtifact({ source, metadata: { ...metadata, responseStatus: null }, outcome: "failed", failure: { phase: "fetch_started", category: "network", code: "UND_ERR_CONNECT_TIMEOUT" } });
+  assert.deepEqual(artifact.failure, { phase: "fetch_started", category: "network", code: "UND_ERR_CONNECT_TIMEOUT" });
+  assert.equal(JSON.stringify(artifact).includes("stack"), false);
+  assert.throws(() => createBenchmarkArtifact({ source, metadata, outcome: "failed", failure: { phase: "fetch_started", category: "network", code: "private text" } }), /failure.code/);
+});
+
 test("document hashing is deterministic and the offline report summarizes without network access", async (t) => {
   const root = await temporaryRoot();
   t.after(() => fs.rm(root, { recursive: true, force: true }));

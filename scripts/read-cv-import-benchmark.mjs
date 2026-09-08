@@ -39,6 +39,9 @@ export function formatBenchmarkReport(artifact, artifactPath) {
     `TOTAL TOKENS     ${artifact.provider.usage.totalTokens ?? "unavailable"}`
   ];
   if (artifact.outcome !== "completed") {
+    lines.push(`FAILURE PHASE    ${artifact.failure?.phase ?? "unavailable"}`);
+    lines.push(`FAILURE CATEGORY ${artifact.failure?.category ?? "unavailable"}`);
+    lines.push(`FAILURE CODE     ${artifact.failure?.code ?? "unavailable"}`);
     lines.push(`INCOMPLETE REASON ${artifact.provider.incompleteReason ?? "unavailable"}`);
     return lines.join("\n");
   }
