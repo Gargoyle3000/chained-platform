@@ -3,7 +3,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const { getWorkRepository } = await import("./data/work-repository.mjs");
   const { renderDashboardAccountIdentity } = await import("./data/dashboard-context.mjs");
-  const { groupArtistWorksByYear, moveWorkWithinYear } = await import("./data/artist-work-ordering.mjs");
+  const {
+    groupArtistWorksByYear,
+    moveWorkWithinYear,
+    placeWorkWithinYear,
+    workInsertionDestination
+  } = await import("./data/artist-work-ordering.mjs");
   const workList = document.querySelector("#dashboard-work-list");
   const totalElement = document.querySelector("#dashboard-works-total");
   const breakdownElement = document.querySelector("#dashboard-works-breakdown");
@@ -11,6 +16,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const addWorkLink = document.querySelector(".dashboard-add-work");
   let repository;
   const activeUrls = new Set();
+  let activeWorkDrag = null;
+  let workOrderSaving = false;
 
   function releaseUrls() {
     activeUrls.forEach((url) => URL.revokeObjectURL(url));
@@ -51,6 +58,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     const image = document.createElement("img");
     image.alt = `${work.title || "Untitled"} cover image`;
+    image.draggable = false;
     try {
       if (repository.mode === "supabase") {
         image.src = cover.publicPath && work.visibility === "published"
@@ -100,6 +108,103 @@ document.addEventListener("DOMContentLoaded", async () => {
     return container;
   }
 
+  function clearWorkDropTarget(rows) {
+    rows.querySelectorAll(".is-work-drop-before, .is-work-drop-after").forEach((row) => {
+      row.classList.remove("is-work-drop-before", "is-work-drop-after");
+    });
+  }
+
+  function destinationForWorkDrag(session, clientX, clientY) {
+    const bounds = session.rows.getBoundingClientRect();
+    if (clientX < bounds.left - 48 || clientX > bounds.right + 48
+      || clientY < bounds.top - 16 || clientY > bounds.bottom + 16) return null;
+    const rows = [...session.rows.querySelectorAll(".dashboard-work-row")];
+    const insertionIndex = rows.findIndex((row) => {
+      const bounds = row.getBoundingClientRect();
+      return clientY < bounds.top + bounds.height / 2;
+    });
+    const rawDestination = insertionIndex === -1 ? rows.length : insertionIndex;
+    return workInsertionDestination(session.sourceIndex, rawDestination, rows.length);
+  }
+
+  function setWorkDropTarget(session, destination) {
+    clearWorkDropTarget(session.rows);
+    session.destination = destination;
+    if (destination == null) return;
+    const rows = [...session.rows.querySelectorAll(".dashboard-work-row")];
+    rows[destination]?.classList.add(
+      destination < session.sourceIndex ? "is-work-drop-before" : "is-work-drop-after"
+    );
+  }
+
+  function finishWorkDrag(session, { cancelled = false } = {}) {
+    if (activeWorkDrag !== session) return;
+    activeWorkDrag = null;
+    window.removeEventListener("pointermove", session.onMove);
+    window.removeEventListener("pointerup", session.onEnd);
+    window.removeEventListener("pointercancel", session.onCancel);
+    session.row.classList.remove("is-work-reordering");
+    clearWorkDropTarget(session.rows);
+    if (cancelled || !session.started || session.destination == null) return;
+    const nextWorks = placeWorkWithinYear(
+      session.ordering.works,
+      session.ordering.workId,
+      session.destination
+    );
+    if (nextWorks) void session.ordering.save(nextWorks.map((work) => work.id));
+  }
+
+  function startWorkDrag(event, row, grip, ordering, fromGrip) {
+    const coarsePointer = event.pointerType === "touch"
+      || window.matchMedia?.("(pointer: coarse)")?.matches;
+    if (event.pointerType !== "touch" && event.button !== 0) return;
+    if (workOrderSaving || activeWorkDrag || (coarsePointer && !fromGrip)) return;
+    if (!coarsePointer && event.target.closest("a, button, input, select, textarea")) return;
+    if (fromGrip) event.stopPropagation();
+    const session = {
+      row,
+      rows: ordering.rows,
+      ordering,
+      sourceIndex: ordering.index,
+      destination: null,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      started: false,
+      onMove: null,
+      onEnd: null,
+      onCancel: null
+    };
+    session.onMove = (moveEvent) => {
+      if (moveEvent.pointerId !== session.pointerId) return;
+      const distance = Math.hypot(moveEvent.clientX - session.startX, moveEvent.clientY - session.startY);
+      if (!session.started && distance < 6) return;
+      session.started = true;
+      moveEvent.preventDefault();
+      session.row.classList.add("is-work-reordering");
+      setWorkDropTarget(session, destinationForWorkDrag(session, moveEvent.clientX, moveEvent.clientY));
+    };
+    session.onEnd = (endEvent) => {
+      if (endEvent.pointerId === session.pointerId) finishWorkDrag(session);
+    };
+    session.onCancel = (cancelEvent) => {
+      if (cancelEvent.pointerId === session.pointerId) finishWorkDrag(session, { cancelled: true });
+    };
+    activeWorkDrag = session;
+    window.addEventListener("pointermove", session.onMove, { passive: false });
+    window.addEventListener("pointerup", session.onEnd);
+    window.addEventListener("pointercancel", session.onCancel);
+  }
+
+  function attachWorkReorderInteraction(row, grip, ordering) {
+    row.addEventListener("pointerdown", (event) => {
+      startWorkDrag(event, row, grip, ordering, false);
+    });
+    grip.addEventListener("pointerdown", (event) => {
+      startWorkDrag(event, row, grip, ordering, true);
+    });
+  }
+
   async function createWorkRow(work, reload, privatePreviewResult, ordering) {
     const row = document.createElement("article");
     const information = document.createElement("div");
@@ -110,12 +215,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const status = document.createElement("span");
     const actions = document.createElement("div");
     const edit = document.createElement("a");
+    const grip = document.createElement("span");
     const remove = createTextAction("DELETE", `Delete ${work.title || "untitled work"}`);
     const confirmation = createDeleteConfirmation(work, reload);
     row.className = "dashboard-work-row";
     information.className = "dashboard-work-information";
     statusArea.className = "dashboard-work-status";
     actions.className = "dashboard-work-actions";
+    grip.className = "dashboard-work-reorder-grip";
+    grip.setAttribute("role", "img");
+    grip.setAttribute("aria-label", `Reorder ${work.title || "untitled work"}; arrow controls remain available`);
     remove.classList.add("dashboard-delete-trigger");
     title.textContent = work.title || "UNTITLED";
     metadata.textContent = [work.year, formatWorkType(work.workType), formatUpdated(work.updatedAt)].filter(Boolean).join(" · ") || "INCOMPLETE RECORD";
@@ -136,12 +245,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       moveDown.disabled = ordering.index === ordering.workIds.length - 1;
       moveUp.addEventListener("click", () => ordering.move(-1));
       moveDown.addEventListener("click", () => ordering.move(1));
-      actions.append(moveUp, moveDown);
+      actions.append(grip, moveUp, moveDown);
     }
     information.append(title, metadata, imageState);
     actions.append(edit, remove);
     statusArea.append(status, actions, confirmation);
     row.append(await createWorkImage(work, privatePreviewResult), information, statusArea);
+    if (ordering) attachWorkReorderInteraction(row, grip, ordering);
     return row;
   }
 
@@ -197,6 +307,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       heading.textContent = label;
       rows.className = "dashboard-work-year-list";
       const orderedIds = group.works.map((work) => work.id);
+      const saveOrder = async (nextWorkIds) => {
+        if (workOrderSaving) return;
+        workOrderSaving = true;
+        setError();
+        try {
+          await repository.reorderArtistProfileWorks(group.profileId, group.year, nextWorkIds);
+          await renderWorks(profiles);
+        } catch {
+          try { await renderWorks(profiles); } catch {}
+          setError("WORK ORDER COULD NOT BE SAVED");
+        } finally {
+          workOrderSaving = false;
+        }
+      };
       const renderedRows = await Promise.all(group.works.map((work, index) => createWorkRow(
         work,
         () => renderWorks(profiles),
@@ -204,19 +328,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         {
           index,
           label: yearLabel,
+          rows,
+          works: group.works,
+          workId: work.id,
           workIds: orderedIds,
           move: async (direction) => {
             const moved = moveWorkWithinYear(orderedIds.map((id) => ({ id })), work.id, direction);
             if (!moved) return;
-            setError();
-            try {
-              await repository.reorderArtistProfileWorks(group.profileId, group.year, moved.map((item) => item.id));
-              await renderWorks(profiles);
-            } catch {
-              try { await renderWorks(profiles); } catch {}
-              setError("WORK ORDER COULD NOT BE SAVED");
-            }
-          }
+            await saveOrder(moved.map((item) => item.id));
+          },
+          save: saveOrder
         }
       )));
       rows.append(...renderedRows);
@@ -252,5 +373,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     workList.replaceChildren(emptyState("WORKS UNAVAILABLE"));
   }
 
-  window.addEventListener("beforeunload", releaseUrls);
+  window.addEventListener("beforeunload", () => {
+    if (activeWorkDrag) finishWorkDrag(activeWorkDrag, { cancelled: true });
+    releaseUrls();
+  });
 });

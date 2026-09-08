@@ -93,3 +93,30 @@ export function moveWorkWithinYear(works = [], workIdToMove, direction) {
   [ordered[index], ordered[destination]] = [ordered[destination], ordered[index]];
   return Object.freeze(ordered);
 }
+
+export function placeWorkWithinYear(works = [], workIdToMove, destinationIndex) {
+  const ordered = [...works];
+  const sourceIndex = ordered.findIndex((work) => work?.id === workIdToMove);
+  if (!Number.isInteger(destinationIndex)
+    || sourceIndex < 0
+    || destinationIndex < 0
+    || destinationIndex >= ordered.length
+    || destinationIndex === sourceIndex) return null;
+  const [work] = ordered.splice(sourceIndex, 1);
+  ordered.splice(destinationIndex, 0, work);
+  return Object.freeze(ordered);
+}
+
+export function workInsertionDestination(sourceIndex, insertionIndex, workCount) {
+  if (!Number.isInteger(sourceIndex)
+    || !Number.isInteger(insertionIndex)
+    || !Number.isInteger(workCount)
+    || sourceIndex < 0
+    || sourceIndex >= workCount
+    || insertionIndex < 0
+    || insertionIndex > workCount) return null;
+  const destination = insertionIndex > sourceIndex
+    ? insertionIndex - 1
+    : insertionIndex;
+  return destination === sourceIndex ? null : destination;
+}

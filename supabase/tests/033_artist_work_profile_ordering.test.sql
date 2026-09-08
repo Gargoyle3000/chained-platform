@@ -33,10 +33,10 @@ select function_privs_are('public', 'reorder_artist_profile_works', array['uuid'
 select results_eq(
   $$select id, profile_order from public.works where owner_profile_id = '92000000-0000-4000-8000-000000000001' and year_sort = 2026 order by profile_order$$,
   $$values
-    ('93000000-0000-4000-8000-000000000001'::uuid, 0),
+    ('93000000-0000-4000-8000-000000000003'::uuid, 0),
     ('93000000-0000-4000-8000-000000000002'::uuid, 1),
-    ('93000000-0000-4000-8000-000000000003'::uuid, 2)$$,
-  'new Works append to the end of their year bucket');
+    ('93000000-0000-4000-8000-000000000001'::uuid, 2)$$,
+  'each new Work prepends atomically to the top of its year bucket');
 select is((select profile_order from public.works where id = '93000000-0000-4000-8000-000000000004'), 0, 'UNKNOWN starts its own manually orderable bucket');
 
 set local role authenticated;

@@ -417,6 +417,76 @@
   gap: 8px 18px;
 }
 
+.dashboard-work-reorder-grip {
+  display: none;
+}
+
+.dashboard-work-row.is-work-reordering {
+  opacity: 0.45;
+}
+
+.dashboard-work-row.is-work-drop-before,
+.dashboard-work-row.is-work-drop-after {
+  position: relative;
+}
+
+.dashboard-work-row.is-work-drop-before::before,
+.dashboard-work-row.is-work-drop-after::after {
+  position: absolute;
+  right: 0;
+  left: 0;
+
+  height: 1px;
+
+  background: var(--accent);
+  content: "";
+}
+
+.dashboard-work-row.is-work-drop-before::before {
+  top: -9px;
+}
+
+.dashboard-work-row.is-work-drop-after::after {
+  bottom: -9px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-work-row {
+    cursor: grab;
+  }
+
+  .dashboard-work-row a,
+  .dashboard-work-row button {
+    cursor: pointer;
+  }
+
+  .dashboard-work-row.is-work-reordering {
+    cursor: grabbing;
+  }
+}
+
+@media (max-width: 700px), (pointer: coarse) {
+  .dashboard-work-reorder-grip {
+    display: grid;
+    place-items: center;
+
+    width: 44px;
+    height: 44px;
+
+    color: var(--black);
+    touch-action: none;
+  }
+
+  .dashboard-work-reorder-grip::before {
+    width: 12px;
+    height: 2px;
+
+    background: currentColor;
+    box-shadow: 0 5px 0 currentColor;
+    content: "";
+  }
+}
+
 .dashboard-delete-confirmation {
   display: grid;
   justify-items: end;
