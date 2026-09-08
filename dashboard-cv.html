@@ -101,14 +101,31 @@
           <h2>CV</h2>
         </div>
 
-        <label
-          class="dashboard-cv-profile-switch"
-          id="dashboard-cv-profile-field"
-          hidden>
-          <span>CV FOR</span>
+        <div class="dashboard-cv-header-controls">
+          <label
+            class="dashboard-cv-profile-switch"
+            id="dashboard-cv-profile-field"
+            hidden>
+            <span>CV FOR</span>
 
-          <select id="dashboard-cv-profile"></select>
-        </label>
+            <select id="dashboard-cv-profile"></select>
+          </label>
+
+          <div class="dashboard-cv-page-actions" id="dashboard-cv-page-actions">
+            <button class="text-action" id="dashboard-cv-import" type="button" disabled>
+              [ IMPORT ]
+            </button>
+
+            <button
+              class="text-action"
+              id="dashboard-cv-export"
+              type="button"
+              disabled
+              aria-label="CV export is not available yet">
+              [ EXPORT ]
+            </button>
+          </div>
+        </div>
       </header>
 
 
@@ -135,7 +152,7 @@
 
   </main>
 
-  <script src="dashboard-cv.js?v=2"></script>
+  <script src="dashboard-cv.js?v=3"></script>
 
 </body>
 </html>

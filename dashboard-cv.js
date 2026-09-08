@@ -7,6 +7,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { renderDashboardAccountIdentity } =
     await import("./data/dashboard-context.mjs");
 
+  const {
+    CV_CATEGORY_TYPES,
+    CV_CATEGORY_LABELS,
+    createCvImportReviewState,
+    cvImportReviewSummary,
+    groupCvImportReviewCandidates,
+    selectedCvImportPersistenceProjection,
+    updateCvImportReviewCandidate
+  } = await import("./data/cv-import-review.mjs");
+
+  const { CV_IMPORT_REVIEW_FIXTURE } =
+    await import("./data/cv-import-review-fixture.mjs");
+
   const liveCv =
     document.querySelector("#dashboard-cv-live");
 
@@ -22,9 +35,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   const profileSelect =
     document.querySelector("#dashboard-cv-profile");
 
+  const pageActions =
+    document.querySelector("#dashboard-cv-page-actions");
+
+  const importButton =
+    document.querySelector("#dashboard-cv-import");
+
   let repository;
   let managedProfiles = [];
   let selectedProfileId = null;
+  let importReview = null;
+  let lastPrototypeProjection = [];
 
   function setError(message = "") {
     errorElement.textContent = message;
@@ -34,6 +55,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   function setNotice(message = "") {
     noticeElement.textContent = message;
     noticeElement.hidden = !message;
+  }
+
+  function setImportAvailable(available) {
+    importButton.disabled = !available;
   }
 
   function createTextButton(text, ariaLabel = "") {
@@ -170,6 +195,273 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     return container;
+  }
+
+  function reviewCandidateLine(candidate) {
+    return [
+      candidate.title,
+      candidate.organization,
+      candidate.locationText
+    ]
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  function setImportReviewMode(active) {
+    pageActions.hidden = active;
+    profileField.hidden = active || managedProfiles.length <= 1;
+  }
+
+  function createReviewSummary(summary) {
+    const element = document.createElement("p");
+    const selection = [
+      `${summary.selected} SELECTED`,
+      summary.excluded ? `${summary.excluded} EXCLUDED` : "",
+      `${summary.needsReview} NEED REVIEW`
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+    element.className = "dashboard-cv-import-summary";
+    element.textContent = selection;
+    element.setAttribute("aria-live", "polite");
+
+    return element;
+  }
+
+  function createReviewEditor(candidate, row) {
+    const form = document.createElement("form");
+    const category = document.createElement("select");
+    const year = document.createElement("input");
+    const line = document.createElement("input");
+    const actions = document.createElement("div");
+    const save = document.createElement("button");
+    const cancel = createTextButton(
+      "CANCEL",
+      `Cancel editing ${reviewCandidateLine(candidate)}`
+    );
+
+    form.className = "dashboard-cv-entry-edit dashboard-cv-import-edit";
+
+    CV_CATEGORY_TYPES.forEach((categoryType) => {
+      const option = document.createElement("option");
+
+      option.value = categoryType;
+      option.textContent = CV_CATEGORY_LABELS[categoryType];
+      option.selected = categoryType === candidate.categoryType;
+      category.append(option);
+    });
+
+    category.setAttribute("aria-label", "CV category");
+    year.type = "text";
+    year.maxLength = 40;
+    year.placeholder = "YEAR / PERIOD";
+    year.value = candidate.yearLabel || "";
+    year.setAttribute("aria-label", "Year or period");
+    line.type = "text";
+    line.maxLength = 300;
+    line.placeholder = "COMPLETE CV LINE";
+    line.value = reviewCandidateLine(candidate);
+    line.setAttribute("aria-label", "Complete CV line");
+
+    actions.className = "dashboard-cv-entry-edit-actions";
+    save.type = "submit";
+    save.className = "text-action";
+    save.textContent = "[ SAVE ]";
+
+    cancel.addEventListener("click", () => renderImportReview());
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      if (!line.value.trim()) {
+        setError("ENTER A COMPLETE CV LINE");
+        line.focus();
+        return;
+      }
+
+      updateCvImportReviewCandidate(
+        importReview,
+        candidate.candidateId,
+        {
+          categoryType: category.value,
+          yearLabel: year.value,
+          title: line.value
+        }
+      );
+
+      setError();
+      renderImportReview();
+    });
+
+    actions.append(save, cancel);
+    form.append(category, year, line, actions);
+    row.replaceChildren(form);
+    line.focus();
+  }
+
+  function createReviewCandidateRow(candidate) {
+    const row = document.createElement("article");
+    const select = document.createElement("input");
+    const year = document.createElement("p");
+    const text = document.createElement("div");
+    const line = document.createElement("p");
+    const actions = document.createElement("div");
+    const edit = createTextButton(
+      "EDIT",
+      `Edit import candidate ${reviewCandidateLine(candidate)}`
+    );
+
+    row.className = "dashboard-cv-entry dashboard-cv-import-entry";
+    select.type = "checkbox";
+    select.checked = candidate.selected;
+    select.setAttribute(
+      "aria-label",
+      `Add ${reviewCandidateLine(candidate)} to my CV`
+    );
+
+    select.addEventListener("change", () => {
+      updateCvImportReviewCandidate(
+        importReview,
+        candidate.candidateId,
+        { selected: select.checked }
+      );
+      renderImportReview();
+    });
+
+    year.className = "dashboard-cv-entry-year";
+    year.textContent = candidate.yearLabel || "";
+    text.className = "dashboard-cv-entry-text";
+    line.textContent = reviewCandidateLine(candidate);
+    text.append(line);
+
+    if (candidate.needsReview) {
+      const review = document.createElement("p");
+
+      review.className = "dashboard-cv-entry-source";
+      review.textContent = "NEEDS REVIEW";
+      text.append(review);
+    }
+
+    if (candidate.duplicateState === "duplicate") {
+      const duplicate = document.createElement("p");
+
+      duplicate.className = "dashboard-cv-entry-source";
+      duplicate.textContent = "ALREADY IN CV";
+      text.append(duplicate);
+    }
+
+    actions.className = "dashboard-cv-entry-actions";
+    edit.addEventListener("click", () => createReviewEditor(candidate, row));
+    actions.append(edit);
+    row.append(select, year, text, actions);
+
+    return row;
+  }
+
+  function createUnsupportedSections() {
+    if (!importReview.unsupportedSections.length) return null;
+
+    const section = document.createElement("section");
+    const heading = document.createElement("h3");
+    const entries = document.createElement("div");
+
+    section.className = "dashboard-cv-section dashboard-cv-import-unsupported";
+    heading.textContent = "NOT IMPORTED";
+    entries.className = "dashboard-cv-entries";
+
+    importReview.unsupportedSections.forEach((item) => {
+      const row = document.createElement("article");
+      const title = document.createElement("p");
+      const explanation = document.createElement("p");
+
+      row.className = "dashboard-cv-import-unsupported-row";
+      title.textContent = `${item.heading} · ${item.entryCount} ENTRIES`;
+      explanation.textContent = "NOT SUPPORTED IN THE CURRENT CV FORMAT";
+      row.append(title, explanation);
+      entries.append(row);
+    });
+
+    section.append(heading, entries);
+    return section;
+  }
+
+  function leaveImportReview(message = "") {
+    importReview = null;
+    setImportReviewMode(false);
+    setNotice(message);
+    reloadCv().catch(() => setError("CV COULD NOT BE RELOADED"));
+  }
+
+  function renderImportReview() {
+    if (!importReview) return;
+
+    setError();
+    setNotice();
+
+    const summary = cvImportReviewSummary(importReview);
+    const header = document.createElement("header");
+    const title = document.createElement("h3");
+    const found = document.createElement("p");
+    const groups = groupCvImportReviewCandidates(importReview);
+    const endActions = document.createElement("div");
+    const cancel = createTextButton("CANCEL", "Cancel CV import review");
+    const add = createTextButton(
+      `ADD ${summary.selected} ENTRIES`,
+      `Prepare ${summary.selected} CV entries to add`
+    );
+
+    header.className = "dashboard-cv-import-header";
+    title.textContent = "IMPORT CV";
+    found.className = "dashboard-cv-import-found";
+    found.textContent = [
+      `${summary.found} ENTRIES FOUND`,
+      `${summary.needsReview} NEED REVIEW`,
+      `${summary.unsupportedSections} UNSUPPORTED SECTIONS`
+    ].join(" · ");
+    header.append(title, found, createReviewSummary(summary));
+
+    const sections = groups.map((group) => {
+      const section = document.createElement("section");
+      const heading = document.createElement("h3");
+      const entries = document.createElement("div");
+
+      section.className = "dashboard-cv-section dashboard-cv-import-section";
+      heading.textContent = group.label;
+      entries.className = "dashboard-cv-entries";
+      entries.append(...group.candidates.map(createReviewCandidateRow));
+      section.append(heading, entries);
+      return section;
+    });
+
+    const unsupported = createUnsupportedSections();
+    endActions.className = "dashboard-cv-import-actions";
+
+    cancel.addEventListener("click", () => leaveImportReview());
+    add.addEventListener("click", () => {
+      lastPrototypeProjection = selectedCvImportPersistenceProjection(importReview);
+      leaveImportReview(`${lastPrototypeProjection.length} ENTRIES READY TO ADD`);
+    });
+
+    endActions.append(cancel, add);
+    liveCv.replaceChildren(
+      header,
+      ...sections,
+      ...(unsupported ? [unsupported] : []),
+      endActions
+    );
+  }
+
+  function enterImportReview() {
+    if (!selectedProfileId) {
+      setError("ARTIST PROFILE SETUP REQUIRED");
+      return;
+    }
+
+    lastPrototypeProjection = [];
+    importReview = createCvImportReviewState(CV_IMPORT_REVIEW_FIXTURE);
+    setImportReviewMode(true);
+    renderImportReview();
   }
 
   async function reloadCv() {
@@ -580,7 +872,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
 
     profileField.hidden = profiles.length <= 1;
+    setImportAvailable(profiles.length > 0);
   }
+
+  importButton.addEventListener("click", enterImportReview);
 
   profileSelect.addEventListener("change", async () => {
     selectedProfileId = profileSelect.value;
@@ -601,6 +896,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
 
       renderCategories([]);
+      selectedProfileId = "local-review";
+      setImportAvailable(true);
       return;
     }
 
@@ -612,6 +909,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!managedProfiles.length) {
       setNotice("ARTIST PROFILE SETUP REQUIRED");
       renderCategories([]);
+      setImportAvailable(false);
       return;
     }
 
@@ -632,5 +930,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
 
     renderCategories([]);
+    setImportAvailable(false);
   }
 });

@@ -82,6 +82,12 @@ try {
       await command("Page.navigate", { url: `http://127.0.0.1:5500/${page}` });
       await Promise.race([loaded, wait(5000)]);
       await wait(1200);
+      if (page === "dashboard-cv.html") {
+        await command("Runtime.evaluate", {
+          expression: "document.querySelector('#dashboard-cv-import')?.click()"
+        });
+        await wait(80);
+      }
       const evaluation = await command("Runtime.evaluate", {
         expression: `(() => {
           const header = document.querySelector('.site-header')?.getBoundingClientRect();
@@ -95,6 +101,7 @@ try {
             portfolioLibraries: !document.querySelector('#portfolio-generate') || (Boolean(window.PDFLib) && Boolean(window.fontkit)),
             portfolioControls: !document.querySelector('#portfolio-generate') || Boolean(document.querySelector('#portfolio-work-selection') && document.querySelector('#portfolio-selected-works')),
             imagePicker: !imageDialog || (imageDialog.open && imageDialog.getBoundingClientRect().width <= document.documentElement.clientWidth),
+            cvImportReview: !document.querySelector('#dashboard-cv-import') || document.body.innerText.includes('IMPORT CV'),
             headerBottom: header?.bottom || 0,
             mainTop: Number.isFinite(contentTop) ? contentTop : main?.top || 0,
             hasMain: Boolean(main),
@@ -110,6 +117,7 @@ try {
       assert.equal(value.portfolioLibraries, true, `${page} PDF libraries load at ${width}px`);
       assert.equal(value.portfolioControls, true, `${page} portfolio controls render at ${width}px`);
       assert.equal(value.imagePicker, true, `${page} image picker opens without horizontal overflow at ${width}px`);
+      assert.equal(value.cvImportReview, true, `${page} CV import review renders at ${width}px`);
       assert.ok(value.mainTop >= value.headerBottom - 1, `${page} starts below the full header at ${width}px`);
       results.push(`${page}:${width}`);
     }
