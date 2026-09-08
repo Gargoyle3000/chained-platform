@@ -1,6 +1,6 @@
 # CHAINED — ROADMAP
 
-Last updated: 2026-09-06
+Last updated: 2026-09-08
 
 ## POLISH
 
@@ -11,7 +11,8 @@ Last updated: 2026-09-06
 - Refine Work detail so a single image prefers a fixed/non-scrolling presentation where the viewport permits it, while multiple images remain scrollable/swipeable and metadata stays accessible on smaller screens.
 - Investigate a possible cover-image deletion/state issue observed during testing: non-cover images appeared to delete immediately while the probable cover remained visible until `SAVE AS DRAFT`. This is an observation/hypothesis, not a confirmed root cause.
 - Improve stale soft-deleted Work UX: a locally stale save currently collapses `THIS WORK IS NOT AVAILABLE` into generic `WORK COULD NOT BE SAVED`. This does not block private-preview rollout.
-- DRAG-AND-DROP SAME-YEAR WORK ORDERING: add desktop-first drag-and-drop ordering within each year bucket. A Work must not cross year boundaries; dragging updates the existing `profile_order` semantics only. Keep the existing `[ ↑ ][ ↓ ]` controls as the keyboard/accessibility/mobile fallback, and assess touch drag separately rather than requiring it on mobile. This reduces the repeated reacquisition needed to move a Work several places with arrows.
+- DRAG-AND-DROP SAME-YEAR WORK ORDERING: add desktop-first drag-and-drop ordering within each year bucket. New Works default to the top of their year bucket; year remains the hard primary sort, and the artist may subsequently move a Work lower within that year through the existing `profile_order` semantics. On desktop, drag the Work itself without a permanent handle; show only a thin CHAINED-green insertion line and save immediately on drop, with no separate SAVE ORDER action. On mobile, use a minimal two-line `=` grip with an approximately 44×44px touch target rather than dragging the whole image or using a six-dot grip. No valid insertion point may cross a year boundary; public Profile mirrors the stored ordering; existing `[ ↑ ][ ↓ ]` controls remain the keyboard/accessibility/mobile fallback; touch drag supplements rather than replaces them. Avoid cards, permanent drop zones, large handles, unnecessary shifting, or animation.
+- Dashboard WORKS publication-readiness status: surface the existing Work readiness state on authenticated Works surfaces, for example `DRAFT · PREPARING IMAGES`, `DRAFT · READY TO PUBLISH`, or `DRAFT · IMAGE PROCESSING FAILED`. This is Work state, not a REQUEST notification; do not add a notification center, badge system, pop-up, or gamified alert. Final copy remains open for polish.
 - Add an optional, compact `[?]` GUIDE / HELP layer. It should be system-oriented and context-aware (for example Work publication, Archive privacy/projects/tags, or Profile draft/published state), with a possible central GUIDE entry from Settings/navigation. No mandatory onboarding or tutorial.
 - Clarify the valid state where a Work is published while its owner profile remains draft/private, for example `WORK PUBLISHED · PROFILE STILL PRIVATE [?]`, optionally linking to Settings. Never auto-publish the profile as a Work-publication side effect.
 
@@ -58,6 +59,10 @@ Implementation should verify the largest real preview display and HiDPI needs be
 - DIRECT CHAINED SELECT is active-Project-only: `[ EXPORT CHAINED SELECT ]` opens the shared picker and `[ EXPORT SELECT ]` directly generates/downloads. It uses fresh Project membership, fresh strict public projection and canonical LARGE derivatives only; it has no review page, private-media path or legacy fallback.
 - Both SELECT and Portfolio use export-local per-Work image selection: cover first, otherwise first eligible image by `sort_order`; each included Work retains at least one image. Selection is not persisted and never mutates Work/media state.
 - Portfolio remains a separate authorized private-original export using `purpose: pdf_export`; its picker uses `purpose: preview` only for temporary thumbnails.
+
+## PRE-BETA HARDENING
+
+- Audit derivative throughput and queue latency before broader beta. Measure `UPLOAD FINALIZED → JOB PENDING → PROCESSING START → SMALL READY → LARGE READY` per image, separating queue wait from processing time and checking worker concurrency, batching, poll cadence, startup and Storage I/O under representative bursts such as 20 / 50 / 100 images. Do not optimize before measuring or assume image transformation is the bottleneck; use the results to calibrate the long-processing threshold and confirm Supabase/infrastructure capacity.
 
 ## AFTER FIRST TESTERS
 - Publications as a separate future profile/content object, not a Presentation: overview of titles, then a dedicated detail page with multiple images, fixed context, and optional publication metadata.
