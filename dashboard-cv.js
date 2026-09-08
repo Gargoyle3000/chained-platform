@@ -17,8 +17,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateCvImportReviewCandidate
   } = await import("./data/cv-import-review.mjs");
 
-  const { CV_IMPORT_REVIEW_FIXTURE } =
-    await import("./data/cv-import-review-fixture.mjs");
+  const {
+    getCvImportExtractionService,
+    safeCvImportMessage,
+    validateCvImportPdfFile
+  } = await import("./data/cv-import-extraction.mjs");
+
+  const { createCvImportFlow } =
+    await import("./data/cv-import-flow.mjs");
 
   const liveCv =
     document.querySelector("#dashboard-cv-live");
@@ -40,6 +46,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const importButton =
     document.querySelector("#dashboard-cv-import");
+
+  const importFileInput =
+    document.querySelector("#dashboard-cv-import-file");
 
   let repository;
   let managedProfiles = [];
@@ -452,16 +461,85 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  function enterImportReview() {
+  function requestImportPdfSelection() {
     if (!selectedProfileId) {
       setError("ARTIST PROFILE SETUP REQUIRED");
       return;
     }
+    importFlow.requestSelection();
+  }
 
-    lastPrototypeProjection = [];
-    importReview = createCvImportReviewState(CV_IMPORT_REVIEW_FIXTURE);
+  function createImportStateHeader(filename, status) {
+    const header = document.createElement("header");
+    const title = document.createElement("h3");
+    const file = document.createElement("p");
+    const state = document.createElement("p");
+    const privacy = document.createElement("p");
+
+    header.className = "dashboard-cv-import-header dashboard-cv-import-processing";
+    title.textContent = "IMPORT CV";
+    file.className = "dashboard-cv-import-file";
+    file.textContent = filename;
+    state.className = "dashboard-cv-import-status";
+    state.textContent = status;
+    privacy.className = "dashboard-cv-import-privacy";
+    privacy.textContent = "PDF IS PROCESSED BY AN EXTERNAL AI SERVICE FOR CV EXTRACTION. CHAINED DOES NOT SAVE THE PDF.";
+    header.append(title, file, state, privacy);
+    return header;
+  }
+
+  function renderImportProcessing(filename) {
+    setError();
+    setNotice();
     setImportReviewMode(true);
-    renderImportReview();
+    liveCv.replaceChildren(createImportStateHeader(filename, "PROCESSING CV..."));
+  }
+
+  function renderImportFailure(filename, error) {
+    const header = createImportStateHeader(filename, safeCvImportMessage(error));
+    const actions = document.createElement("div");
+    const retry = createTextButton("TRY AGAIN", "Choose a PDF and try CV import again");
+    const cancel = createTextButton("CANCEL", "Cancel CV import");
+
+    actions.className = "dashboard-cv-import-actions";
+    retry.addEventListener("click", requestImportPdfSelection);
+    cancel.addEventListener("click", () => leaveImportReview());
+    actions.append(retry, cancel);
+    liveCv.replaceChildren(header, actions);
+  }
+
+  const importFlow = createCvImportFlow({
+    openPicker() {
+      importFileInput.value = "";
+      importFileInput.click();
+    },
+    validate: validateCvImportPdfFile,
+    async extract(file) {
+      const service = await getCvImportExtractionService();
+      return service.extract(file);
+    },
+    onInvalid(error) {
+      setError(safeCvImportMessage(error));
+    },
+    onProcessing(file) {
+      lastPrototypeProjection = [];
+      renderImportProcessing(file.name);
+    },
+    onSuccess(result) {
+      importReview = createCvImportReviewState(result);
+      renderImportReview();
+    },
+    onFailure(error, file) {
+      importReview = null;
+      renderImportFailure(file.name, error);
+    }
+  });
+
+  function handleImportPdfSelection() {
+    const file = importFileInput.files?.[0] ?? null;
+    importFileInput.value = "";
+    if (!file) return;
+    importFlow.acceptSelection(file);
   }
 
   async function reloadCv() {
@@ -875,7 +953,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     setImportAvailable(profiles.length > 0);
   }
 
-  importButton.addEventListener("click", enterImportReview);
+  importButton.addEventListener("click", requestImportPdfSelection);
+  importFileInput.addEventListener("change", handleImportPdfSelection);
 
   profileSelect.addEventListener("change", async () => {
     selectedProfileId = profileSelect.value;
@@ -898,6 +977,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderCategories([]);
       selectedProfileId = "local-review";
       setImportAvailable(true);
+
+      const previewState = new URLSearchParams(window.location.search).get("cv-import-state");
+      if (previewState === "processing") {
+        renderImportProcessing("sample-cv.pdf");
+      } else if (previewState === "error") {
+        renderImportFailure("sample-cv.pdf", { code: "cv_import_failed" });
+      } else if (previewState === "review") {
+        const { CV_IMPORT_REVIEW_FIXTURE } = await import("./data/cv-import-review-fixture.mjs");
+        importReview = createCvImportReviewState(CV_IMPORT_REVIEW_FIXTURE);
+        setImportReviewMode(true);
+        renderImportReview();
+      }
       return;
     }
 

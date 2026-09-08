@@ -338,6 +338,11 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/authorized-private-media/index.ts"
 
+[functions.cv-import-extract]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/cv-import-extract/index.ts"
+
 [functions.worker-image-broker]
 enabled = true
 verify_jwt = false

@@ -47,6 +47,7 @@ Important agent rule: failure to resolve `docker` from PATH does not mean Docker
 - The restricted Project API key is stored for the current Windows user in Credential Manager as `OPENAI_CHAINED_CV_IMPORT` (username: `CHAINED`). The local launcher injects it only as process-scoped `OPENAI_API_KEY`.
 - Secret values never belong in Git, documentation, plaintext `.env` files, CLI arguments, browser code, or logs. The current key requires Responses write permission.
 - The local development key and any future production key are separate credentials. A future production integration should use server-side secret handling, likely Supabase Edge Function secrets.
+- The implemented, not-yet-deployed CV extraction Edge Function expects a separate server-side `OPENAI_API_KEY`, a comma-separated `CV_IMPORT_BETA_USER_IDS` allowlist, and `ALLOWED_CV_IMPORT_ORIGINS`. Do not configure real values during ordinary local validation or commit them; deployment and secret configuration require separate explicit authorization.
 - The API project currently uses prepaid development billing with auto-reload disabled.
 
 ### Sensitive local development secrets

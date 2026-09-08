@@ -1504,6 +1504,29 @@
   color: var(--accent);
 }
 
+.dashboard-cv-import-processing {
+  max-width: 620px;
+}
+
+.dashboard-cv-import-file,
+.dashboard-cv-import-status,
+.dashboard-cv-import-privacy {
+  margin: 0;
+}
+
+.dashboard-cv-import-status {
+  margin-top: 18px;
+
+  color: var(--accent);
+}
+
+.dashboard-cv-import-privacy {
+  margin-top: 10px;
+
+  font-size: var(--font-meta);
+  line-height: 1.5;
+}
+
 .dashboard-cv-import-entry {
   grid-template-columns: max-content minmax(95px, 0.22fr) minmax(0, 1fr) max-content;
 }

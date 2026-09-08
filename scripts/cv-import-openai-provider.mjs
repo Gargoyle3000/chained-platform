@@ -1,4 +1,9 @@
-import { CV_CATEGORY_TYPES, normalizeCvImportResult } from "./cv-import-prototype.mjs";
+import {
+  CV_CATEGORY_TYPES,
+  CV_IMPORT_INSTRUCTIONS as SHARED_CV_IMPORT_INSTRUCTIONS,
+  CV_IMPORT_RESULT_SCHEMA as SHARED_CV_IMPORT_RESULT_SCHEMA,
+  normalizeCvImportResult as normalizeSharedCvImportResult
+} from "../data/cv-import-contract.mjs";
 
 export const OPENAI_RESPONSES_ENDPOINT = "https://api.openai.com/v1/responses";
 export const CV_IMPORT_MODEL = "gpt-5.6-luna";
@@ -102,16 +107,6 @@ export const CV_IMPORT_RESULT_SCHEMA = {
   }
 };
 
-const INSTRUCTIONS = [
-  "Translate the supplied CV content into CHAINED manual CV candidates only.",
-  "Preserve source wording, names, punctuation, and year/period text.",
-  "Do not embellish, infer missing venue/city/country, rewrite institutions, or fabricate facts.",
-  "Candidates may use only the supplied fixed category enum. If a source section cannot map clearly to one of those categories, do not create a candidate or choose a closest category; add one bounded unsupportedSections entry with reason unsupported_category and its entryCount instead.",
-  "Do not add bio, contact, birth, lives/works, or other profile metadata to candidates or unsupportedSections. Archive is a source-organizational heading: retain an Archive entry only when its exhibition context supports an allowed category, and set needsReview true.",
-  "Confidence describes extraction confidence only. Include concise source provenance for human review.",
-  "Never create Presentations, activities, IDs, database relationships, or sourceActivityId values. Output the schema only."
-].join(" ");
-
 function safeApiError(status, body) {
   const error = body && typeof body === "object" ? body.error : null;
   const code = typeof error?.code === "string" ? error.code : null;
@@ -212,14 +207,14 @@ export function createCvImportRequest({
     store: false,
     reasoning: { effort: "low" },
     max_output_tokens: maxOutputTokens,
-    instructions: INSTRUCTIONS,
+    instructions: SHARED_CV_IMPORT_INSTRUCTIONS,
     input,
     text: {
       format: {
         type: "json_schema",
         name: "chained_cv_import_result",
         strict: true,
-        schema: CV_IMPORT_RESULT_SCHEMA
+        schema: SHARED_CV_IMPORT_RESULT_SCHEMA
       }
     }
   };
@@ -276,7 +271,7 @@ export async function extractCvCandidatesWithMetadata({
       throw new CvImportProviderError("OpenAI CV extraction structured output was invalid JSON", { failure: failure("provider_response_validation", "provider", "INVALID_JSON") });
     }
     let result;
-    try { result = normalizeCvImportResult(payload); }
+    try { result = normalizeSharedCvImportResult(payload); }
     catch { throw new CvImportProviderError("OpenAI CV extraction failed CHAINED schema validation", { failure: failure("chained_schema_validation", "chained_validation", "SCHEMA_INVALID") }); }
     return { result, metadata };
   }

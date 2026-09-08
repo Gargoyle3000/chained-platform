@@ -101,7 +101,15 @@ try {
             portfolioLibraries: !document.querySelector('#portfolio-generate') || (Boolean(window.PDFLib) && Boolean(window.fontkit)),
             portfolioControls: !document.querySelector('#portfolio-generate') || Boolean(document.querySelector('#portfolio-work-selection') && document.querySelector('#portfolio-selected-works')),
             imagePicker: !imageDialog || (imageDialog.open && imageDialog.getBoundingClientRect().width <= document.documentElement.clientWidth),
-            cvImportReview: !document.querySelector('#dashboard-cv-import') || document.body.innerText.includes('IMPORT CV'),
+            cvImportSurface: (() => {
+              if (!document.querySelector('#dashboard-cv-import')) return true;
+              const state = new URLSearchParams(location.search).get('cv-import-state');
+              const text = document.body.innerText;
+              if (state === 'processing') return text.includes('PROCESSING CV...') && text.includes('EXTERNAL AI SERVICE');
+              if (state === 'review') return text.includes('ENTRIES FOUND') && text.includes('ADD 10 ENTRIES');
+              if (state === 'error') return text.includes('CV COULD NOT BE PROCESSED') && text.includes('TRY AGAIN') && text.includes('CANCEL');
+              return Boolean(document.querySelector('#dashboard-cv-import-file')) && !text.includes('ENTRIES FOUND');
+            })(),
             headerBottom: header?.bottom || 0,
             mainTop: Number.isFinite(contentTop) ? contentTop : main?.top || 0,
             hasMain: Boolean(main),
@@ -117,7 +125,7 @@ try {
       assert.equal(value.portfolioLibraries, true, `${page} PDF libraries load at ${width}px`);
       assert.equal(value.portfolioControls, true, `${page} portfolio controls render at ${width}px`);
       assert.equal(value.imagePicker, true, `${page} image picker opens without horizontal overflow at ${width}px`);
-      assert.equal(value.cvImportReview, true, `${page} CV import review renders at ${width}px`);
+      assert.equal(value.cvImportSurface, true, `${page} CV import state renders at ${width}px`);
       assert.ok(value.mainTop >= value.headerBottom - 1, `${page} starts below the full header at ${width}px`);
       results.push(`${page}:${width}`);
     }

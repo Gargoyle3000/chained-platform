@@ -11,6 +11,7 @@ import {
   validateCvPdfInput
 } from "../scripts/cv-import-openai-provider.mjs";
 import { CV_CATEGORY_TYPES, normalizeCvImportResult } from "../scripts/cv-import-prototype.mjs";
+import { CV_IMPORT_RESULT_SCHEMA as SHARED_CV_IMPORT_RESULT_SCHEMA } from "../data/cv-import-contract.mjs";
 
 const payload = {
   source: { documentKind: "text", pageCount: 1, extractedCharacterCount: 20 },
@@ -51,6 +52,7 @@ test("provider requests Responses structured output with mandatory privacy and m
   assert.deepEqual(body.text.format.schema.properties.unsupportedSections.items.properties.reason.enum, ["unsupported_category"]);
   assert.equal(body.tools, undefined);
   assert.equal(request.options.headers.Authorization, "Bearer test-key");
+  assert.deepEqual(body.text.format.schema, SHARED_CV_IMPORT_RESULT_SCHEMA);
 });
 
 test("strict provider schema and CHAINED validation require bounded unsupported review sections", () => {

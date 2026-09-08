@@ -1,15 +1,6 @@
-export const CV_CATEGORY_TYPES = Object.freeze([
-  "education",
-  "solo_exhibition",
-  "duo_exhibition",
-  "group_presentation",
-  "award",
-  "grant",
-  "collection",
-  "residency",
-  "teaching",
-  "curatorial"
-]);
+import { CV_CATEGORY_TYPES } from "./cv-import-contract.mjs";
+
+export { CV_CATEGORY_TYPES };
 
 export const CV_CATEGORY_LABELS = Object.freeze({
   education: "EDUCATION",
