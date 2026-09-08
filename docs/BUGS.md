@@ -1,6 +1,6 @@
 # CHAINED — ACTIVE BUGS / BLOCKERS
 
-Last updated: 2026-09-07
+Last updated: 2026-09-08
 
 ## Private Work preview diagnostics
 
@@ -13,7 +13,7 @@ Last updated: 2026-09-07
 
 ## Work publish-processing readiness feedback
 
-- After the first readiness release, production testing showed that `SAVE DRAFT` could leave `PUBLISH WORK` disabled while suppressing the authoritative readiness state. The Work was safely saved and the watcher ran, but its `processing`, `ready`, or `failed` result was not rendered. Keep this open until the editor always makes every disabled publish state explicit: `CHECKING IMAGE PROCESSING`, `WORK SAVED · PROCESSING IMAGES`, `IMAGE PROCESSING FAILED`, or the existing prerequisite message; `READY TO PUBLISH` must enable Publish. The same behaviour applies when reopening a saved draft.
+- Production testing showed two readiness-feedback failures after `SAVE DRAFT`: the editor could suppress the authoritative `processing`, `ready`, or `failed` result, and the original five-second watcher stopped after its 120-second active window even when the server was still legitimately processing. The Work itself remained safely saved, but Publish could stay disabled without current feedback until a hard refresh. Keep this open until the editor always renders the authoritative stage, continues with bounded low-frequency checks after the initial window, refreshes on return to the page, and offers a truthful manual check. Required states include `CHECKING IMAGE PROCESSING`, `WORK SAVED · PREPARING IMAGES FOR PUBLISH`, `WORK SAVED · IMAGES ARE TAKING LONGER TO PREPARE`, `IMAGE PROCESSING FAILED`, or the existing prerequisite message; `READY TO PUBLISH` must enable Publish. The same behaviour applies when reopening a saved draft.
 
 ## Resolved incidents
 - Agenda occurrence publication regression: explicit PUBLISH / UNPUBLISH and independent `show_in_agenda` / `show_in_presentation` behavior are implemented and validated; the prior Gothic Summer state was historic data plus UX ambiguity, not a public query defect.

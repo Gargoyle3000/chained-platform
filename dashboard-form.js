@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const editorHeading = document.querySelector("#work-editor-heading");
   const editorContext = document.querySelector("#work-editor-context");
   const formStatus = document.querySelector("#work-form-status");
+  const readinessCheckButton = document.querySelector("#work-readiness-check");
   const basicValidation = document.querySelector("#work-basic-validation");
   const contextValidation = document.querySelector(
     "#work-context-validation"
@@ -58,6 +59,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentWorkPublished = false;
   let editorBusy = false;
   let managedPublicationState = currentWorkId ? "unknown" : "new";
+  let manualReadinessCheckInFlight = false;
   let lastAuthoritativeWork = null;
   const publishAttempt = createIdempotencyState();
   const unpublishAttempt = createIdempotencyState();
@@ -68,7 +70,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     onError: () => {
       managedPublicationState = "unknown";
       updatePublishAvailability();
-      showFormStatus("WORK SAVED · PUBLICATION READINESS UNAVAILABLE", true);
+      showFormStatus(
+        manualReadinessCheckInFlight
+          ? "WORK SAVED\nCHECKING IMAGE PREPARATION IS TEMPORARILY UNAVAILABLE"
+          : "WORK SAVED · PUBLICATION READINESS UNAVAILABLE",
+        true,
+        { showCheckAgain: manualReadinessCheckInFlight }
+      );
     }
   });
 
@@ -138,14 +146,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
-  function showFormStatus(message, isError = false) {
-    if (!formStatus) {
-      return;
+  function showFormStatus(message, isError = false, { showCheckAgain = false } = {}) {
+    if (formStatus) {
+      formStatus.textContent = message;
+      formStatus.hidden = !message;
+      formStatus.classList.toggle("is-error", isError);
     }
 
-    formStatus.textContent = message;
-    formStatus.hidden = !message;
-    formStatus.classList.toggle("is-error", isError);
+    if (readinessCheckButton) {
+      readinessCheckButton.hidden = !showCheckAgain;
+      readinessCheckButton.disabled = !showCheckAgain || editorBusy || readinessWatcher.isChecking();
+    }
   }
 
 
@@ -170,17 +181,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     managedPublicationState = readiness.state;
     updatePublishAvailability();
     const state = publicationReadinessUiState(readiness, prerequisiteMessage());
-    showFormStatus(state.message, state.isError);
+    showFormStatus(state.message, state.isError, {
+      showCheckAgain: state.showCheckAgain
+    });
   }
 
 
-  async function refreshPublicationReadiness() {
+  async function refreshPublicationReadiness({ immediate = false } = {}) {
     if (!localSupabaseMode || !currentWorkId || currentWorkPublished) return null;
+    if (readinessWatcher.isActive()) {
+      if (immediate) await readinessWatcher.checkNow();
+      return managedPublicationState;
+    }
+    if (["ready", "failed"].includes(managedPublicationState)) return managedPublicationState;
     managedPublicationState = "checking";
     updatePublishAvailability();
     showFormStatus("CHECKING IMAGE PROCESSING");
     await readinessWatcher.start(currentWorkId);
     return managedPublicationState;
+  }
+
+
+  async function checkPublicationReadinessNow() {
+    if (readinessWatcher.isChecking()) return;
+    manualReadinessCheckInFlight = true;
+    showFormStatus("WORK SAVED\nCHECKING IMAGE PROCESSING", false);
+    try {
+      if (readinessWatcher.isActive()) {
+        await readinessWatcher.checkNow();
+      } else {
+        await refreshPublicationReadiness({ immediate: true });
+      }
+    } finally {
+      manualReadinessCheckInFlight = false;
+      if (readinessCheckButton && !readinessCheckButton.hidden) {
+        readinessCheckButton.disabled = editorBusy || readinessWatcher.isChecking();
+      }
+    }
   }
 
 
@@ -198,6 +235,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     updatePublishAvailability();
+    if (readinessCheckButton && !readinessCheckButton.hidden) {
+      readinessCheckButton.disabled = isBusy || readinessWatcher.isChecking();
+    }
     if (unpublishButton) unpublishButton.disabled = isBusy;
     if (deleteWorkButton) deleteWorkButton.disabled = isBusy;
     if (imageInput) imageInput.disabled = isBusy || currentWorkPublished;
@@ -957,6 +997,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     saveWork("draft");
   });
 
+  readinessCheckButton?.addEventListener("click", () => {
+    void checkPublicationReadinessNow();
+  });
+
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
     saveWork("published");
@@ -1002,7 +1046,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch { showFormStatus("WORK COULD NOT BE DELETED", true); setEditorBusy(false); }
   });
 
+  function refreshReadinessAfterReturn() {
+    if (document.visibilityState !== "visible") return;
+    void refreshPublicationReadiness({ immediate: true });
+  }
+
+  function handleVisibilityChange() {
+    if (document.visibilityState === "visible") refreshReadinessAfterReturn();
+  }
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+  window.addEventListener("focus", refreshReadinessAfterReturn);
+
   window.addEventListener("beforeunload", (event) => {
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+    window.removeEventListener("focus", refreshReadinessAfterReturn);
     readinessWatcher.dispose();
     releaseAllPreviewUrls();
     workStore?.media?.urls.revokeAll();

@@ -402,13 +402,23 @@
   margin-top: 20px;
 }
 
+.work-form-status-region {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+  margin: 0 0 24px;
+}
+
 .work-form-status {
   width: max-content;
   max-width: 100%;
-  margin: 0 0 24px auto;
+  margin: 0;
 
   color: var(--accent);
   font-size: var(--font-meta);
+  line-height: 1.5;
+  text-align: right;
+  white-space: pre-line;
 }
 
 .work-form-status.is-error {
@@ -425,6 +435,18 @@
 
 .work-form-publish {
   color: var(--accent);
+}
+
+.work-form-publish:disabled {
+  color: var(--black);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.work-readiness-check:disabled {
+  color: var(--black);
+  opacity: 0.45;
+  cursor: wait;
 }
 
 .dashboard-cancel {
@@ -487,6 +509,11 @@
 
   .work-form-status {
     margin-left: 0;
+    text-align: left;
+  }
+
+  .work-form-status-region {
+    justify-items: start;
   }
 
   .work-upload-area {

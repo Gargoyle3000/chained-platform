@@ -2,22 +2,26 @@ import { WORK_ERROR_CODES } from "./work-errors.mjs";
 
 export const PUBLICATION_READINESS_INTERVAL_MS = 5_000;
 export const PUBLICATION_READINESS_BOUND_MS = 120_000;
+export const PUBLICATION_LONG_PROCESSING_INTERVAL_MS = 15_000;
 
 export function publicationReadinessUiState(readiness, prerequisiteMessage = "WORK IS NOT READY TO PUBLISH") {
   if (readiness?.state === "ready") {
-    return Object.freeze({ message: "READY TO PUBLISH", isError: false, publishEnabled: true });
+    return Object.freeze({ message: "READY TO PUBLISH", isError: false, publishEnabled: true, showCheckAgain: false });
   }
   if (readiness?.state === "processing") {
     return Object.freeze({
-      message: readiness.delayed ? "WORK SAVED · IMAGES STILL PROCESSING" : "WORK SAVED · PROCESSING IMAGES",
+      message: readiness.longProcessing
+        ? "WORK SAVED\nIMAGES ARE TAKING LONGER TO PREPARE\nYOU CAN LEAVE THIS PAGE AND RETURN LATER"
+        : "WORK SAVED\nPREPARING IMAGES FOR PUBLISH\nYOU CAN LEAVE THIS PAGE — PROCESSING WILL CONTINUE",
       isError: false,
-      publishEnabled: false
+      publishEnabled: false,
+      showCheckAgain: readiness.longProcessing === true
     });
   }
   if (readiness?.state === "failed") {
-    return Object.freeze({ message: "IMAGE PROCESSING FAILED", isError: true, publishEnabled: false });
+    return Object.freeze({ message: "IMAGE PROCESSING FAILED", isError: true, publishEnabled: false, showCheckAgain: false });
   }
-  return Object.freeze({ message: prerequisiteMessage, isError: true, publishEnabled: false });
+  return Object.freeze({ message: prerequisiteMessage, isError: true, publishEnabled: false, showCheckAgain: false });
 }
 
 export function workOperationFailureUiState({ phase, metadataPersisted, error }) {
@@ -30,7 +34,11 @@ export function workOperationFailureUiState({ phase, metadataPersisted, error })
     return Object.freeze({ message, isError: true, restartReadiness: false });
   }
   if (phase === "publishing" && error?.code === WORK_ERROR_CODES.MEDIA_PROCESSING) {
-    return Object.freeze({ message: "WORK SAVED · PROCESSING IMAGES", isError: false, restartReadiness: true });
+    return Object.freeze({
+      message: "WORK SAVED\nPREPARING IMAGES FOR PUBLISH\nYOU CAN LEAVE THIS PAGE — PROCESSING WILL CONTINUE",
+      isError: false,
+      restartReadiness: true
+    });
   }
   if (phase === "publishing") return Object.freeze({ message: "WORK COULD NOT BE PUBLISHED", isError: true, restartReadiness: false });
   if (phase === "uploading") return Object.freeze({ message: "WORK SAVED · IMAGE UPLOAD FAILED", isError: true, restartReadiness: false });
@@ -45,9 +53,10 @@ export function createPublicationReadinessWatcher({
   clearTimer = globalThis.clearTimeout?.bind(globalThis),
   now = () => Date.now(),
   intervalMs = PUBLICATION_READINESS_INTERVAL_MS,
-  boundMs = PUBLICATION_READINESS_BOUND_MS
+  boundMs = PUBLICATION_READINESS_BOUND_MS,
+  longIntervalMs = PUBLICATION_LONG_PROCESSING_INTERVAL_MS
 }) {
-  if (typeof read !== "function" || typeof onState !== "function" || typeof onError !== "function" || typeof setTimer !== "function" || typeof clearTimer !== "function") {
+  if (typeof read !== "function" || typeof onState !== "function" || typeof onError !== "function" || typeof setTimer !== "function" || typeof clearTimer !== "function" || !Number.isFinite(intervalMs) || intervalMs <= 0 || !Number.isFinite(boundMs) || boundMs <= 0 || !Number.isFinite(longIntervalMs) || longIntervalMs <= 0) {
     throw new TypeError("Publication readiness watcher dependencies are invalid.");
   }
 
@@ -76,13 +85,16 @@ export function createPublicationReadinessWatcher({
     try {
       const readiness = await read(workId);
       if (expectedSession !== session || workId !== activeWorkId) return;
-      const delayed = readiness.state === "processing" && now() >= deadline;
-      onState(Object.freeze({ ...readiness, delayed }));
-      if (readiness.state === "processing" && !delayed) {
+      const longProcessing = readiness.state === "processing" && now() >= deadline;
+      onState(Object.freeze({ ...readiness, longProcessing }));
+      if (readiness.state === "processing") {
+        const delay = longProcessing
+          ? longIntervalMs
+          : Math.min(intervalMs, Math.max(0, deadline - now()));
         timer = setTimer(() => {
           timer = null;
           void check(expectedSession);
-        }, Math.min(intervalMs, Math.max(0, deadline - now())));
+        }, delay);
       } else {
         clearScheduled();
         activeWorkId = null;
@@ -109,11 +121,19 @@ export function createPublicationReadinessWatcher({
     return check(expectedSession);
   }
 
+  function checkNow() {
+    if (!activeWorkId || inFlight) return Promise.resolve();
+    clearScheduled();
+    return check(session);
+  }
+
   return Object.freeze({
     start,
     stop,
     dispose: stop,
+    checkNow,
     isActive: () => activeWorkId !== null,
+    isChecking: () => inFlight,
     activeWorkId: () => activeWorkId
   });
 }
