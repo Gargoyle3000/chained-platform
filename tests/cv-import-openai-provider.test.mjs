@@ -2,8 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   CV_IMPORT_MODEL,
+  MAX_CV_PDF_BYTES,
   CvImportProviderError,
-  extractCvCandidatesWithMetadata
+  extractCvCandidatesWithMetadata,
+  validateCvPdfInput
 } from "../scripts/cv-import-openai-provider.mjs";
 
 const payload = {
@@ -49,6 +51,67 @@ test("successful structured output reaches the existing CHAINED validator and re
   assert.equal(result.metadata.cachedInputTokens, 2);
   assert.equal(result.metadata.reasoningTokens, 1);
   assert.equal(result.metadata.store, false);
+});
+
+test("direct PDF mode uses inline input_file and never a Files API route", async () => {
+  let request;
+  const pdf = Buffer.from("%PDF-1.4 synthetic PDF");
+  await extractCvCandidatesWithMetadata({
+    pdfBytes: pdf, filename: "private-cv.pdf", source: { documentKind: "pdf", pageCount: 1, extractedCharacterCount: 0 },
+    maxOutputTokens: 12_000,
+    apiKey: "test-key", fetchImpl: async (url, options) => { request = { url, options }; return response(completed()); }
+  });
+  const body = JSON.parse(request.options.body);
+  const content = body.input[0].content;
+  const file = content.find((item) => item.type === "input_file");
+  assert.equal(request.url, "https://api.openai.com/v1/responses");
+  assert.equal(body.store, false);
+  assert.equal(body.model, CV_IMPORT_MODEL);
+  assert.equal(body.max_output_tokens, 12_000);
+  assert.equal(body.text.format.type, "json_schema");
+  assert.equal(file.filename, "private-cv.pdf");
+  assert.equal(file.detail, "auto");
+  assert.equal(file.file_data.startsWith("data:application/pdf;base64,"), true);
+  assert.equal(Buffer.from(file.file_data.replace("data:application/pdf;base64,", ""), "base64").toString("ascii"), "%PDF-1.4 synthetic PDF");
+});
+
+test("missing, non-PDF, and oversized direct inputs reject before a provider call without data leakage", () => {
+  assert.throws(() => validateCvPdfInput(undefined, "private-cv.pdf"), CvImportProviderError);
+  assert.throws(() => validateCvPdfInput(Buffer.from("not a PDF"), "private-cv.pdf"), /PDF/);
+  assert.throws(() => validateCvPdfInput(Buffer.alloc(MAX_CV_PDF_BYTES + 1, 0), "private-cv.pdf"), /size limit/);
+  assert.throws(
+    () => validateCvPdfInput(Buffer.from("not a PDF with private-base64-like-content"), "private-cv.pdf"),
+    (error) => error instanceof CvImportProviderError && !error.message.includes("private-base64")
+  );
+});
+
+test("incomplete responses reject partial output but retain only safe reason and usage diagnostics", async () => {
+  const partial = JSON.stringify({ privatePdfData: "must-not-be-used" });
+  const body = {
+    model: CV_IMPORT_MODEL,
+    status: "incomplete",
+    incomplete_details: { reason: "max_output_tokens" },
+    output_text: partial,
+    usage: { input_tokens: 111, input_tokens_details: { cached_tokens: 4 }, output_tokens: 4000, output_tokens_details: { reasoning_tokens: 900 }, total_tokens: 5011 }
+  };
+  await assert.rejects(
+    () => extractCvCandidatesWithMetadata({ text: "Synthetic", apiKey: "test-key", fetchImpl: async () => response(body) }),
+    (error) => error instanceof CvImportProviderError
+      && error.diagnostics.incompleteReason === "max_output_tokens"
+      && error.diagnostics.maxOutputTokens === 4000
+      && error.diagnostics.inputTokens === 111
+      && error.diagnostics.totalTokens === 5011
+      && !error.message.includes("privatePdfData")
+      && !JSON.stringify(error.diagnostics).includes("privatePdfData")
+  );
+});
+
+test("incomplete reasons remain distinguishable without accepting partial candidates", async () => {
+  const body = { model: CV_IMPORT_MODEL, status: "incomplete", incomplete_details: { reason: "content_filter" }, output: [] };
+  await assert.rejects(
+    () => extractCvCandidatesWithMetadata({ text: "Synthetic", apiKey: "test-key", fetchImpl: async () => response(body) }),
+    (error) => error instanceof CvImportProviderError && error.diagnostics.incompleteReason === "content_filter"
+  );
 });
 
 test("malformed, presentation-shaped, and incomplete outputs fail closed", async () => {

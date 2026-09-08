@@ -1,5 +1,10 @@
 [CmdletBinding()]
-param()
+param(
+  [Parameter()] [string]$PdfPath,
+  [Parameter()] [switch]$Summary,
+  [Parameter()] [switch]$SelfTest,
+  [Parameter()] [ValidateRange(256, 12000)] [int]$MaxOutputTokens
+)
 
 $ErrorActionPreference = "Stop"
 $credentialTarget = "OPENAI_CHAINED_CV_IMPORT"
@@ -51,15 +56,30 @@ function Get-GenericCredentialSecret([string]$Target) {
   }
 }
 
+${exitCode} = 0
 try {
-  $secret = Get-GenericCredentialSecret $credentialTarget
-  if ([string]::IsNullOrWhiteSpace($secret)) { throw "Windows Credential Manager returned an empty OpenAI credential." }
-  $env:OPENAI_API_KEY = $secret
-  & node (Join-Path $PSScriptRoot "run-cv-import-luna-smoke.mjs")
-  exit $LASTEXITCODE
+  if ($SelfTest) {
+    & node -e "process.stdout.write('STDOUT TEST OK\n'); process.stderr.write('STDERR TEST OK\n'); process.exitCode = 7"
+  }
+  else {
+    $secret = Get-GenericCredentialSecret $credentialTarget
+    if ([string]::IsNullOrWhiteSpace($secret)) { throw "Windows Credential Manager returned an empty OpenAI credential." }
+    $env:OPENAI_API_KEY = $secret
+    if ([string]::IsNullOrWhiteSpace($PdfPath)) {
+      & node (Join-Path $PSScriptRoot "run-cv-import-luna-smoke.mjs")
+    }
+    else {
+      $arguments = @((Join-Path $PSScriptRoot "run-cv-import-luna-pdf-benchmark.mjs"), "--pdf", $PdfPath)
+      if ($Summary) { $arguments += "--summary" }
+      if ($PSBoundParameters.ContainsKey("MaxOutputTokens")) { $arguments += @("--max-output-tokens", $MaxOutputTokens) }
+      & node @arguments
+    }
+  }
+  ${exitCode} = $LASTEXITCODE
 }
 finally {
   Remove-Variable secret -ErrorAction SilentlyContinue
   if ($hadExistingKey) { $env:OPENAI_API_KEY = $existingKey }
   else { Remove-Item Env:OPENAI_API_KEY -ErrorAction SilentlyContinue }
 }
+exit ${exitCode}
