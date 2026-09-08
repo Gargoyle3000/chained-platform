@@ -12,6 +12,7 @@ import {
   writeBenchmarkArtifact
 } from "../scripts/cv-import-benchmark-artifact.mjs";
 import { formatBenchmarkReport } from "../scripts/read-cv-import-benchmark.mjs";
+import { CV_IMPORT_PDF_BENCHMARK_TIMEOUT_MS } from "../scripts/run-cv-import-luna-pdf-benchmark.mjs";
 
 const sourceBytes = Buffer.from("synthetic CV document");
 const source = {
@@ -23,6 +24,7 @@ const source = {
 const metadata = {
   requestedModel: "gpt-5.6-luna", returnedModel: "gpt-5.6-luna", httpStatus: 200,
   responseStatus: "completed", latencyMs: 1234, maxOutputTokens: 12000,
+  requestTimeoutMs: CV_IMPORT_PDF_BENCHMARK_TIMEOUT_MS,
   inputTokens: 10, cachedInputTokens: 0, outputTokens: 5, reasoningTokens: 1, totalTokens: 15
 };
 const result = {
@@ -51,6 +53,7 @@ test("completed artifacts persist only normalized CV results and safe metadata o
   assert.equal(artifactPath.includes(process.cwd()), false);
   assert.equal(restored.result.candidates[0].title, "Example Academy");
   assert.equal(restored.provider.store, false);
+  assert.equal(restored.provider.requestTimeoutMs, 180000);
   assert.equal(raw.includes("must-not-persist"), false);
   assert.equal(raw.includes("OPENAI_API_KEY"), false);
   assert.equal(raw.includes("data:application/pdf;base64"), false);
@@ -93,6 +96,7 @@ test("document hashing is deterministic and the offline report summarizes withou
   assert.match(report, /PRIVATE LOCAL BENCHMARK DATA/);
   assert.match(report, /CATEGORY         education: 1/);
   assert.match(report, /NEEDS REVIEW     0/);
+  assert.match(report, /REQUEST TIMEOUT MS 180000/);
   assert.equal(readerSource.includes("fetch("), false);
 });
 

@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   CV_IMPORT_MODEL,
+  CV_IMPORT_MAX_REQUEST_TIMEOUT_MS,
+  CV_IMPORT_TIMEOUT_MS,
   MAX_CV_PDF_BYTES,
   CvImportProviderError,
   extractCvCandidatesWithMetadata,
@@ -51,6 +53,53 @@ test("successful structured output reaches the existing CHAINED validator and re
   assert.equal(result.metadata.cachedInputTokens, 2);
   assert.equal(result.metadata.reasoningTokens, 1);
   assert.equal(result.metadata.store, false);
+  assert.equal(result.metadata.requestTimeoutMs, CV_IMPORT_TIMEOUT_MS);
+});
+
+test("request timeouts are bounded, configurable, and cleaned up after a successful request", async () => {
+  const scheduled = [];
+  const cleared = [];
+  const result = await extractCvCandidatesWithMetadata({
+    text: "Synthetic", apiKey: "test-key", requestTimeoutMs: CV_IMPORT_MAX_REQUEST_TIMEOUT_MS,
+    setTimeoutImpl: (callback, delay) => { const timer = { callback, delay }; scheduled.push(timer); return timer; },
+    clearTimeoutImpl: (timer) => cleared.push(timer),
+    fetchImpl: async () => response(completed())
+  });
+  assert.equal(scheduled.length, 1);
+  assert.equal(scheduled[0].delay, CV_IMPORT_MAX_REQUEST_TIMEOUT_MS);
+  assert.deepEqual(cleared, [scheduled[0]]);
+  assert.equal(result.metadata.requestTimeoutMs, CV_IMPORT_MAX_REQUEST_TIMEOUT_MS);
+  await assert.rejects(
+    () => extractCvCandidatesWithMetadata({ text: "Synthetic", apiKey: "test-key", requestTimeoutMs: CV_IMPORT_MAX_REQUEST_TIMEOUT_MS + 1, fetchImpl: async () => response(completed()) }),
+    /timeout is invalid/
+  );
+  await assert.rejects(
+    () => extractCvCandidatesWithMetadata({ text: "Synthetic", apiKey: "test-key", requestTimeoutMs: 999, fetchImpl: async () => response(completed()) }),
+    /timeout is invalid/
+  );
+});
+
+test("timeout aborts with safe diagnostics and never includes request secrets", async () => {
+  let timeoutCallback;
+  await assert.rejects(
+    () => extractCvCandidatesWithMetadata({
+      text: "Synthetic private CV content", apiKey: "test-secret-key", requestTimeoutMs: 1_000,
+      setTimeoutImpl: (callback) => { timeoutCallback = callback; return "timer"; },
+      clearTimeoutImpl: (timer) => assert.equal(timer, "timer"),
+      fetchImpl: async (_url, options) => {
+        timeoutCallback();
+        assert.equal(options.signal.aborted, true);
+        const error = new Error("test-secret-key Synthetic private CV content");
+        error.name = "AbortError";
+        throw error;
+      }
+    }),
+    (error) => error.failure?.phase === "fetch_started"
+      && error.failure?.category === "timeout"
+      && error.failure?.code === "AbortError"
+      && !JSON.stringify(error.failure).includes("test-secret-key")
+      && !JSON.stringify(error.failure).includes("private CV")
+  );
 });
 
 test("direct PDF mode uses inline input_file and never a Files API route", async () => {

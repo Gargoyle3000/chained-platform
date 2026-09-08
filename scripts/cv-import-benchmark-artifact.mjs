@@ -10,7 +10,7 @@ const TOP_LEVEL_KEYS = new Set(["version", "createdAt", "outcome", "source", "pr
 const FAILURE_KEYS = new Set(["phase", "category", "code"]);
 const SOURCE_KEYS = new Set(["fileName", "fileSize", "pageCount", "documentSha256"]);
 const PROVIDER_KEYS = new Set([
-  "requestedModel", "returnedModel", "httpStatus", "responseStatus", "latencyMs", "maxOutputTokens",
+  "requestedModel", "returnedModel", "httpStatus", "responseStatus", "latencyMs", "maxOutputTokens", "requestTimeoutMs",
   "usage", "store", "incompleteReason"
 ]);
 const USAGE_KEYS = new Set(["inputTokens", "cachedInputTokens", "outputTokens", "reasoningTokens", "totalTokens"]);
@@ -61,6 +61,7 @@ function normalizeProvider(provider, outcome) {
   optionalInteger(provider.httpStatus, "provider.httpStatus");
   optionalInteger(provider.latencyMs, "provider.latencyMs");
   optionalInteger(provider.maxOutputTokens, "provider.maxOutputTokens");
+  optionalInteger(provider.requestTimeoutMs, "provider.requestTimeoutMs");
   if (provider.store !== false) throw new Error("provider.store must be false");
   if (provider.incompleteReason !== null && (typeof provider.incompleteReason !== "string" || !/^[a-z_]+$/.test(provider.incompleteReason))) {
     throw new Error("provider.incompleteReason is invalid");
@@ -75,6 +76,7 @@ function normalizeProvider(provider, outcome) {
     responseStatus: provider.responseStatus,
     latencyMs: provider.latencyMs,
     maxOutputTokens: provider.maxOutputTokens,
+    requestTimeoutMs: provider.requestTimeoutMs,
     usage: { ...provider.usage },
     store: false,
     incompleteReason: provider.incompleteReason
@@ -105,6 +107,7 @@ export function createBenchmarkArtifact({ source, metadata, failure = null, resu
     responseStatus: metadata?.responseStatus ?? null,
     latencyMs: metadata?.latencyMs ?? null,
     maxOutputTokens: metadata?.maxOutputTokens ?? null,
+    requestTimeoutMs: metadata?.requestTimeoutMs ?? null,
     usage: {
       inputTokens: metadata?.inputTokens ?? null,
       cachedInputTokens: metadata?.cachedInputTokens ?? null,

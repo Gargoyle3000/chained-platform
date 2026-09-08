@@ -31,6 +31,7 @@ export function formatBenchmarkReport(artifact, artifactPath) {
     `RETURNED MODEL   ${artifact.provider.returnedModel ?? "unavailable"}`,
     `LATENCY MS       ${artifact.provider.latencyMs ?? "unavailable"}`,
     `MAX OUTPUT TOKENS ${artifact.provider.maxOutputTokens ?? "unavailable"}`,
+    `REQUEST TIMEOUT MS ${artifact.provider.requestTimeoutMs ?? "unavailable"}`,
     `STORE            ${artifact.provider.store}`,
     `INPUT TOKENS     ${artifact.provider.usage.inputTokens ?? "unavailable"}`,
     `CACHED TOKENS    ${artifact.provider.usage.cachedInputTokens ?? "unavailable"}`,

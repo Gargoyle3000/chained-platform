@@ -3,6 +3,7 @@ import { CV_CATEGORY_TYPES, normalizeCvImportResult } from "./cv-import-prototyp
 export const OPENAI_RESPONSES_ENDPOINT = "https://api.openai.com/v1/responses";
 export const CV_IMPORT_MODEL = "gpt-5.6-luna";
 export const CV_IMPORT_TIMEOUT_MS = 45_000;
+export const CV_IMPORT_MAX_REQUEST_TIMEOUT_MS = 180_000;
 export const MAX_CV_PDF_BYTES = 20 * 1024 * 1024;
 export const CV_IMPORT_DEFAULT_MAX_OUTPUT_TOKENS = 4_000;
 
@@ -20,6 +21,13 @@ export class CvImportProviderError extends Error {
 
 const SAFE_NETWORK_CODES = new Set(["ECONNRESET", "ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT", "UND_ERR_CONNECT_TIMEOUT", "UND_ERR_HEADERS_TIMEOUT"]);
 function failure(phase, category, code = null) { return { phase, category, code: SAFE_NETWORK_CODES.has(code) || code === "AbortError" || code === "TypeError" || code === "HTTP_ERROR" || code === "INVALID_JSON" || code === "SCHEMA_INVALID" ? code : "UNKNOWN" }; }
+
+function validateRequestTimeoutMs(requestTimeoutMs) {
+  if (!Number.isInteger(requestTimeoutMs) || requestTimeoutMs < 1_000 || requestTimeoutMs > CV_IMPORT_MAX_REQUEST_TIMEOUT_MS) {
+    throw new CvImportProviderError("CV extraction request timeout is invalid");
+  }
+  return requestTimeoutMs;
+}
 
 const nullableString = (maxLength) => ({ type: ["string", "null"], maxLength });
 const sourceSchema = {
@@ -127,11 +135,12 @@ function responseText(body, metadata) {
   throw new CvImportProviderError("OpenAI CV extraction returned no structured output");
 }
 
-function usageMetadata(body, latencyMs, httpStatus, maxOutputTokens) {
+function usageMetadata(body, latencyMs, httpStatus, maxOutputTokens, requestTimeoutMs) {
   const usage = body?.usage || {};
   return {
     requestedModel: CV_IMPORT_MODEL,
     maxOutputTokens,
+    requestTimeoutMs,
     returnedModel: typeof body?.model === "string" ? body.model : null,
     httpStatus,
     responseStatus: typeof body?.status === "string" ? body.status : null,
@@ -210,15 +219,21 @@ export async function extractCvCandidatesWithMetadata({
   apiKey = process.env.OPENAI_API_KEY,
   fetchImpl = globalThis.fetch,
   endpoint = OPENAI_RESPONSES_ENDPOINT,
-  timeoutMs = CV_IMPORT_TIMEOUT_MS
+  requestTimeoutMs = CV_IMPORT_TIMEOUT_MS,
+  setTimeoutImpl = globalThis.setTimeout,
+  clearTimeoutImpl = globalThis.clearTimeout
 } = {}) {
   if (typeof apiKey !== "string" || apiKey.trim() === "") throw new CvImportProviderError("OpenAI API key is unavailable", { failure: failure("credential_retrieval", "credential") });
   if (typeof fetchImpl !== "function") throw new CvImportProviderError("Fetch is unavailable for OpenAI CV extraction", { failure: failure("fetch_started", "network") });
   let request;
   try { request = createCvImportRequest({ text, source, pdfBytes, filename, maxOutputTokens }); }
   catch (error) { throw new CvImportProviderError("OpenAI CV request construction failed", { failure: failure("request_construction", "file") }); }
+  validateRequestTimeoutMs(requestTimeoutMs);
+  if (typeof setTimeoutImpl !== "function" || typeof clearTimeoutImpl !== "function") {
+    throw new CvImportProviderError("CV extraction timeout controls are unavailable");
+  }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeoutImpl(() => controller.abort(), requestTimeoutMs);
   const startedAt = performance.now();
   try {
     let response;
@@ -238,7 +253,7 @@ export async function extractCvCandidatesWithMetadata({
     try { body = await response.json(); }
     catch { throw new CvImportProviderError(`OpenAI CV extraction returned invalid JSON (HTTP ${response.status})`, { status: response.status, failure: failure("response_body_parse", "response_parse", "INVALID_JSON") }); }
     if (!response.ok) { const error = safeApiError(response.status, body); error.failure = failure("fetch_started", "http", "HTTP_ERROR"); throw error; }
-    const metadata = usageMetadata(body, Math.round(performance.now() - startedAt), response.status, request.max_output_tokens);
+    const metadata = usageMetadata(body, Math.round(performance.now() - startedAt), response.status, request.max_output_tokens, requestTimeoutMs);
     let payload;
     try { payload = JSON.parse(responseText(body, metadata)); }
     catch (error) {
@@ -251,7 +266,7 @@ export async function extractCvCandidatesWithMetadata({
     return { result, metadata };
   }
   finally {
-    clearTimeout(timer);
+    clearTimeoutImpl(timer);
   }
 }
 

@@ -2,8 +2,11 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createBenchmarkArtifact, sha256, writeBenchmarkArtifact } from "./cv-import-benchmark-artifact.mjs";
-import { CV_IMPORT_MODEL, extractCvCandidatesWithMetadata, validateCvPdfInput } from "./cv-import-openai-provider.mjs";
+import { CV_IMPORT_MODEL, CV_IMPORT_MAX_REQUEST_TIMEOUT_MS, extractCvCandidatesWithMetadata, validateCvPdfInput } from "./cv-import-openai-provider.mjs";
+
+export const CV_IMPORT_PDF_BENCHMARK_TIMEOUT_MS = CV_IMPORT_MAX_REQUEST_TIMEOUT_MS;
 
 function argumentValue(name) {
   const index = process.argv.indexOf(name);
@@ -44,6 +47,7 @@ async function main() {
   const pageCount = countPdfPages(bytes);
   const source = { fileName: filename, fileSize: stat.size, pageCount, documentSha256: sha256(bytes) };
   const configuredMaxOutputTokens = maxOutputTokens ?? 4000;
+  const configuredRequestTimeoutMs = CV_IMPORT_PDF_BENCHMARK_TIMEOUT_MS;
   let result;
   let metadata;
   let artifactPath;
@@ -52,7 +56,8 @@ async function main() {
       pdfBytes: bytes,
       filename,
       source: { documentKind: "pdf", pageCount, extractedCharacterCount: 0 },
-      maxOutputTokens
+      maxOutputTokens,
+      requestTimeoutMs: configuredRequestTimeoutMs
     }));
     artifactPath = await writeBenchmarkArtifact(createBenchmarkArtifact({ source, metadata, result }));
   }
@@ -64,6 +69,7 @@ async function main() {
       responseStatus: null,
       latencyMs: null,
       maxOutputTokens: configuredMaxOutputTokens,
+      requestTimeoutMs: configuredRequestTimeoutMs,
       inputTokens: null,
       cachedInputTokens: null,
       outputTokens: null,
@@ -102,6 +108,7 @@ async function main() {
   console.log(`REASONING TOKENS ${metadata.reasoningTokens ?? "unavailable"}`);
   console.log(`TOTAL TOKENS     ${metadata.totalTokens ?? "unavailable"}`);
   console.log(`MAX OUTPUT TOKENS ${configuredMaxOutputTokens}`);
+  console.log(`REQUEST TIMEOUT MS ${configuredRequestTimeoutMs}`);
   console.log("STORE             false");
 }
 
@@ -121,10 +128,12 @@ function printSafeDiagnostics(diagnostics) {
   console.error(`MAX OUTPUT TOKENS ${diagnostics.maxOutputTokens ?? "unavailable"}`);
 }
 
-main().catch((error) => {
-  const details = [error.status ? `HTTP ${error.status}` : null, error.code, error.type].filter(Boolean).join("; ");
-  console.error(`CV IMPORT LUNA PDF BENCHMARK ERROR: ${error.message}${details ? ` (${details})` : ""}`);
-  printSafeDiagnostics(error.diagnostics);
-  if (typeof error.artifactPath === "string") console.error(`ARTIFACT         ${error.artifactPath}`);
-  process.exitCode = 1;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    const details = [error.status ? `HTTP ${error.status}` : null, error.code, error.type].filter(Boolean).join("; ");
+    console.error(`CV IMPORT LUNA PDF BENCHMARK ERROR: ${error.message}${details ? ` (${details})` : ""}`);
+    printSafeDiagnostics(error.diagnostics);
+    if (typeof error.artifactPath === "string") console.error(`ARTIFACT         ${error.artifactPath}`);
+    process.exitCode = 1;
+  });
+}
