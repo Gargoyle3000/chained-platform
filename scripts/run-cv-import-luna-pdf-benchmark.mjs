@@ -2,7 +2,8 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { extractCvCandidatesWithMetadata, validateCvPdfInput } from "./cv-import-openai-provider.mjs";
+import { createBenchmarkArtifact, sha256, writeBenchmarkArtifact } from "./cv-import-benchmark-artifact.mjs";
+import { CV_IMPORT_MODEL, extractCvCandidatesWithMetadata, validateCvPdfInput } from "./cv-import-openai-provider.mjs";
 
 function argumentValue(name) {
   const index = process.argv.indexOf(name);
@@ -41,15 +42,44 @@ async function main() {
   const filename = path.basename(resolvedPath);
   validateCvPdfInput(bytes, filename);
   const pageCount = countPdfPages(bytes);
-  const { result, metadata } = await extractCvCandidatesWithMetadata({
-    pdfBytes: bytes,
-    filename,
-    source: { documentKind: "pdf", pageCount, extractedCharacterCount: 0 },
-    maxOutputTokens
-  });
+  const source = { fileName: filename, fileSize: stat.size, pageCount, documentSha256: sha256(bytes) };
+  const configuredMaxOutputTokens = maxOutputTokens ?? 4000;
+  let result;
+  let metadata;
+  let artifactPath;
+  try {
+    ({ result, metadata } = await extractCvCandidatesWithMetadata({
+      pdfBytes: bytes,
+      filename,
+      source: { documentKind: "pdf", pageCount, extractedCharacterCount: 0 },
+      maxOutputTokens
+    }));
+    artifactPath = await writeBenchmarkArtifact(createBenchmarkArtifact({ source, metadata, result }));
+  }
+  catch (error) {
+    const diagnostics = error?.diagnostics || {
+      requestedModel: CV_IMPORT_MODEL,
+      returnedModel: null,
+      httpStatus: error?.status ?? null,
+      responseStatus: null,
+      latencyMs: null,
+      maxOutputTokens: configuredMaxOutputTokens,
+      inputTokens: null,
+      cachedInputTokens: null,
+      outputTokens: null,
+      reasoningTokens: null,
+      totalTokens: null,
+      incompleteReason: null
+    };
+    const outcome = diagnostics.responseStatus === "incomplete" ? "incomplete" : "failed";
+    artifactPath = await writeBenchmarkArtifact(createBenchmarkArtifact({ source, metadata: diagnostics, outcome }));
+    error.artifactPath = artifactPath;
+    throw error;
+  }
   console.log("CV IMPORT LUNA PDF BENCHMARK");
   console.log(`FILE SIZE BYTES  ${stat.size}`);
   console.log(`PAGE COUNT       ${pageCount || "unavailable"}`);
+  console.log(`ARTIFACT         ${artifactPath}`);
   console.log(`CANDIDATES       ${result.candidates.length}`);
   for (const [category, count] of categoryCounts(result.candidates)) console.log(`CATEGORY         ${category}: ${count}`);
   if (hasArgument("--summary")) {
@@ -71,7 +101,7 @@ async function main() {
   console.log(`OUTPUT TOKENS    ${metadata.outputTokens ?? "unavailable"}`);
   console.log(`REASONING TOKENS ${metadata.reasoningTokens ?? "unavailable"}`);
   console.log(`TOTAL TOKENS     ${metadata.totalTokens ?? "unavailable"}`);
-  console.log(`MAX OUTPUT TOKENS ${maxOutputTokens ?? 4000}`);
+  console.log(`MAX OUTPUT TOKENS ${configuredMaxOutputTokens}`);
   console.log("STORE             false");
 }
 
@@ -95,5 +125,6 @@ main().catch((error) => {
   const details = [error.status ? `HTTP ${error.status}` : null, error.code, error.type].filter(Boolean).join("; ");
   console.error(`CV IMPORT LUNA PDF BENCHMARK ERROR: ${error.message}${details ? ` (${details})` : ""}`);
   printSafeDiagnostics(error.diagnostics);
+  if (typeof error.artifactPath === "string") console.error(`ARTIFACT         ${error.artifactPath}`);
   process.exitCode = 1;
 });
