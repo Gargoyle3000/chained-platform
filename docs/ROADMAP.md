@@ -64,6 +64,7 @@ Implementation should verify the largest real preview display and HiDPI needs be
 - Audit derivative throughput and queue latency before broader beta. Measure `UPLOAD FINALIZED → JOB PENDING → PROCESSING START → SMALL READY → LARGE READY` per image, separating queue wait from processing time and checking worker concurrency, batching, poll cadence, startup and Storage I/O under representative bursts such as 20 / 50 / 100 images. Do not optimize before measuring or assume image transformation is the bottleneck; use the results to calibrate the long-processing threshold and confirm Supabase/infrastructure capacity.
 
 ## AFTER FIRST TESTERS
+- CV Import v1: private existing CV/PDF → textual CV candidates → mandatory review-before-write into the existing manual CV model only; it never creates or mutates Presentations. Keep the importer provider-independent and benchmark real artist CVs before provider lock-in. Prioritize before or alongside external onboarding because it materially reduces setup friction.
 - Publications as a separate future profile/content object, not a Presentation: overview of titles, then a dedicated detail page with multiple images, fixed context, and optional publication metadata.
 - Optional external profile `SHOP` link only; no CHAINED commerce, products, prices, carts, checkout or payments.
 - Import.
