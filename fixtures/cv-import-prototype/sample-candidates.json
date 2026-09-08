@@ -1,0 +1,34 @@
+{
+  "source": { "documentKind": "text", "pageCount": 1, "extractedCharacterCount": 103 },
+  "candidates": [
+    {
+      "candidateId": "candidate-1",
+      "categoryType": "group_presentation",
+      "yearLabel": "2024",
+      "title": "Example Art Fair",
+      "organization": null,
+      "locationText": "Amsterdam",
+      "url": null,
+      "source": { "pageNumber": 1, "sectionHeading": "GROUP PRESENTATIONS", "excerpt": "2024 — GROUP PRESENTATION — Example Art Fair", "sequence": 0 },
+      "confidence": "high",
+      "needsReview": false,
+      "duplicateState": "new",
+      "warnings": []
+    },
+    {
+      "candidateId": "candidate-2",
+      "categoryType": "education",
+      "yearLabel": "2023",
+      "title": "Example Academy",
+      "organization": null,
+      "locationText": null,
+      "url": null,
+      "source": { "pageNumber": 1, "sectionHeading": "EDUCATION", "excerpt": "2023 — EDUCATION — Example Academy", "sequence": 1 },
+      "confidence": "high",
+      "needsReview": false,
+      "duplicateState": "new",
+      "warnings": []
+    }
+  ],
+  "warnings": []
+}
