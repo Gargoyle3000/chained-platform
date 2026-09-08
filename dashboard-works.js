@@ -154,13 +154,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (nextWorks) void session.ordering.save(nextWorks.map((work) => work.id));
   }
 
-  function startWorkDrag(event, row, grip, ordering, fromGrip) {
-    const coarsePointer = event.pointerType === "touch"
-      || window.matchMedia?.("(pointer: coarse)")?.matches;
+  function startWorkDrag(event, row, ordering) {
     if (event.pointerType !== "touch" && event.button !== 0) return;
-    if (workOrderSaving || activeWorkDrag || (coarsePointer && !fromGrip)) return;
-    if (!coarsePointer && event.target.closest("a, button, input, select, textarea")) return;
-    if (fromGrip) event.stopPropagation();
+    if (workOrderSaving || activeWorkDrag) return;
+    if (event.target.closest("a, button, input, select, textarea")) return;
     const session = {
       row,
       rows: ordering.rows,
@@ -196,12 +193,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.addEventListener("pointercancel", session.onCancel);
   }
 
-  function attachWorkReorderInteraction(row, thumbnail, grip, ordering) {
+  function attachWorkReorderInteraction(row, thumbnail, ordering) {
     thumbnail.addEventListener("pointerdown", (event) => {
-      startWorkDrag(event, row, grip, ordering, false);
-    });
-    grip.addEventListener("pointerdown", (event) => {
-      startWorkDrag(event, row, grip, ordering, true);
+      startWorkDrag(event, row, ordering);
     });
   }
 
@@ -216,7 +210,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const actions = document.createElement("div");
     const primaryActions = document.createElement("div");
     const edit = document.createElement("a");
-    const grip = document.createElement("span");
     const remove = createTextAction("DELETE", `Delete ${work.title || "untitled work"}`);
     const confirmation = createDeleteConfirmation(work, reload);
     row.className = "dashboard-work-row";
@@ -224,9 +217,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     statusArea.className = "dashboard-work-status";
     actions.className = "dashboard-work-actions";
     primaryActions.className = "dashboard-work-primary-actions";
-    grip.className = "dashboard-work-reorder-grip";
-    grip.setAttribute("role", "img");
-    grip.setAttribute("aria-label", `Reorder ${work.title || "untitled work"}; arrow controls remain available`);
     remove.classList.add("dashboard-delete-trigger");
     title.textContent = work.title || "UNTITLED";
     metadata.textContent = [work.year, formatWorkType(work.workType), formatUpdated(work.updatedAt)].filter(Boolean).join(" · ") || "INCOMPLETE RECORD";
@@ -250,7 +240,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       moveUp.addEventListener("click", () => ordering.move(-1));
       moveDown.addEventListener("click", () => ordering.move(1));
       reorderControls.append(moveUp, moveDown);
-      primaryActions.append(grip, reorderControls);
+      primaryActions.append(reorderControls);
     }
     information.append(title, metadata, imageState);
     if (ordering) {
@@ -263,7 +253,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const thumbnail = await createWorkImage(work, privatePreviewResult);
     if (ordering) thumbnail.classList.add("dashboard-work-reorder-thumbnail");
     row.append(thumbnail, information, statusArea);
-    if (ordering) attachWorkReorderInteraction(row, thumbnail, grip, ordering);
+    if (ordering) attachWorkReorderInteraction(row, thumbnail, ordering);
     return row;
   }
 
