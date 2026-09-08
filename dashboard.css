@@ -417,6 +417,11 @@
   gap: 8px 18px;
 }
 
+.dashboard-work-primary-actions,
+.dashboard-work-reorder-controls {
+  display: contents;
+}
+
 .dashboard-work-reorder-grip {
   display: none;
 }
@@ -735,6 +740,30 @@
   .dashboard-work-actions,
   .dashboard-delete-actions {
     justify-content: flex-start;
+  }
+
+  .dashboard-work-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .dashboard-work-primary-actions {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .dashboard-work-reorder-controls {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .dashboard-work-actions > .dashboard-delete-trigger {
+    align-self: flex-start;
   }
 
   .dashboard-delete-confirmation {

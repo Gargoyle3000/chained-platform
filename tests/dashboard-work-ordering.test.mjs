@@ -28,6 +28,8 @@ test("Dashboard Works uses pointer drag only inside one rendered year bucket", a
   assert.match(source, /window\.addEventListener\("pointermove", session\.onMove/);
   assert.match(source, /event\.pointerType === "touch"/);
   assert.match(source, /dashboard-work-reorder-grip/);
+  assert.match(source, /dashboard-work-primary-actions/);
+  assert.match(source, /dashboard-work-reorder-controls/);
   assert.match(source, /thumbnail\.classList\.add\("dashboard-work-reorder-thumbnail"\)/);
   assert.match(source, /thumbnail\.addEventListener\("pointerdown"/);
   assert.doesNotMatch(source, /row\.addEventListener\("pointerdown"/);
@@ -39,6 +41,9 @@ test("Dashboard Works uses pointer drag only inside one rendered year bucket", a
   assert.match(styles, /\.dashboard-work-reorder-grip[\s\S]*width: 44px[\s\S]*height: 44px[\s\S]*touch-action: none/);
   assert.match(styles, /\.dashboard-work-reorder-thumbnail\s*\{\s*cursor: grab/);
   assert.match(styles, /\.dashboard-work-row\.is-work-reordering \.dashboard-work-reorder-thumbnail\s*\{\s*cursor: grabbing/);
+  assert.match(styles, /\.dashboard-work-primary-actions[\s\S]*align-items: center/);
+  assert.match(styles, /\.dashboard-work-reorder-controls[\s\S]*gap: 3px/);
+  assert.match(styles, /\.dashboard-work-actions > \.dashboard-delete-trigger[\s\S]*align-self: flex-start/);
   assert.doesNotMatch(styles, /\.dashboard-work-row\s*\{\s*cursor: grab/);
   assert.doesNotMatch(styles, /\.dashboard-work-row\s*\{[^}]*touch-action/s);
 });

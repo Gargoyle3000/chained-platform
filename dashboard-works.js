@@ -214,6 +214,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const statusArea = document.createElement("div");
     const status = document.createElement("span");
     const actions = document.createElement("div");
+    const primaryActions = document.createElement("div");
     const edit = document.createElement("a");
     const grip = document.createElement("span");
     const remove = createTextAction("DELETE", `Delete ${work.title || "untitled work"}`);
@@ -222,6 +223,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     information.className = "dashboard-work-information";
     statusArea.className = "dashboard-work-status";
     actions.className = "dashboard-work-actions";
+    primaryActions.className = "dashboard-work-primary-actions";
     grip.className = "dashboard-work-reorder-grip";
     grip.setAttribute("role", "img");
     grip.setAttribute("aria-label", `Reorder ${work.title || "untitled work"}; arrow controls remain available`);
@@ -239,16 +241,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     edit.setAttribute("aria-label", `Edit ${work.title || "untitled work"}`);
     remove.addEventListener("click", () => { confirmation.hidden = false; confirmation.querySelector("button:not([disabled])")?.focus(); });
     if (ordering) {
+      const reorderControls = document.createElement("div");
       const moveUp = createTextAction("↑", `Move ${work.title || "untitled work"} up within ${ordering.label}`);
       const moveDown = createTextAction("↓", `Move ${work.title || "untitled work"} down within ${ordering.label}`);
+      reorderControls.className = "dashboard-work-reorder-controls";
       moveUp.disabled = ordering.index === 0;
       moveDown.disabled = ordering.index === ordering.workIds.length - 1;
       moveUp.addEventListener("click", () => ordering.move(-1));
       moveDown.addEventListener("click", () => ordering.move(1));
-      actions.append(grip, moveUp, moveDown);
+      reorderControls.append(moveUp, moveDown);
+      primaryActions.append(grip, reorderControls);
     }
     information.append(title, metadata, imageState);
-    actions.append(edit, remove);
+    if (ordering) {
+      primaryActions.append(edit);
+      actions.append(primaryActions, remove);
+    } else {
+      actions.append(edit, remove);
+    }
     statusArea.append(status, actions, confirmation);
     const thumbnail = await createWorkImage(work, privatePreviewResult);
     if (ordering) thumbnail.classList.add("dashboard-work-reorder-thumbnail");
