@@ -63,3 +63,25 @@ test("malformed backend output fails closed and backend errors remain safely cat
     (error) => error.code === "cv_import_not_enabled" && !error.message.includes("hidden")
   );
 });
+
+test("safe service failures use restrained provider-neutral product language", async () => {
+  assert.equal(
+    safeCvImportMessage({ code: "cv_import_service_authorization_failed" }),
+    "CV IMPORT SERVICE COULD NOT AUTHORIZE"
+  );
+  assert.equal(
+    safeCvImportMessage({ code: "cv_import_service_unavailable" }),
+    "CV IMPORT SERVICE IS TEMPORARILY UNAVAILABLE"
+  );
+  assert.equal(
+    safeCvImportMessage({ code: "cv_import_timeout" }),
+    "CV IMPORT SERVICE IS TEMPORARILY UNAVAILABLE"
+  );
+  assert.equal(safeCvImportMessage({ code: "cv_import_invalid_result" }), "CV COULD NOT BE PROCESSED");
+  for (const message of [
+    safeCvImportMessage({ code: "cv_import_service_authorization_failed" }),
+    safeCvImportMessage({ code: "cv_import_service_unavailable" })
+  ]) {
+    assert.doesNotMatch(message, /OPENAI|LUNA|API KEY|HTTP|TOKEN/i);
+  }
+});

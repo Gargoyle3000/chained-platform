@@ -1,6 +1,6 @@
 # CHAINED — ROADMAP
 
-Last updated: 2026-09-08
+Last updated: 2026-09-09
 
 ## POLISH
 
@@ -64,7 +64,7 @@ Implementation should verify the largest real preview display and HiDPI needs be
 - Audit derivative throughput and queue latency before broader beta. Measure `UPLOAD FINALIZED → JOB PENDING → PROCESSING START → SMALL READY → LARGE READY` per image, separating queue wait from processing time and checking worker concurrency, batching, poll cadence, startup and Storage I/O under representative bursts such as 20 / 50 / 100 images. Do not optimize before measuring or assume image transformation is the bottleneck; use the results to calibrate the long-processing threshold and confirm Supabase/infrastructure capacity.
 
 ## AFTER FIRST TESTERS
-- CV Import v1: private existing CV/PDF → authenticated transient server-side extraction → same-page textual candidate review → future explicit write into the existing manual CV model only; it never creates or mutates Presentations. CHAINED does not intentionally persist the uploaded PDF, provider credentials and calls remain server-side, and a server-side beta allowlist gates the pre-quota implementation. Keep the importer provider-independent and benchmark real artist CVs before provider lock-in. Unsupported source sections are review information only, never silently forced into another CV category. Prioritize before or alongside external onboarding because it materially reduces setup friction. Free onboarding import should use a configurable server-side quota; failed technical/provider runs do not consume an allowance, manual CV editing remains unlimited, and a future paid allowance may provide a small recurring import count. Overview may surface remaining import allowance; no quota numbers are fixed yet.
+- CV Import v1: private existing CV/PDF → authenticated transient server-side extraction → same-page textual candidate review → future explicit write into the existing manual CV model only; it never creates or mutates Presentations. CHAINED does not intentionally persist the uploaded PDF, provider credentials and calls remain server-side, and a server-side beta allowlist gates the pre-quota implementation. Keep the importer provider-independent and benchmark real artist CVs before provider lock-in. Unsupported source sections are review information only, never silently forced into another CV category. Prioritize before or alongside external onboarding because it materially reduces setup friction. Free onboarding import should use a configurable server-side quota; failed technical/provider runs do not consume an allowance, manual CV editing remains unlimited, and a future paid allowance may provide a small recurring import count. Overview may surface remaining import allowance; no quota numbers are fixed yet. Add durable account-scoped request idempotency together with quota/entitlement accounting before broader rollout; do not rely on Edge-worker process memory for provider-spend protection.
 - Publications as a separate future profile/content object, not a Presentation: overview of titles, then a dedicated detail page with multiple images, fixed context, and optional publication metadata.
 - Optional external profile `SHOP` link only; no CHAINED commerce, products, prices, carts, checkout or payments.
 - Import.

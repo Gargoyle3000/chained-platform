@@ -2,7 +2,7 @@
 
 
 
-Last updated: 2026-09-06
+Last updated: 2026-09-09
 
 
 
@@ -251,6 +251,10 @@ Last updated: 2026-09-06
 \## Observability
 
 \- Temporary tester/session analytics may be used during early usability testing and should be removed or disabled when that phase ends. A permanent privacy-friendly admin error view is desired with error type, route/action, timestamp, frequency and safely available affected-user count; it must not store sensitive content, secrets or tokens.
+
+\## CV Import provider execution
+
+\- One explicit CV Import submission may cause at most one provider request. Browser extraction is single-flight and provider retries are never automatic; `TRY AGAIN` requires a new explicit selection/action. Durable cross-worker idempotency belongs with future quota/entitlement accounting rather than unreliable Edge-worker process memory.
 
 \## Archive PDF export
 

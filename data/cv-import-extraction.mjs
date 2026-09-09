@@ -43,6 +43,12 @@ export function safeCvImportMessage(error) {
   if (error?.code === "cv_import_not_enabled") {
     return "CV IMPORT IS NOT ENABLED FOR THIS ACCOUNT";
   }
+  if (error?.code === "cv_import_service_authorization_failed") {
+    return "CV IMPORT SERVICE COULD NOT AUTHORIZE";
+  }
+  if (error?.code === "cv_import_service_unavailable" || error?.code === "cv_import_timeout") {
+    return "CV IMPORT SERVICE IS TEMPORARILY UNAVAILABLE";
+  }
   return "CV COULD NOT BE PROCESSED";
 }
 

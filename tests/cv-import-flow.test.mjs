@@ -70,3 +70,47 @@ test("concurrent actions cannot create a second extraction request", async () =>
   await running;
   assert.equal(calls, 1);
 });
+
+test("single-flight state is explicit, releases after failure, and retry requires a new action", async () => {
+  const events = [];
+  let calls = 0;
+  let releaseFirst;
+  let rejectFirst;
+  const flow = createCvImportFlow({
+    openPicker: () => events.push("picker"),
+    validate: () => {},
+    extract: async () => {
+      calls += 1;
+      if (calls === 1) {
+        await new Promise((resolve, reject) => {
+          releaseFirst = resolve;
+          rejectFirst = reject;
+        });
+      }
+      return { candidates: [] };
+    },
+    onInvalid: () => {},
+    onProcessing: () => events.push("processing"),
+    onSuccess: () => events.push("success"),
+    onFailure: () => events.push("failure"),
+    onActiveChange: (active) => events.push(active ? "active" : "idle")
+  });
+
+  const first = flow.acceptSelection({});
+  assert.equal(flow.active, true);
+  assert.equal(await flow.acceptSelection({}), false);
+  assert.equal(flow.requestSelection(), false);
+  assert.equal(calls, 1);
+  rejectFirst(new Error("backend"));
+  await first;
+  assert.equal(flow.active, false);
+  assert.equal(calls, 1);
+  assert.deepEqual(events, ["active", "processing", "failure", "idle"]);
+
+  assert.equal(flow.requestSelection(), true);
+  assert.equal(calls, 1);
+  assert.equal(await flow.acceptSelection({}), true);
+  assert.equal(calls, 2);
+  assert.deepEqual(events.slice(-5), ["picker", "active", "processing", "success", "idle"]);
+  assert.equal(typeof releaseFirst, "function");
+});

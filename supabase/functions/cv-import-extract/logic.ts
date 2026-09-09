@@ -12,6 +12,16 @@ export type CvImportSafeLog = Readonly<{
   candidateCount?: number;
   unsupportedSectionCount?: number;
   providerStatus?: number | null;
+  providerPhase?: string | null;
+  providerCategory?: string | null;
+  requestedModel?: string | null;
+  returnedModel?: string | null;
+  responseStatus?: string | null;
+  incompleteReason?: string | null;
+  inputTokens?: number | null;
+  cachedInputTokens?: number | null;
+  outputTokens?: number | null;
+  reasoningTokens?: number | null;
   totalTokens?: number | null;
 }>;
 
@@ -21,14 +31,31 @@ export interface CvImportDependencies {
   allowedOrigins: ReadonlySet<string>;
   extract(input: { bytes: Uint8Array; filename: string }): Promise<{
     result: unknown;
-    metadata: { httpStatus?: number | null; latencyMs: number; totalTokens?: number | null };
+    metadata: {
+      requestedModel?: string | null;
+      returnedModel?: string | null;
+      httpStatus?: number | null;
+      responseStatus?: string | null;
+      incompleteReason?: string | null;
+      latencyMs: number;
+      inputTokens?: number | null;
+      cachedInputTokens?: number | null;
+      outputTokens?: number | null;
+      reasoningTokens?: number | null;
+      totalTokens?: number | null;
+    };
   }>;
   log(event: CvImportSafeLog): void;
   now(): number;
 }
 
 class RequestFailure extends Error {
-  constructor(readonly status: number, readonly code: string) {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    readonly providerPhase: string | null = null,
+    readonly providerCategory: string | null = null
+  ) {
     super(code);
   }
 }
@@ -95,9 +122,39 @@ function safeProviderFailure(error: unknown): RequestFailure {
   const category = error && typeof error === "object" && "category" in error
     ? String((error as { category?: unknown }).category ?? "")
     : "";
-  if (category === "timeout") return new RequestFailure(504, "cv_import_timeout");
-  if (category === "configuration") return new RequestFailure(503, "cv_import_unavailable");
-  return new RequestFailure(502, "cv_import_failed");
+  const rawPhase = error && typeof error === "object" && "diagnostic" in error
+    ? (error as { diagnostic?: { phase?: unknown } }).diagnostic?.phase
+    : null;
+  const phase = typeof rawPhase === "string" && new Set([
+    "provider_request_construction",
+    "provider_fetch_started",
+    "provider_fetch_failed",
+    "provider_http_error",
+    "provider_response_received",
+    "provider_response_parse",
+    "provider_response_validation",
+    "chained_schema_validation",
+    "provider_completed"
+  ]).has(rawPhase) ? rawPhase : null;
+
+  if (["provider_configuration_error", "provider_auth_failed", "provider_permission_denied"].includes(category)) {
+    return new RequestFailure(503, "cv_import_service_authorization_failed", phase, category);
+  }
+  if (category === "provider_timeout") {
+    return new RequestFailure(504, "cv_import_timeout", phase, category);
+  }
+  if ([
+    "provider_request_construction_failed",
+    "provider_network_failed",
+    "provider_rate_limited",
+    "provider_unavailable"
+  ].includes(category)) {
+    return new RequestFailure(503, "cv_import_service_unavailable", phase, category);
+  }
+  if (["provider_bad_request", "provider_invalid_response", "chained_schema_validation"].includes(category)) {
+    return new RequestFailure(502, "cv_import_invalid_result", phase, category);
+  }
+  return new RequestFailure(502, "cv_import_failed", phase, null);
 }
 
 export function createCvImportHandler(dependencies: CvImportDependencies) {
@@ -134,7 +191,12 @@ export function createCvImportHandler(dependencies: CvImportDependencies) {
       try {
         result = normalizeCvImportResult(extracted.result);
       } catch {
-        throw new RequestFailure(502, "cv_import_failed");
+        throw new RequestFailure(
+          502,
+          "cv_import_invalid_result",
+          "chained_schema_validation",
+          "chained_schema_validation"
+        );
       }
 
       dependencies.log({
@@ -145,6 +207,15 @@ export function createCvImportHandler(dependencies: CvImportDependencies) {
         candidateCount: result.candidates.length,
         unsupportedSectionCount: result.unsupportedSections.length,
         providerStatus: extracted.metadata.httpStatus ?? null,
+        providerPhase: "provider_completed",
+        requestedModel: extracted.metadata.requestedModel ?? null,
+        returnedModel: extracted.metadata.returnedModel ?? null,
+        responseStatus: extracted.metadata.responseStatus ?? null,
+        incompleteReason: extracted.metadata.incompleteReason ?? null,
+        inputTokens: extracted.metadata.inputTokens ?? null,
+        cachedInputTokens: extracted.metadata.cachedInputTokens ?? null,
+        outputTokens: extracted.metadata.outputTokens ?? null,
+        reasoningTokens: extracted.metadata.reasoningTokens ?? null,
         totalTokens: extracted.metadata.totalTokens ?? null
       });
       return jsonResponse(200, result, corsHeaders);
@@ -156,7 +227,9 @@ export function createCvImportHandler(dependencies: CvImportDependencies) {
         outcome: "failure",
         category: failure.code,
         pdfBytes,
-        latencyMs: Math.max(0, dependencies.now() - startedAt)
+        latencyMs: Math.max(0, dependencies.now() - startedAt),
+        providerPhase: failure.providerPhase,
+        providerCategory: failure.providerCategory
       });
       return jsonResponse(failure.status, { code: failure.code }, corsHeaders);
     }

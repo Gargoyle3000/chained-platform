@@ -1,5 +1,8 @@
 import { createCvImportHandler } from "./logic.ts";
-import { extractCvImportWithOpenAi } from "./provider.ts";
+import {
+  extractCvImportWithOpenAi,
+  type CvImportProviderDiagnostic
+} from "./provider.ts";
 import {
   resolveSupabaseApiKeys,
   userScopedHeaders
@@ -33,6 +36,10 @@ const allowedOrigins = new Set(
     .filter(Boolean)
 );
 
+function logProviderDiagnostic(diagnostic: CvImportProviderDiagnostic) {
+  console.info(JSON.stringify({ event: "cv_import_provider", ...diagnostic }));
+}
+
 const handler = createCvImportHandler({
   betaUserIds,
   allowedOrigins,
@@ -60,7 +67,8 @@ const handler = createCvImportHandler({
   extract: ({ bytes, filename }) => extractCvImportWithOpenAi({
     bytes,
     filename,
-    apiKey: openAiApiKey
+    apiKey: openAiApiKey,
+    diagnostic: logProviderDiagnostic
   })
 });
 

@@ -5,7 +5,8 @@ export function createCvImportFlow({
   onInvalid,
   onProcessing,
   onSuccess,
-  onFailure
+  onFailure,
+  onActiveChange = () => {}
 }) {
   let active = false;
 
@@ -30,6 +31,7 @@ export function createCvImportFlow({
       }
 
       active = true;
+      onActiveChange(true);
       onProcessing(file);
       try {
         const result = await extract(file);
@@ -38,6 +40,7 @@ export function createCvImportFlow({
         onFailure(error, file);
       } finally {
         active = false;
+        onActiveChange(false);
       }
       return true;
     }

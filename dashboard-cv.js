@@ -55,6 +55,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   let selectedProfileId = null;
   let importReview = null;
   let lastPrototypeProjection = [];
+  let importAvailable = false;
+  let importRequestActive = false;
 
   function setError(message = "") {
     errorElement.textContent = message;
@@ -67,7 +69,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function setImportAvailable(available) {
-    importButton.disabled = !available;
+    importAvailable = Boolean(available);
+    importButton.disabled = !importAvailable || importRequestActive;
+  }
+
+  function setImportRequestActive(active) {
+    importRequestActive = Boolean(active);
+    importButton.disabled = !importAvailable || importRequestActive;
+    importFileInput.disabled = importRequestActive;
   }
 
   function createTextButton(text, ariaLabel = "") {
@@ -532,6 +541,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     onFailure(error, file) {
       importReview = null;
       renderImportFailure(file.name, error);
+    },
+    onActiveChange(active) {
+      setImportRequestActive(active);
     }
   });
 

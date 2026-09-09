@@ -91,7 +91,7 @@ Deno.test("malformed or forbidden provider candidates fail closed without return
     const response = await createCvImportHandler(deps)(request());
     const body = await response.json();
     assert(response.status === 502);
-    assert(body.code === "cv_import_failed");
+    assert(body.code === "cv_import_invalid_result");
     assert(!JSON.stringify(body).includes("provider response"));
   }
 });
@@ -110,4 +110,63 @@ Deno.test("provider failure is safe, single-shot, and never logs credentials or 
   assert(response.status === 502 && calls === 1);
   const serialized = JSON.stringify(deps.logs);
   assert(!serialized.includes("secret") && !serialized.includes("user-token") && !serialized.includes("private contents"));
+});
+
+Deno.test("provider categories become a small provider-neutral client error contract", async () => {
+  const cases = [
+    ["provider_auth_failed", "provider_http_error", 503, "cv_import_service_authorization_failed"],
+    ["provider_permission_denied", "provider_http_error", 503, "cv_import_service_authorization_failed"],
+    ["provider_network_failed", "provider_fetch_failed", 503, "cv_import_service_unavailable"],
+    ["provider_rate_limited", "provider_http_error", 503, "cv_import_service_unavailable"],
+    ["provider_invalid_response", "provider_response_parse", 502, "cv_import_invalid_result"],
+    ["chained_schema_validation", "chained_schema_validation", 502, "cv_import_invalid_result"]
+  ] as const;
+
+  for (const [category, phase, status, code] of cases) {
+    const deps = dependencies({
+      extract: async () => {
+        throw {
+          category,
+          diagnostic: {
+            phase,
+            message: "candidate@example.com",
+            authorization: "Bearer secret"
+          }
+        };
+      }
+    });
+    const response = await createCvImportHandler(deps)(request());
+    const body = await response.json();
+    assert(response.status === status && body.code === code);
+    const serialized = JSON.stringify(deps.logs);
+    assert(serialized.includes(phase) && serialized.includes(category));
+    assert(!serialized.includes("candidate@example.com") && !serialized.includes("Bearer secret"));
+  }
+});
+
+Deno.test("successful aggregate diagnostics retain safe provider metadata only", async () => {
+  const deps = dependencies({
+    extract: async () => ({
+      result,
+      metadata: {
+        requestedModel: "gpt-5.6-luna",
+        returnedModel: "gpt-5.6-luna-2026-08-01",
+        httpStatus: 200,
+        responseStatus: "completed",
+        incompleteReason: null,
+        latencyMs: 1234,
+        inputTokens: 100,
+        cachedInputTokens: 20,
+        outputTokens: 50,
+        reasoningTokens: 10,
+        totalTokens: 150
+      }
+    })
+  });
+  const response = await createCvImportHandler(deps)(request());
+  assert(response.status === 200);
+  const serialized = JSON.stringify(deps.logs);
+  assert(serialized.includes("provider_completed") && serialized.includes("gpt-5.6-luna"));
+  assert(serialized.includes("\"inputTokens\":100") && serialized.includes("\"totalTokens\":150"));
+  assert(!serialized.includes("Private Academy") && !serialized.includes("private contents"));
 });

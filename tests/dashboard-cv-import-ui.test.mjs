@@ -21,8 +21,13 @@ test("Dashboard CV opens a native PDF picker and keeps real extraction on the sa
   assert.match(script, /renderImportFailure/);
   assert.match(script, /TRY AGAIN/);
   assert.match(script, /renderImportReview/);
+  assert.match(script, /onActiveChange\(active\)/);
+  assert.match(script, /importButton\.disabled = !importAvailable \|\| importRequestActive/);
+  assert.match(script, /importFileInput\.disabled = importRequestActive/);
   assert.doesNotMatch(script, /createCvImportReviewState\(CV_IMPORT_REVIEW_FIXTURE\)[\s\S]*openImportPdfPicker/);
   assert.match(script, /previewState === "review"/);
+  const previewBranch = script.slice(script.indexOf("const previewState"), script.indexOf("return;", script.indexOf("const previewState")));
+  assert.doesNotMatch(previewBranch, /acceptSelection|service\.extract|functions\.invoke/);
   assert.doesNotMatch(page, /dashboard-cv-import\.html/);
   assert.doesNotMatch(script, /dashboard-cv-import\.html/);
   assert.match(script, /NOT IMPORTED/);
@@ -33,6 +38,7 @@ test("Dashboard CV opens a native PDF picker and keeps real extraction on the sa
   assert.doesNotMatch(script, /api\.openai\.com|OPENAI_API_KEY|Authorization/);
   assert.match(css, /dashboard-cv-import-entry/);
   assert.match(css, /dashboard-cv-import-actions/);
+  assert.equal((page.match(/dashboard-cv\.js/g) ?? []).length, 1);
 });
 
 test("ADD remains an in-memory no-write checkpoint and import never calls CV persistence", async () => {

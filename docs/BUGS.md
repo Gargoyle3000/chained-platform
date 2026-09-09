@@ -1,6 +1,11 @@
 # CHAINED — ACTIVE BUGS / BLOCKERS
 
-Last updated: 2026-09-08
+Last updated: 2026-09-09
+
+## CV Import provider diagnostics and duplicate submission
+
+- The first authenticated production PDF request after CORS repair reached the provider adapter but returned `cv_import_failed` before useful provider-phase, HTTP, Responses-status or usage evidence was recorded. Two equivalent POST failures were logged four seconds apart. The browser source contains one listener and an existing in-flight guard, so no automatic duplicate-submit path is currently proven; single-flight state and provider-boundary diagnostics are being hardened before another controlled production retry.
+- One explicit import submission may cause at most one provider request and there is no automatic retry. Keep this issue open until the diagnostics/single-flight release is deployed, one controlled production retry identifies or clears the provider failure, and production behavior is validated without duplicate spend.
 
 ## Private Work preview diagnostics
 

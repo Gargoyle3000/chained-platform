@@ -21,4 +21,19 @@ test("CV import Edge Function is explicitly JWT-protected, beta-gated, and serve
   assert.doesNotMatch(`${index}\n${logic}`, /storage\/v1|\.insert\(|\.upsert\(|method:\s*["'](?:PUT|PATCH|DELETE)/);
   assert.match(provider, /store:\s*false/);
   assert.doesNotMatch(provider, /\/v1\/files|retry/i);
+  for (const phase of [
+    "provider_request_construction",
+    "provider_fetch_started",
+    "provider_fetch_failed",
+    "provider_http_error",
+    "provider_response_received",
+    "provider_response_parse",
+    "provider_response_validation",
+    "chained_schema_validation",
+    "provider_completed"
+  ]) {
+    assert.match(provider, new RegExp(phase));
+  }
+  assert.match(index, /event:\s*"cv_import_provider"/);
+  assert.doesNotMatch(provider, /error\.message|error\.stack|console\.(?:log|info|error)/);
 });
