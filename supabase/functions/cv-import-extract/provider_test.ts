@@ -3,6 +3,7 @@ import {
   CV_IMPORT_MODEL,
   CV_IMPORT_REQUEST_TIMEOUT_MS,
   CvImportProviderFailure,
+  bytesToBase64,
   createOpenAiCvImportRequest,
   extractCvImportWithOpenAi,
   type CvImportProviderDiagnostic
@@ -41,6 +42,37 @@ function completed(output = JSON.stringify(result)) {
   };
 }
 
+function assertDecodedBytes(encoded: string, expected: Uint8Array) {
+  const decoded = atob(encoded);
+  assert(decoded.length === expected.length);
+  for (let index = 0; index < expected.length; index += 1) {
+    assert(decoded.charCodeAt(index) === expected[index]);
+  }
+}
+
+Deno.test("Edge-compatible base64 preserves empty, padded, binary, and PDF byte sequences", () => {
+  const fixtures = [
+    { bytes: Uint8Array.from([]), expected: "" },
+    { bytes: Uint8Array.from([0x4d]), expected: "TQ==" },
+    { bytes: Uint8Array.from([0x4d, 0x61]), expected: "TWE=" },
+    { bytes: Uint8Array.from([0x4d, 0x61, 0x6e]), expected: "TWFu" },
+    { bytes: Uint8Array.from([0x00, 0xff, 0x80]), expected: "AP+A" },
+    { bytes: new TextEncoder().encode("%PDF-1.4"), expected: "JVBERi0xLjQ=" }
+  ];
+
+  for (const fixture of fixtures) {
+    assert(bytesToBase64(fixture.bytes) === fixture.expected);
+  }
+});
+
+Deno.test("Edge-compatible base64 processes large synthetic PDFs in bounded chunks", () => {
+  const largeBytes = new Uint8Array((1024 * 1024) + 2);
+  for (let index = 0; index < largeBytes.length; index += 1) largeBytes[index] = index % 251;
+  const encoded = bytesToBase64(largeBytes);
+  assert(encoded.length === 4 * Math.ceil(largeBytes.length / 3));
+  assertDecodedBytes(encoded, largeBytes);
+});
+
 Deno.test("OpenAI request preserves the benchmarked direct-PDF contract", () => {
   const request = createOpenAiCvImportRequest(bytes, "cv.pdf");
   assert(request.model === CV_IMPORT_MODEL);
@@ -51,6 +83,7 @@ Deno.test("OpenAI request preserves the benchmarked direct-PDF contract", () => 
   assert(request.text.format.schema.properties.candidates.items.properties.categoryType.enum.includes("publication") === false);
   const fileInput = request.input[0].content.find((item) => item.type === "input_file") as { file_data?: string } | undefined;
   assert(fileInput?.file_data?.startsWith("data:application/pdf;base64,") === true);
+  assertDecodedBytes(String(fileInput?.file_data).replace("data:application/pdf;base64,", ""), bytes);
   assert((request as Record<string, unknown>).tools === undefined);
 });
 

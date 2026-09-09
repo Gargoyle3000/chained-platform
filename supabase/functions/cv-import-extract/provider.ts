@@ -168,8 +168,21 @@ function providerFailure(
   }));
 }
 
-function bytesToBase64(bytes: Uint8Array): string {
-  return bytes.toBase64();
+// Keep each btoa input comfortably below engine argument/string limits. The
+// chunk size is divisible by three, so only the final chunk ever needs padding.
+const BASE64_CHUNK_BYTES = 32_766;
+
+export function bytesToBase64(bytes: Uint8Array): string {
+  const encodedChunks: string[] = [];
+  for (let start = 0; start < bytes.length; start += BASE64_CHUNK_BYTES) {
+    const end = Math.min(start + BASE64_CHUNK_BYTES, bytes.length);
+    const characters = new Array<string>(end - start);
+    for (let index = start; index < end; index += 1) {
+      characters[index - start] = String.fromCharCode(bytes[index]);
+    }
+    encodedChunks.push(btoa(characters.join("")));
+  }
+  return encodedChunks.join("");
 }
 
 export function createOpenAiCvImportRequest(bytes: Uint8Array, filename: string) {

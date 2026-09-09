@@ -4,8 +4,8 @@ Last updated: 2026-09-09
 
 ## CV Import provider diagnostics and duplicate submission
 
-- The first authenticated production PDF request after CORS repair reached the provider adapter but returned `cv_import_failed` before useful provider-phase, HTTP, Responses-status or usage evidence was recorded. Two equivalent POST failures were logged four seconds apart. The browser source contains one listener and an existing in-flight guard, so no automatic duplicate-submit path is currently proven; single-flight state and provider-boundary diagnostics are being hardened before another controlled production retry.
-- One explicit import submission may cause at most one provider request and there is no automatic retry. Keep this issue open until the diagnostics/single-flight release is deployed, one controlled production retry identifies or clears the provider failure, and production behavior is validated without duplicate spend.
+- The controlled production request after the diagnostics release reached `provider_request_construction` but never `provider_fetch_started`: the Supabase Edge runtime does not support the deployed `Uint8Array.toBase64()` conversion. The local compatibility fix uses bounded Web API `btoa()` chunks, preserves the direct inline-PDF contract and keeps safe failure diagnostics; it remains unverified in production.
+- One explicit import submission may cause at most one provider request and there is no automatic retry. Keep this issue open until the base64 fix is committed/deployed, one controlled production retry reaches at least `provider_fetch_started`, and production behavior is validated without duplicate spend.
 
 ## Private Work preview diagnostics
 
