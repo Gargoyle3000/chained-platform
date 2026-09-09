@@ -27,30 +27,57 @@ function optionalText(value, maximum = 300) {
   return cleaned || null;
 }
 
+function completeCvLine(record) {
+  return [
+    record?.title,
+    record?.organization,
+    record?.locationText
+  ]
+    .map((value) => cleanText(value))
+    .filter(Boolean)
+    .join(", ");
+}
+
+export function cvImportExactDuplicateKey(record) {
+  const categoryType = cleanText(record?.categoryType, 40);
+  const yearLabel = cleanText(record?.yearLabel, 40);
+  const completeLine = completeCvLine(record);
+
+  if (!categoryType || !completeLine) return "";
+  return JSON.stringify([categoryType, yearLabel, completeLine]);
+}
+
+function existingCvDuplicateKeys(categories = []) {
+  return new Set(
+    categories.flatMap((category) =>
+      (category?.entries || [])
+        .map((entry) => cvImportExactDuplicateKey({
+          ...entry,
+          categoryType: category.categoryType
+        }))
+        .filter(Boolean)
+    )
+  );
+}
+
+function refreshExistingDuplicate(state, candidate) {
+  candidate.alreadyInCv = state.existingExactKeys.has(
+    cvImportExactDuplicateKey(candidate)
+  );
+}
+
 function isSupportedCategory(categoryType) {
   return CV_CATEGORY_TYPES.includes(categoryType);
 }
 
-export function createCvImportReviewState(result) {
+export function createCvImportReviewState(result, existingCategories = []) {
   const candidates = Array.isArray(result?.candidates)
     ? result.candidates
     : [];
 
-  return {
-    candidates: candidates
-      .filter((candidate) => isSupportedCategory(candidate.categoryType))
-      .map((candidate) => ({
-        candidateId: cleanText(candidate.candidateId, 120),
-        categoryType: candidate.categoryType,
-        yearLabel: optionalText(candidate.yearLabel, 40),
-        title: cleanText(candidate.title),
-        organization: optionalText(candidate.organization),
-        locationText: optionalText(candidate.locationText),
-        url: optionalText(candidate.url),
-        needsReview: candidate.needsReview === true,
-        duplicateState: candidate.duplicateState || "new",
-        selected: candidate.duplicateState !== "duplicate"
-      })),
+  const state = {
+    existingExactKeys: existingCvDuplicateKeys(existingCategories),
+    candidates: [],
     unsupportedSections: Array.isArray(result?.unsupportedSections)
       ? result.unsupportedSections.map((section) => ({
         heading: cleanText(section.heading, 120),
@@ -63,6 +90,30 @@ export function createCvImportReviewState(result) {
       })).filter((section) => section.heading && section.entryCount > 0)
       : []
   };
+
+  state.candidates = candidates
+    .filter((candidate) => isSupportedCategory(candidate.categoryType))
+    .map((candidate) => {
+      const reviewed = {
+        candidateId: cleanText(candidate.candidateId, 120),
+        categoryType: candidate.categoryType,
+        yearLabel: optionalText(candidate.yearLabel, 40),
+        title: cleanText(candidate.title),
+        organization: optionalText(candidate.organization),
+        locationText: optionalText(candidate.locationText),
+        url: optionalText(candidate.url),
+        needsReview: candidate.needsReview === true,
+        duplicateState: candidate.duplicateState || "new",
+        alreadyInCv: false,
+        selected: true
+      };
+
+      refreshExistingDuplicate(state, reviewed);
+      reviewed.selected = !reviewed.alreadyInCv;
+      return reviewed;
+    });
+
+  return state;
 }
 
 export function updateCvImportReviewCandidate(state, candidateId, patch = {}) {
@@ -88,6 +139,19 @@ export function updateCvImportReviewCandidate(state, candidateId, patch = {}) {
     const title = cleanText(patch.title);
     if (title) candidate.title = title;
   }
+
+  if (Object.hasOwn(patch, "completeLine")) {
+    const title = cleanText(patch.completeLine);
+    if (title) {
+      candidate.title = title;
+      candidate.organization = null;
+      candidate.locationText = null;
+      candidate.url = null;
+    }
+  }
+
+  refreshExistingDuplicate(state, candidate);
+  if (candidate.alreadyInCv) candidate.selected = false;
 
   return true;
 }

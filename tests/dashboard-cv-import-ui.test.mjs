@@ -32,7 +32,15 @@ test("Dashboard CV opens a native PDF picker and keeps real extraction on the sa
   assert.doesNotMatch(script, /dashboard-cv-import\.html/);
   assert.match(script, /NOT IMPORTED/);
   assert.match(script, /NEEDS REVIEW/);
-  assert.match(script, /ENTRIES READY TO ADD/);
+  assert.match(script, /ADDING CV\.\.\./);
+  assert.match(script, /repository\.importManualEntries/);
+  assert.match(script, /CV COULD NOT BE ADDED/);
+  assert.match(script, /await reloadCv\(\)/);
+  assert.match(script, /createCvImportReviewState\([\s\S]*?result,[\s\S]*?currentCategories/);
+  assert.match(script, /candidate\.alreadyInCv/);
+  assert.match(script, /add\.disabled = importAddActive \|\| summary\.selected < 1/);
+  assert.match(script, /cancel\.disabled = importAddActive/);
+  assert.match(script, /importSuccessMessage/);
   assert.match(reviewState, /sourceActivityId: null/);
   assert.match(extraction, /functions\.invoke|invoke\("cv-import-extract"/);
   assert.doesNotMatch(script, /api\.openai\.com|OPENAI_API_KEY|Authorization/);
@@ -41,10 +49,17 @@ test("Dashboard CV opens a native PDF picker and keeps real extraction on the sa
   assert.equal((page.match(/dashboard-cv\.js/g) ?? []).length, 1);
 });
 
-test("ADD remains an in-memory no-write checkpoint and import never calls CV persistence", async () => {
+test("ADD persists only the reviewed safe projection through the atomic repository method", async () => {
   const script = await readFile(new URL("../dashboard-cv.js", import.meta.url), "utf8");
   const addHandler = script.slice(script.indexOf("add.addEventListener"), script.indexOf("endActions.append"));
   assert.match(addHandler, /selectedCvImportPersistenceProjection/);
-  assert.match(addHandler, /ENTRIES READY TO ADD/);
-  assert.doesNotMatch(addHandler, /repository\.(create|insert|update|save|upsert)/);
+  assert.match(addHandler, /importPersistenceFlow\.submit/);
+  assert.doesNotMatch(addHandler, /unsupportedSections|provider|source\b|PDF|base64/i);
+  assert.doesNotMatch(addHandler, /createManualEntry|\.insert\(|\.upsert\(/);
+
+  const cancelHandler = script.slice(
+    script.indexOf("cancel.addEventListener(\"click\", () => leaveImportReview())"),
+    script.indexOf("add.addEventListener", script.indexOf("cancel.addEventListener(\"click\", () => leaveImportReview())"))
+  );
+  assert.doesNotMatch(cancelHandler, /importManualEntries|importPersistenceFlow\.submit/);
 });

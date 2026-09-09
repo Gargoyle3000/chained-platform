@@ -2,10 +2,10 @@
 
 Last updated: 2026-09-09
 
-## CV Import provider diagnostics and duplicate submission
+## CV Import ADD persistence
 
-- The controlled production request after the diagnostics release reached `provider_request_construction` but never `provider_fetch_started`: the Supabase Edge runtime does not support the deployed `Uint8Array.toBase64()` conversion. The local compatibility fix uses bounded Web API `btoa()` chunks, preserves the direct inline-PDF contract and keeps safe failure diagnostics; it remains unverified in production.
-- One explicit import submission may cause at most one provider request and there is no automatic retry. Keep this issue open until the base64 fix is committed/deployed, one controlled production retry reaches at least `provider_fetch_started`, and production behavior is validated without duplicate spend.
+- Real PDF extraction and same-page review are now proven in production. The atomic ADD implementation exists locally but remains open until its migration/frontend release and one controlled production persistence test succeed.
+- ADD must remain one profile-authorized transaction with exact duplicate protection. Imported records are ordinary manual `cv_entries` with `source_activity_id = null`; no PDF, provider metadata, unsupported section, Presentation or Agenda state may be persisted.
 
 ## Private Work preview diagnostics
 
@@ -21,4 +21,5 @@ Last updated: 2026-09-09
 - Production testing showed two readiness-feedback failures after `SAVE DRAFT`: the editor could suppress the authoritative `processing`, `ready`, or `failed` result, and the original five-second watcher stopped after its 120-second active window even when the server was still legitimately processing. The Work itself remained safely saved, but Publish could stay disabled without current feedback until a hard refresh. Keep this open until the editor always renders the authoritative stage, continues with bounded low-frequency checks after the initial window, refreshes on return to the page, and offers a truthful manual check. Required states include `CHECKING IMAGE PROCESSING`, `WORK SAVED · PREPARING IMAGES FOR PUBLISH`, `WORK SAVED · IMAGES ARE TAKING LONGER TO PREPARE`, `IMAGE PROCESSING FAILED`, or the existing prerequisite message; `READY TO PUBLISH` must enable Publish. The same behaviour applies when reopening a saved draft.
 
 ## Resolved incidents
+- CV Import Edge PDF encoding: the bounded Web API `btoa()` encoder is deployed and a real production PDF completed extraction into the validated same-page review without automatic retry or duplicate provider spend.
 - Agenda occurrence publication regression: explicit PUBLISH / UNPUBLISH and independent `show_in_agenda` / `show_in_presentation` behavior are implemented and validated; the prior Gothic Summer state was historic data plus UX ambiguity, not a public query defect.

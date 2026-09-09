@@ -26,6 +26,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { createCvImportFlow } =
     await import("./data/cv-import-flow.mjs");
 
+  const { createCvImportPersistenceFlow } =
+    await import("./data/cv-import-persistence.mjs");
+
   const liveCv =
     document.querySelector("#dashboard-cv-live");
 
@@ -53,10 +56,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   let repository;
   let managedProfiles = [];
   let selectedProfileId = null;
+  let currentCategories = [];
   let importReview = null;
-  let lastPrototypeProjection = [];
   let importAvailable = false;
   let importRequestActive = false;
+  let importAddActive = false;
 
   function setError(message = "") {
     errorElement.textContent = message;
@@ -304,7 +308,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         {
           categoryType: category.value,
           yearLabel: year.value,
-          title: line.value
+          completeLine: line.value
         }
       );
 
@@ -333,6 +337,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     row.className = "dashboard-cv-entry dashboard-cv-import-entry";
     select.type = "checkbox";
     select.checked = candidate.selected;
+    select.disabled = importAddActive;
     select.setAttribute(
       "aria-label",
       `Add ${reviewCandidateLine(candidate)} to my CV`
@@ -361,7 +366,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       text.append(review);
     }
 
-    if (candidate.duplicateState === "duplicate") {
+    if (candidate.alreadyInCv) {
       const duplicate = document.createElement("p");
 
       duplicate.className = "dashboard-cv-entry-source";
@@ -370,6 +375,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     actions.className = "dashboard-cv-entry-actions";
+    edit.disabled = importAddActive;
     edit.addEventListener("click", () => createReviewEditor(candidate, row));
     actions.append(edit);
     row.append(select, year, text, actions);
@@ -405,6 +411,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function leaveImportReview(message = "") {
+    if (importAddActive) return;
     importReview = null;
     setImportReviewMode(false);
     setNotice(message);
@@ -425,8 +432,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const endActions = document.createElement("div");
     const cancel = createTextButton("CANCEL", "Cancel CV import review");
     const add = createTextButton(
-      `ADD ${summary.selected} ENTRIES`,
-      `Prepare ${summary.selected} CV entries to add`
+      importAddActive
+        ? "ADDING CV..."
+        : `ADD ${summary.selected} ${summary.selected === 1 ? "ENTRY" : "ENTRIES"}`,
+      `Add ${summary.selected} reviewed CV entries`
     );
 
     header.className = "dashboard-cv-import-header";
@@ -455,10 +464,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     const unsupported = createUnsupportedSections();
     endActions.className = "dashboard-cv-import-actions";
 
+    cancel.disabled = importAddActive;
+    add.disabled = importAddActive || summary.selected < 1;
+
     cancel.addEventListener("click", () => leaveImportReview());
     add.addEventListener("click", () => {
-      lastPrototypeProjection = selectedCvImportPersistenceProjection(importReview);
-      leaveImportReview(`${lastPrototypeProjection.length} ENTRIES READY TO ADD`);
+      const selectedEntries =
+        selectedCvImportPersistenceProjection(importReview);
+
+      importPersistenceFlow.submit(
+        selectedProfileId,
+        selectedEntries
+      );
     });
 
     endActions.append(cancel, add);
@@ -531,11 +548,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       setError(safeCvImportMessage(error));
     },
     onProcessing(file) {
-      lastPrototypeProjection = [];
       renderImportProcessing(file.name);
     },
     onSuccess(result) {
-      importReview = createCvImportReviewState(result);
+      importReview = createCvImportReviewState(
+        result,
+        currentCategories
+      );
       renderImportReview();
     },
     onFailure(error, file) {
@@ -544,6 +563,44 @@ document.addEventListener("DOMContentLoaded", async () => {
     },
     onActiveChange(active) {
       setImportRequestActive(active);
+    }
+  });
+
+  function importSuccessMessage(result) {
+    const added = `${result.insertedCount} ${
+      result.insertedCount === 1 ? "ENTRY" : "ENTRIES"
+    } ADDED`;
+
+    return result.duplicateCount
+      ? `${added} · ${result.duplicateCount} ALREADY IN CV`
+      : added;
+  }
+
+  const importPersistenceFlow = createCvImportPersistenceFlow({
+    persist(profileId, entries) {
+      return repository.importManualEntries(profileId, entries);
+    },
+    onPending() {
+      renderImportReview();
+    },
+    async onSuccess(result) {
+      importReview = null;
+      setImportReviewMode(false);
+      setError();
+      setNotice(importSuccessMessage(result));
+
+      try {
+        await reloadCv();
+      } catch {
+        setError("CV COULD NOT BE RELOADED");
+      }
+    },
+    onFailure() {
+      renderImportReview();
+      setError("CV COULD NOT BE ADDED");
+    },
+    onActiveChange(active) {
+      importAddActive = active;
     }
   });
 
@@ -560,6 +617,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const categories =
       await repository.listCv([selectedProfileId]);
 
+    currentCategories = categories;
     renderCategories(categories);
   }
 

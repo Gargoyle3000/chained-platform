@@ -252,9 +252,11 @@ Last updated: 2026-09-09
 
 \- Temporary tester/session analytics may be used during early usability testing and should be removed or disabled when that phase ends. A permanent privacy-friendly admin error view is desired with error type, route/action, timestamp, frequency and safely available affected-user count; it must not store sensitive content, secrets or tokens.
 
-\## CV Import provider execution
+\## CV Import execution and persistence
 
 \- One explicit CV Import submission may cause at most one provider request. Browser extraction is single-flight and provider retries are never automatic; `TRY AGAIN` requires a new explicit selection/action. Durable cross-worker idempotency belongs with future quota/entitlement accounting rather than unreliable Edge-worker process memory.
+\- ADD persists only the selected reviewed manual-entry projection through one profile-authorized atomic database operation. Exact duplicates use category, conservatively normalized year/period and complete CV line; existing and within-batch duplicates are skipped without fuzzy matching.
+\- Imported rows always use the existing manual CV model with `source_activity_id = null`. PDFs, provider metadata, source excerpts and unsupported sections are never persisted, and CV Import never creates or mutates Presentations or Agenda state.
 
 \## Archive PDF export
 

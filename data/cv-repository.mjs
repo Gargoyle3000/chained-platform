@@ -180,6 +180,7 @@ function createUnavailableRepository() {
     createCategory: unavailable,
     updateCategory: unavailable,
     createManualEntry: unavailable,
+    importManualEntries: unavailable,
     updateManualEntry: unavailable,
     updateEntryVisibility: unavailable,
     deleteManualEntry: unavailable
@@ -481,6 +482,53 @@ export function createSupabaseCvRepository(client) {
           "CV ENTRY COULD NOT BE CREATED"
         )
       );
+    },
+
+    async importManualEntries(ownerProfileId, entries = []) {
+      const targetProfileId = requireId(
+        ownerProfileId,
+        "ARTIST PROFILE IS UNAVAILABLE"
+      );
+
+      if (!Array.isArray(entries) || !entries.length || entries.length > 500) {
+        throw new Error("SELECT CV ENTRIES TO ADD");
+      }
+
+      const { data, error } = await client.rpc(
+        "import_cv_entries",
+        {
+          target_profile_id: targetProfileId,
+          selected_entries: entries
+        }
+      );
+
+      const result = requireResult(
+        error,
+        data,
+        "CV COULD NOT BE ADDED"
+      );
+
+      const submittedCount = Number(result?.submitted_count);
+      const insertedCount = Number(result?.inserted_count);
+      const duplicateCount = Number(result?.duplicate_count);
+
+      if (
+        !Number.isInteger(submittedCount) ||
+        !Number.isInteger(insertedCount) ||
+        !Number.isInteger(duplicateCount) ||
+        submittedCount < 1 ||
+        insertedCount < 0 ||
+        duplicateCount < 0 ||
+        insertedCount + duplicateCount !== submittedCount
+      ) {
+        throw new Error("CV COULD NOT BE ADDED");
+      }
+
+      return Object.freeze({
+        submittedCount,
+        insertedCount,
+        duplicateCount
+      });
     },
 
     async updateManualEntry(record, expectedUpdatedAt) {
