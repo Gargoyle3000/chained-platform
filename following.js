@@ -146,10 +146,6 @@ document.addEventListener("DOMContentLoaded", () => {
       metadata.append(year);
     }
 
-    if (archiveState && createArchiveAction) {
-      metadata.append(createArchiveAction(work, archiveState, announceArchiveStatus, "discover-archive-action"));
-    }
-
     imageLink.className = "discover-image-link";
     imageLink.href = work.artworkHref;
     imageLink.setAttribute("aria-label", `View ${work.title} by ${work.artistName}`);
@@ -171,6 +167,9 @@ document.addEventListener("DOMContentLoaded", () => {
       onImageChange: (current) => updatePublicResponsiveImage(image, picture, current)
     });
     if (carouselControls) metadata.append(carouselControls.root);
+    if (archiveState && createArchiveAction) {
+      metadata.append(createArchiveAction(work, archiveState, announceArchiveStatus, "discover-archive-action"));
+    }
     article.append(metadata, imageLink);
     return article;
   }

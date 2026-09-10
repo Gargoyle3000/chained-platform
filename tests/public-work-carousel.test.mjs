@@ -310,3 +310,14 @@ test("every compact public Work viewer uses shared circular state, controls, and
   assert.equal(styles.includes("--discover-image-hit-top"), false);
   exports.forEach((source) => assert.equal(source.includes("public-work-carousel"), false));
 });
+
+test("compact carousel counter precedes SELECT action on Discover and Following", async () => {
+  const [discover, following] = await Promise.all([
+    readFile(new URL("../discover.js", import.meta.url), "utf8"),
+    readFile(new URL("../following.js", import.meta.url), "utf8")
+  ]);
+  const controlsAppend = "if (carouselControls) metadata.append(carouselControls.root);";
+  const selectAppend = 'metadata.append(createArchiveAction(work, archiveState, announceArchiveStatus, "discover-archive-action"));';
+  assert.ok(discover.indexOf(controlsAppend) < discover.indexOf(selectAppend));
+  assert.ok(following.indexOf(controlsAppend) < following.indexOf(selectAppend));
+});

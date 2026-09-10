@@ -214,10 +214,6 @@ function createDiscoverWork(
     details.append(line);
   });
   if (details.childElementCount) metadata.append(details);
-  if (archiveState && createArchiveAction) {
-    metadata.append(createArchiveAction(work, archiveState, announceArchiveStatus, "discover-archive-action"));
-  }
-
   imageLink.className = "discover-image-link";
   imageLink.href = work.artworkHref;
   imageLink.setAttribute("aria-label", `View ${work.title} by ${work.artistName}`);
@@ -240,6 +236,9 @@ function createDiscoverWork(
   });
 
   if (carouselControls) metadata.append(carouselControls.root);
+  if (archiveState && createArchiveAction) {
+    metadata.append(createArchiveAction(work, archiveState, announceArchiveStatus, "discover-archive-action"));
+  }
   article.append(metadata, imageLink);
   return article;
 }
