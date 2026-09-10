@@ -1585,14 +1585,6 @@
   color: var(--accent);
 }
 
-.dashboard-cv-pdf-delivery {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-
-  margin: 0 0 38px;
-}
-
 .dashboard-cv-export-entry {
   grid-template-columns: 7.5rem minmax(0, 1fr) max-content;
   width: min(100%, 760px);

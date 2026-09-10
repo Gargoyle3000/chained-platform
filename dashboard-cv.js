@@ -68,15 +68,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const exportButton =
     document.querySelector("#dashboard-cv-export");
 
-  const pdfDeliveryRoot =
-    document.querySelector("#dashboard-cv-pdf-delivery");
-
-  const sharePdfButton =
-    document.querySelector("#dashboard-cv-share-pdf");
-
-  const downloadPdfButton =
-    document.querySelector("#dashboard-cv-download-pdf");
-
   let repository;
   let managedProfiles = [];
   let selectedProfileId = null;
@@ -272,29 +263,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   function clearPdfDelivery() {
     pdfDelivery?.dispose();
     pdfDelivery = null;
-    pdfDeliveryRoot.hidden = true;
-    sharePdfButton.hidden = true;
   }
 
-  function setPdfDelivery(data, filename) {
+  function deliverPdf(data, filename) {
     clearPdfDelivery();
     pdfDelivery = createPdfDelivery(data, { filename });
-    pdfDeliveryRoot.hidden = false;
-    sharePdfButton.hidden = !pdfDelivery.canShareFile;
-  }
-
-  async function sharePdf() {
-    const result = await pdfDelivery?.share();
-    if (result?.status === "cancelled") setNotice("PDF READY");
-    else if (result?.status === "failed") setNotice("PDF READY · DOWNLOAD PDF IS AVAILABLE");
-  }
-
-  function downloadPdf() {
     try {
-      pdfDelivery?.download();
-      setNotice("PDF READY · DOWNLOAD STARTED");
+      pdfDelivery.download();
+      return true;
     } catch {
-      setNotice("PDF READY · DOWNLOAD PDF IS AVAILABLE");
+      return false;
     }
   }
 
@@ -630,11 +608,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         artistName,
         categories
       });
-      setPdfDelivery(output.bytes, cvExportFilename(artistName));
+      const delivered = deliverPdf(output.bytes, cvExportFilename(artistName));
       exportSelection = null;
       setImportReviewMode(false);
       renderCategories(currentCategories);
-      setNotice("PDF READY");
+      setNotice(delivered ? "PDF EXPORTED" : "PDF COULD NOT BE DELIVERED");
     } catch {
       exportFailed = true;
       setError("CV COULD NOT BE EXPORTED");
@@ -1262,8 +1240,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   importButton.addEventListener("click", requestImportPdfSelection);
   importFileInput.addEventListener("change", handleImportPdfSelection);
   exportButton.addEventListener("click", enterExportMode);
-  sharePdfButton.addEventListener("click", sharePdf);
-  downloadPdfButton.addEventListener("click", downloadPdf);
 
   window.addEventListener("pagehide", clearPdfDelivery, { once: true });
 

@@ -119,10 +119,12 @@ export async function renderCvPdf({ PDFLib, fontkit, fontBytes, artistName, cate
   const startPage = (continuation = false) => {
     page = pdf.addPage([A4_PAGE.width, A4_PAGE.height]);
     pageNumber += 1;
-    page.drawText(text(artistName), { x: margin, y: top, size: continuation ? 10 : 22, font, color: black });
-    page.drawText("CV", { x: margin, y: continuation ? top - 16 : top - 32, size: continuation ? 10 : 13, font, color: green });
+    if (!continuation) {
+      page.drawText(text(artistName), { x: margin, y: top, size: 22, font, color: black });
+      page.drawText("CV", { x: margin, y: top - 32, size: 13, font, color: green });
+    }
     page.drawText(String(pageNumber), { x: A4_PAGE.width - margin, y: 28, size: 8, font, color: black });
-    cursor = continuation ? top - 54 : top - 72;
+    cursor = continuation ? top : top - 72;
   };
 
   const entryHeight = (entry) => Math.max(14, wrapText(entry.line, font, 10, lineWidth).length * 14) + 9;

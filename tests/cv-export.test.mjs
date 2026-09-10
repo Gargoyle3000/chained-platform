@@ -118,6 +118,15 @@ test("CV PDF is deterministic in structure, text-based, and flows a long CV acro
   assert.ok(output.bytes.byteLength > 1000);
 });
 
+test("CV PDF keeps identity on page one and continues split categories without a running header", async () => {
+  const source = await readFile(new URL("../data/cv-export.mjs", import.meta.url), "utf8");
+  assert.match(source, /if \(!continuation\) \{/);
+  assert.match(source, /cursor = continuation \? top : top - 72/);
+  assert.doesNotMatch(source, /continuation \? top - 16/);
+  assert.match(source, /if \(cursor - categoryHeight < bottom\) startPage\(true\)/);
+  assert.match(source, /if \(cursor - height < bottom\) startPage\(true\)/);
+});
+
 test("CV PDF generator rejects empty private/export-invalid input without a fallback", async () => {
   await assert.rejects(
     () => renderCvPdf({ artistName: "PEER VINK", categories: [] }),

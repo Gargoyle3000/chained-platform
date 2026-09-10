@@ -46,11 +46,14 @@ test("Dashboard CV opens a native PDF picker and keeps real extraction on the sa
   assert.doesNotMatch(script, /api\.openai\.com|OPENAI_API_KEY|Authorization/);
   assert.match(css, /dashboard-cv-import-entry/);
   assert.match(css, /dashboard-cv-import-actions/);
-  assert.match(page, /id="dashboard-cv-pdf-delivery"[\s\S]*id="dashboard-cv-share-pdf"[\s\S]*id="dashboard-cv-download-pdf"/);
+  assert.doesNotMatch(page, /dashboard-cv-(?:pdf-delivery|share-pdf|download-pdf)/);
   assert.match(page, /assets\/vendor\/pdf-lib\.min\.js[\s\S]*assets\/vendor\/fontkit\.umd\.min\.js/);
   assert.match(script, /createCvExportSelectionState/);
   assert.match(script, /renderCvPdf/);
   assert.match(script, /createPdfDelivery/);
+  assert.match(script, /pdfDelivery\.download\(\)/);
+  assert.match(script, /PDF EXPORTED/);
+  assert.doesNotMatch(script, /sharePdfButton|downloadPdfButton|function sharePdf|function downloadPdf/);
   assert.match(script, /EXPORT CV/);
   assert.match(script, /GENERATING PDF\.\.\./);
   assert.match(script, /CV COULD NOT BE EXPORTED/);
