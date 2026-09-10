@@ -7,6 +7,39 @@ export function createPublicWorkCarouselState(images = []) {
   });
 }
 
+/**
+ * Creates the one compact, accessible navigation treatment for every public
+ * Work viewer. It stays hidden until the shared carousel has confirmed that
+ * the Work has more than one public image.
+ */
+export function createPublicWorkCarouselControls(document, total = null) {
+  if (!document?.createElement || (Number.isInteger(total) && total < 2)) return null;
+
+  const root = document.createElement("div");
+  const previous = document.createElement("button");
+  const counter = document.createElement("span");
+  const next = document.createElement("button");
+
+  root.className = "public-work-carousel-controls";
+  root.hidden = true;
+  previous.className = "public-work-carousel-button";
+  previous.type = "button";
+  previous.textContent = "<";
+  previous.setAttribute("aria-label", "Previous image");
+  previous.hidden = true;
+  counter.className = "public-work-carousel-count";
+  counter.setAttribute("aria-live", "polite");
+  counter.textContent = Number.isInteger(total) ? `1/${total}` : "";
+  next.className = "public-work-carousel-button";
+  next.type = "button";
+  next.textContent = ">";
+  next.setAttribute("aria-label", "Next image");
+  next.hidden = true;
+  root.append(previous, counter, next);
+
+  return { root, previous, counter, next };
+}
+
 export function nextCarouselIndex(index, direction, length) {
   if (!Number.isInteger(index) || !Number.isInteger(length) || length < 2) return 0;
   if (direction > 0) return (index + 1) % length;
@@ -22,6 +55,27 @@ function horizontalSwipe(startX, startY, currentX, currentY) {
 
 function describeImage(index, total, label) {
   return `${label}. Image ${index + 1} of ${total}`;
+}
+
+function updateInteractiveHitArea(link, imageRecord) {
+  const width = link.clientWidth;
+  const height = link.clientHeight;
+  const imageWidth = Number(imageRecord?.width) || 0;
+  const imageHeight = Number(imageRecord?.height) || 0;
+  if (!width || !height || !imageWidth || !imageHeight) return;
+
+  const frameRatio = width / height;
+  const imageRatio = imageWidth / imageHeight;
+  const renderedWidth = frameRatio > imageRatio ? height * imageRatio : width;
+  const renderedHeight = frameRatio > imageRatio ? height : width / imageRatio;
+  const horizontalInset = Math.max(0, (width - renderedWidth) / 2);
+  const verticalInset = Math.max(0, (height - renderedHeight) / 2);
+
+  link.dataset.publicCarouselHitArea = "true";
+  link.style.setProperty("--public-carousel-hit-top", `${verticalInset}px`);
+  link.style.setProperty("--public-carousel-hit-right", `${horizontalInset}px`);
+  link.style.setProperty("--public-carousel-hit-bottom", `${verticalInset}px`);
+  link.style.setProperty("--public-carousel-hit-left", `${horizontalInset}px`);
 }
 
 /**
@@ -50,6 +104,7 @@ export function attachPublicWorkCarousel({
   let pointer = null;
   let capturedPointerId = null;
   let suppressClick = false;
+  let resizeObserver = null;
 
   link.draggable = false;
   image.draggable = false;
@@ -94,6 +149,7 @@ export function attachPublicWorkCarousel({
       counter.textContent = `${state.activeIndex + 1}/${state.images.length}`;
       counter.parentElement.hidden = state.images.length < 2;
     }
+    updateInteractiveHitArea(link, current);
     onImageChange(current, state);
   };
 
@@ -215,6 +271,14 @@ export function attachPublicWorkCarousel({
   previousButton?.addEventListener("click", onPreviousClick);
   nextButton?.addEventListener("click", onNextClick);
 
+  if (typeof ResizeObserver === "function") {
+    resizeObserver = new ResizeObserver(() => {
+      updateInteractiveHitArea(link, state.images[state.activeIndex]);
+    });
+    resizeObserver.observe(link);
+  }
+  updateInteractiveHitArea(link, coverImage);
+
   if (eager) void load();
 
   if (typeof IntersectionObserver === "function") {
@@ -238,5 +302,6 @@ export function attachPublicWorkCarousel({
     link.removeEventListener("keydown", onKeyDown);
     previousButton?.removeEventListener("click", onPreviousClick);
     nextButton?.removeEventListener("click", onNextClick);
+    resizeObserver?.disconnect();
   };
 }

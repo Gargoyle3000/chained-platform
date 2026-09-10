@@ -10,11 +10,15 @@ body.artwork-page {
 /* LAYOUT */
 
 .artwork-layout {
-  --artwork-image-shift: clamp(110px, 10vw, 210px);
+  --artwork-information-width: clamp(210px, 21vw, 285px);
+  --artwork-column-gap: clamp(50px, 8vw, 150px);
 
   display: grid;
-  grid-template-columns: minmax(210px, 285px) minmax(0, 1fr);
-  gap: clamp(50px, 8vw, 150px);
+  grid-template-columns:
+    var(--artwork-information-width)
+    minmax(0, 1fr)
+    var(--artwork-information-width);
+  column-gap: var(--artwork-column-gap);
 
   width: 100%;
   height: 100svh;
@@ -33,6 +37,7 @@ body.artwork-page {
   z-index: 2;
 
   min-width: 0;
+  grid-column: 1;
 }
 
 .artwork-information-inner {
@@ -112,13 +117,10 @@ body.artwork-page {
 /* IMAGE */
 
 .artwork-content {
+  grid-column: 2;
   min-width: 0;
   min-height: 0;
   height: 100%;
-
-  transform: translateX(
-    calc(-1 * var(--artwork-image-shift))
-  );
 }
 
 .artwork-main-image {
@@ -194,46 +196,6 @@ body.artwork-dynamic-page {
   max-height: calc(100svh - var(--header-height) - 58px);
 }
 
-.artwork-dynamic-image.has-public-work-carousel {
-  touch-action: pan-y;
-}
-
-.artwork-carousel-controls {
-  display: flex;
-  align-items: center;
-  width: max-content;
-  margin: 22px 0 0;
-
-  color: var(--accent);
-  font-size: var(--font-meta);
-  line-height: 1;
-}
-
-.artwork-carousel-button {
-  display: inline-grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.artwork-carousel-button:focus-visible {
-  outline: 1px solid var(--accent);
-  outline-offset: -2px;
-}
-
-.artwork-carousel-count {
-  min-width: 28px;
-  text-align: center;
-}
-
 .artwork-description {
   line-height: 1.45;
   text-transform: none;
@@ -254,10 +216,8 @@ body.artwork-dynamic-page {
 
 @media (max-width: 900px) {
   .artwork-layout {
-    --artwork-image-shift: 116px;
-
-    grid-template-columns: 190px minmax(0, 1fr);
-    gap: 42px;
+    --artwork-information-width: 190px;
+    --artwork-column-gap: 42px;
   }
 }
 

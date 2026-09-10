@@ -16,53 +16,6 @@ const filterClearButton = document.querySelector(".discover-filter-clear");
 const channelButtons = [...document.querySelectorAll("[data-discover-channel]")];
 const viewStorageKey = "chained-discover-view";
 const scrollStorageKey = "chained-discover-scroll";
-const containedImageHitAreas = new Map();
-
-function updateContainedImageHitAreas() {
-  containedImageHitAreas.forEach((source, imageLink) => {
-    if (!imageLink.isConnected) {
-      containedImageHitAreas.delete(imageLink);
-      return;
-    }
-
-    const width = imageLink.clientWidth;
-    const height = imageLink.clientHeight;
-    if (!width || !height || !source.width || !source.height) return;
-
-    const frameRatio = width / height;
-    const imageRatio = source.width / source.height;
-    const imageWidth = frameRatio > imageRatio ? height * imageRatio : width;
-    const imageHeight = frameRatio > imageRatio ? height : width / imageRatio;
-    const horizontalInset = Math.max(0, (width - imageWidth) / 2);
-    const verticalInset = Math.max(0, (height - imageHeight) / 2);
-
-    imageLink.style.setProperty("--discover-image-hit-top", `${verticalInset}px`);
-    imageLink.style.setProperty("--discover-image-hit-right", `${horizontalInset}px`);
-    imageLink.style.setProperty("--discover-image-hit-bottom", `${verticalInset}px`);
-    imageLink.style.setProperty("--discover-image-hit-left", `${horizontalInset}px`);
-  });
-}
-
-function registerContainedImageHitArea(imageLink, image, source) {
-  const dimensions = {
-    width: Number(source?.width) || 0,
-    height: Number(source?.height) || 0
-  };
-
-  imageLink.dataset.containedHitArea = "true";
-  containedImageHitAreas.set(imageLink, dimensions);
-  image.addEventListener("load", () => {
-    if (!dimensions.width) dimensions.width = image.naturalWidth;
-    if (!dimensions.height) dimensions.height = image.naturalHeight;
-    updateContainedImageHitAreas();
-  }, { once: true });
-  requestAnimationFrame(updateContainedImageHitAreas);
-}
-
-if (typeof ResizeObserver === "function") {
-  const containedImageHitAreaObserver = new ResizeObserver(updateContainedImageHitAreas);
-  containedImageHitAreaObserver.observe(stream);
-}
 
 function readStoredView() {
   try {
@@ -224,6 +177,7 @@ function createDiscoverWork(
   const heading = document.createElement("h2");
   const imageLink = document.createElement("a");
   const image = document.createElement("img");
+  const carouselControls = carousel?.createControls?.(document) || null;
 
   article.className = "discover-work";
   article.dataset.workId = work.id;
@@ -271,7 +225,6 @@ function createDiscoverWork(
   image.addEventListener("error", () => replaceBrokenImage(imageLink), { once: true });
   const picture = createPublicResponsiveImage(document, image, work.image);
   imageLink.append(picture);
-  registerContainedImageHitArea(imageLink, image, work.image);
   carousel?.attach({
     link: imageLink,
     image,
@@ -280,9 +233,13 @@ function createDiscoverWork(
     coverImage: work.image,
     loadImages: carousel.loadImages,
     label: `View ${work.title} by ${work.artistName}`,
+    previousButton: carouselControls?.previous,
+    nextButton: carouselControls?.next,
+    counter: carouselControls?.counter,
     onImageChange: (current) => updatePublicResponsiveImage(image, picture, current)
   });
 
+  if (carouselControls) metadata.append(carouselControls.root);
   article.append(metadata, imageLink);
   return article;
 }
@@ -383,7 +340,7 @@ async function initialiseLocalDiscover() {
     { FORMAT_DISCIPLINES },
     { createArchiveWorkAction, loadArchiveWorkState },
     { createPublicWorkImageLoader },
-    { attachPublicWorkCarousel }
+    { attachPublicWorkCarousel, createPublicWorkCarouselControls }
   ] = await Promise.all([
     import("./data/discover-repository.mjs"),
     import("./data/discover-ordering.mjs"),
@@ -404,7 +361,8 @@ async function initialiseLocalDiscover() {
   const publicImages = createPublicWorkImageLoader(runtime.client, runtime.config);
   const carousel = Object.freeze({
     loadImages: (workId, coverImage) => publicImages.load(workId, coverImage),
-    attach: attachPublicWorkCarousel
+    attach: attachPublicWorkCarousel,
+    createControls: createPublicWorkCarouselControls
   });
   let archiveState = null;
   let archiveStatus = null;

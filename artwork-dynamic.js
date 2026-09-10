@@ -154,7 +154,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
-  function createInformation(work, archiveState = null, createArchiveAction = null, feedOrigin = null, carouselControls = null) {
+  function createInformation(work, archiveState = null, createArchiveAction = null, feedOrigin = null) {
     const fragment = document.createDocumentFragment();
     const artist = document.createElement("a");
     const heading = document.createElement("h1");
@@ -222,8 +222,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
     }
 
-    if (carouselControls) fragment.append(carouselControls.root);
-
     if (archiveState && createArchiveAction) {
       const archiveStatus = document.createElement("p");
       archiveStatus.className = "sr-only";
@@ -263,46 +261,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     const figure = document.createElement("figure");
     const image = document.createElement("img");
 
-    figure.className = "artwork-main-image artwork-dynamic-image";
-    figure.tabIndex = total > 1 ? 0 : -1;
+    figure.className = "artwork-main-image";
     image.src = imageRecord.src || createImageSource(imageRecord);
     image.alt =
       `${work.title} by ${work.ownerProfileName || "Peer Vink"}, image ${index + 1} of ${total}`;
     figure.append(image);
 
-    return { figure, image };
+    return figure;
   }
 
 
-  function createCarouselControls(total) {
-    if (total < 2) return null;
-
-    const root = document.createElement("div");
-    const previous = document.createElement("button");
-    const counter = document.createElement("span");
-    const next = document.createElement("button");
-
-    root.className = "artwork-carousel-controls";
-    root.hidden = true;
-    previous.className = "artwork-carousel-button";
-    previous.type = "button";
-    previous.textContent = "<";
-    previous.setAttribute("aria-label", "Previous image");
-    previous.hidden = true;
-    counter.className = "artwork-carousel-count";
-    counter.textContent = `1/${total}`;
-    next.className = "artwork-carousel-button";
-    next.type = "button";
-    next.textContent = ">";
-    next.setAttribute("aria-label", "Next image");
-    next.hidden = true;
-    root.append(previous, counter, next);
-
-    return { root, previous, counter, next };
-  }
-
-
-  function renderImages(work, carouselControls = null, carousel = null) {
+  function renderImages(work) {
     releaseObjectUrls();
 
     const images = [...(work.images || [])].sort(
@@ -318,28 +287,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const carouselImages = images.map((record) => ({
-      ...record,
-      src: createImageSource(record)
-    }));
-    const { figure, image } = createArtworkImage(carouselImages[0], work, 0, images.length);
-    content.replaceChildren(figure);
-
-    if (!carouselControls || !carousel) return;
-
-    carousel.attach({
-      link: figure,
-      image,
-      article: figure,
-      workId: work.id,
-      coverImage: carouselImages[0],
-      loadImages: async () => carouselImages,
-      label: `View ${work.title}`,
-      previousButton: carouselControls.previous,
-      nextButton: carouselControls.next,
-      counter: carouselControls.counter,
-      eager: true
-    });
+    content.replaceChildren(
+      ...images.map((image, index) => createArtworkImage(image, work, index, images.length))
+    );
   }
 
 
@@ -355,12 +305,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
-  function renderWork(work, archiveState = null, createArchiveAction = null, feedOrigin = null, carousel = null) {
+  function renderWork(work, archiveState = null, createArchiveAction = null, feedOrigin = null) {
     if (primaryProfileLink) primaryProfileLink.href = profileDestination(work);
     document.title = `${work.title} — ${work.ownerProfileName || "PEER VINK"} — CHAINED`;
-    const carouselControls = createCarouselControls(work.images?.length || 0);
-    information.replaceChildren(createInformation(work, archiveState, createArchiveAction, feedOrigin, carouselControls));
-    renderImages(work, carouselControls, carousel);
+    information.replaceChildren(createInformation(work, archiveState, createArchiveAction, feedOrigin));
+    renderImages(work);
   }
 
 
@@ -379,10 +328,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
-      const [selected, { consumeWorkFeedOrigin }, { attachPublicWorkCarousel }] = await Promise.all([
+      const [selected, { consumeWorkFeedOrigin }] = await Promise.all([
         getWorkRepository(),
-        import("./data/work-feed-return.mjs"),
-        import("./public-work-carousel.mjs")
+        import("./data/work-feed-return.mjs")
       ]);
       workStore = selected.repository;
       await workStore.initialise();
@@ -410,7 +358,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         referrer: document.referrer,
         storage: window.sessionStorage
       });
-      renderWork(work, archiveState, createArchiveAction, feedOrigin, { attach: attachPublicWorkCarousel });
+      renderWork(work, archiveState, createArchiveAction, feedOrigin);
     } catch (error) {
       renderUnavailable();
     }

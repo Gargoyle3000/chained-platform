@@ -8,7 +8,10 @@ import {
   isValidProfileSlug
 } from "./data/public-work-mapping.mjs";
 import { createPublicWorkImageLoader } from "./data/public-work-images.mjs";
-import { attachPublicWorkCarousel } from "./public-work-carousel.mjs";
+import {
+  attachPublicWorkCarousel,
+  createPublicWorkCarouselControls
+} from "./public-work-carousel.mjs";
 import {
   createPublicResponsiveImage,
   updatePublicResponsiveImage
@@ -165,6 +168,7 @@ function createWorkArticle(work, carousel = null) {
   const metadata = document.createElement("div");
   const heading = document.createElement("h2");
   const titleLink = document.createElement("a");
+  const carouselControls = carousel ? createPublicWorkCarouselControls(document) : null;
 
   article.className = "profile-work";
   article.dataset.workId = work.id;
@@ -184,6 +188,9 @@ function createWorkArticle(work, carousel = null) {
     coverImage: work.image,
     loadImages: carousel.loadImages,
     label: `View ${work.title} by ${work.artistName}`,
+    previousButton: carouselControls?.previous,
+    nextButton: carouselControls?.next,
+    counter: carouselControls?.counter,
     onImageChange: (current) => updatePublicResponsiveImage(image, picture, current)
   });
 
@@ -220,6 +227,8 @@ function createWorkArticle(work, carousel = null) {
     line.textContent = dimensions;
     metadata.append(line);
   }
+
+  if (carouselControls) metadata.append(carouselControls.root);
 
   article.append(imageLink, metadata);
   return article;

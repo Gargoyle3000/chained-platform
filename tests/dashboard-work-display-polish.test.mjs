@@ -21,14 +21,15 @@ test("Work material preview uses comma-only display punctuation without changing
   assert.doesNotMatch(formatter, /\bAND\b/);
 });
 
-test("public Work detail uses a centered contained presentation and compact metadata controls", async () => {
-  const [css, script] = await Promise.all([
+test("public Work detail uses a centered contained stacked presentation without carousel controls", async () => {
+  const [artworkCss, script] = await Promise.all([
     readFile(new URL("../artwork.css", import.meta.url), "utf8"),
     readFile(new URL("../artwork-dynamic.js", import.meta.url), "utf8")
   ]);
-  assert.match(css, /\.artwork-dynamic-page \.artwork-content \{[\s\S]*?justify-items: center;[\s\S]*?transform: none;/);
-  assert.match(css, /\.artwork-dynamic-page \.artwork-main-image img \{[\s\S]*?max-width: 100%;[\s\S]*?max-height:/);
-  assert.match(css, /\.artwork-carousel-controls \{[\s\S]*?color: var\(--accent\)/);
-  assert.match(script, /previous\.setAttribute\("aria-label", "Previous image"\)/);
-  assert.match(script, /next\.setAttribute\("aria-label", "Next image"\)/);
+  assert.match(artworkCss, /\.artwork-dynamic-page \.artwork-content \{[\s\S]*?justify-items: center;[\s\S]*?transform: none;/);
+  assert.match(artworkCss, /\.artwork-dynamic-page \.artwork-main-image img \{[\s\S]*?max-width: 100%;[\s\S]*?max-height:/);
+  assert.match(artworkCss, /grid-template-columns:[\s\S]*?var\(--artwork-information-width\)[\s\S]*?minmax\(0, 1fr\)[\s\S]*?var\(--artwork-information-width\)/);
+  assert.doesNotMatch(artworkCss, /--artwork-image-shift|translateX\(/);
+  assert.match(script, /content\.replaceChildren\([\s\S]*?\.\.\.images\.map\(/);
+  assert.doesNotMatch(script, /public-work-carousel\.mjs|carouselControls|attachPublicWorkCarousel/);
 });

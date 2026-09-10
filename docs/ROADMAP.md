@@ -71,7 +71,7 @@ Implementation should verify the largest real preview display and HiDPI needs be
 
 ## COMPLETED / LIVE
 
-- Quiet multi-image Work browsing is live on Discover, Following and Public Profile only: swipe on mobile and drag/grab on desktop, with no persistent carousel chrome. Work detail remains the full image sequence; current card geometry, natural ratios, containment, and lazy secondary-image loading are preserved.
+- Circular compact multi-image Work browsing is live on Discover, Following and Public Profile. Each uses the UI-only `< current/total >` navigation while preserving swipe/drag, keyboard browsing, current geometry, natural ratios, containment and lazy secondary-image loading; no carousel state enters exports. Public Work Detail intentionally remains a vertically stacked, contained all-image view for close comparison, without carousel controls.
 - Phase 4 public image derivatives are live: verified new and backfilled active Works publish exact WebP SMALL (960px maximum long edge) and LARGE (3200px maximum long edge) renditions. SMALL serves public grid/feed contexts, LARGE serves strict Work detail paths, originals remain private, and legacy public paths remain compatible. The active legacy migration is complete.
 - The one-time legacy public-media promotion is complete: all 9 target Works / 29 images use canonical SMALL + LARGE publication derivatives, retain historic objects solely for cleanup compatibility, and are idempotently promotable no-ops thereafter.
 

@@ -161,15 +161,15 @@ Last updated: 2026-09-10
 
 \## Public Work carousel
 
-\- The carousel is public-only and applies to Discover, Following, Public Profile and Work detail.
-\- Work detail uses one centered contained image stage rather than a vertical image sequence.
+\- Compact interactive multi-image Work viewers — Discover, Following, Public Profile and any future equivalent compact viewer — use the canonical public carousel. Its current/total count is UI-only, derives at runtime, is never persisted, and never appears in PDF or other export output.
+\- Public Work Detail is the intentional exception: it renders all Work images vertically in canonical order for close viewing and comparison, with natural page scrolling and no carousel navigation.
 \- The current `is_cover=true` image is first; remaining public images use `sort_order`, then deterministic `id` order.
 \- The cover defines fixed stage geometry; secondary ratios use contain behavior with no crop or stretch.
-\- No visible arrows, dots or autoplay are required.
+\- Compact multi-image viewers use green accessible `< current/total >` navigation associated with Work metadata or the image presentation; one-image Works show no carousel control. Work Detail has no counter, previous/next controls, swipe-to-replace behavior or keyboard image switching. No dots, large artwork-overlay arrows or autoplay are used.
 \- Media carousels loop circularly: last → next returns to first, and first → previous returns to last.
-\- Discover, Following and Public Profile retain the invisible swipe/drag model with keyboard Left/Right support and no persistent carousel chrome. Work detail places a compact green `< current/total >` control beneath its metadata; it uses real accessible previous/next buttons while preserving swipe/drag.
+\- Click/tap, swipe/drag and keyboard Left/Right all use the same circular current-image state; visible previous/next controls are real accessible buttons while preserving swipe/drag.
 
-\- Work detail with one image prefers a fixed, non-scrolling visual presentation where the viewport permits it. Multiple images use the same stage with circular browsing; metadata remains accessible on smaller screens.
+\- Work Detail keeps every image independently contained in its vertical sequence; natural page scrolling supports close viewing and comparison while metadata remains accessible on smaller screens.
 
 \## Portfolio export images
 
@@ -195,7 +195,7 @@ Last updated: 2026-09-10
 
 \- Video is an ordinary artistic medium, not a premium type. v1 uses external hosting only, preferably Vimeo; do not support YouTube or native CHAINED video hosting. Keep provider handling extensible for another suitable provider later.
 \- Every video item requires a still selected or uploaded by the artist. In a Work carousel it initially behaves like a normal image; clicking it activates that item's player. Mixed order such as `IMAGE · IMAGE · VIDEO · IMAGE` and multiple videos within normal media limits are allowed.
-\- Video playback exists on Work detail only. Discover, Following, GRID, Archive overviews and similar views use stills, never autoplay or moving thumbnails. Swiping away stops playback; provider fullscreen controls are sufficient.
+\- Video playback exists on Work detail only. Discover, Following, GRID, Archive overviews and similar views use stills, never autoplay or moving thumbnails. Scrolling away stops playback; provider fullscreen controls are sufficient.
 \- Duration is required metadata for video. PDF export uses the still plus `VIDEO + DURATION` and may include the external URL; no default QR code. No native hosting is planned unless later demand and economics justify it.
 
 \## Products and account types

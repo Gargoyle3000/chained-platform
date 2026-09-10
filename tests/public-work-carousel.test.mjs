@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 import {
   attachPublicWorkCarousel,
+  createPublicWorkCarouselControls,
   createPublicWorkCarouselState,
   nextCarouselIndex
 } from "../public-work-carousel.mjs";
@@ -19,7 +20,16 @@ function element() {
   target.attributes = new Map();
   target.dataset = {};
   target.classList = classList();
-  target.style = { setProperty() {} };
+  const styleValues = new Map();
+  target.style = {
+    setProperty: (key, value) => styleValues.set(key, String(value)),
+    getPropertyValue: (key) => styleValues.get(key) || ""
+  };
+  target.children = [];
+  target.append = (...children) => {
+    target.children.push(...children);
+    children.forEach((child) => { child.parentElement = target; });
+  };
   target.setAttribute = (key, value) => target.attributes.set(key, String(value));
   target.getAttribute = (key) => target.attributes.get(key) || null;
   target.setPointerCapture = (pointerId) => captures.add(pointerId);
@@ -28,6 +38,8 @@ function element() {
   target.hasCapturedPointer = (pointerId) => captures.has(pointerId);
   return target;
 }
+
+const testDocument = { createElement: () => element() };
 
 function pointer(type, values = {}) {
   const event = new Event(type, { cancelable: true });
@@ -53,14 +65,41 @@ test("carousel state starts on the cover and wraps three-image navigation", () =
   assert.equal(nextCarouselIndex(2, 1, 3), 0);
 });
 
+test("canonical controls are compact, accessible, and absent for a one-image Work", () => {
+  assert.equal(createPublicWorkCarouselControls(testDocument, 1), null);
+  const controls = createPublicWorkCarouselControls(testDocument);
+  assert.equal(controls.root.hidden, true);
+  assert.equal(controls.previous.textContent, "<");
+  assert.equal(controls.next.textContent, ">");
+  assert.equal(controls.previous.getAttribute("aria-label"), "Previous image");
+  assert.equal(controls.next.getAttribute("aria-label"), "Next image");
+  assert.equal(controls.counter.getAttribute("aria-live"), "polite");
+});
+
+test("shared carousel clips its interaction target to the contained image footprint", () => {
+  const link = element();
+  const image = element();
+  const article = element();
+  Object.defineProperties(link, {
+    clientWidth: { value: 300 },
+    clientHeight: { value: 200 }
+  });
+  attachPublicWorkCarousel({
+    link, image, article, workId: "11111111-1111-4111-8111-111111111111",
+    coverImage: { ...images[1], width: 100, height: 200 },
+    loadImages: async () => images, label: "View Work"
+  });
+  assert.equal(link.dataset.publicCarouselHitArea, "true");
+  assert.equal(link.style.getPropertyValue("--public-carousel-hit-left"), "100px");
+  assert.equal(link.style.getPropertyValue("--public-carousel-hit-right"), "100px");
+  assert.equal(link.style.getPropertyValue("--public-carousel-hit-top"), "0px");
+});
+
 test("compact carousel controls update the count and wrap in both directions", async () => {
   const link = element();
   const image = element();
   const article = element();
-  const previous = element();
-  const next = element();
-  const counter = element();
-  counter.parentElement = { hidden: true };
+  const { previous, next, counter } = createPublicWorkCarouselControls(testDocument);
   attachPublicWorkCarousel({
     link, image, article, workId: "11111111-1111-4111-8111-111111111111",
     coverImage: images[0], loadImages: async () => images, label: "View Work",
@@ -247,17 +286,27 @@ test("keyboard changes the accessible current-image position without adding visi
   assert.equal(link.dataset.carouselCount, "3");
 });
 
-test("public listing and Work detail carousel integrations use the shared circular behavior", async () => {
-  const [discover, following, profile, artwork] = await Promise.all([
+test("every compact public Work viewer uses shared circular state, controls, and contained hit areas", async () => {
+  const [discover, following, profile, artwork, styles, exports] = await Promise.all([
     readFile(new URL("../discover.js", import.meta.url), "utf8"),
     readFile(new URL("../following.js", import.meta.url), "utf8"),
     readFile(new URL("../profile-dynamic.js", import.meta.url), "utf8"),
-    readFile(new URL("../artwork-dynamic.js", import.meta.url), "utf8")
+    readFile(new URL("../artwork-dynamic.js", import.meta.url), "utf8"),
+    readFile(new URL("../styles.css", import.meta.url), "utf8"),
+    Promise.all([
+      readFile(new URL("../data/portfolio-export.mjs", import.meta.url), "utf8"),
+      readFile(new URL("../data/chained-select-export.mjs", import.meta.url), "utf8")
+    ])
   ]);
   assert.equal(discover.includes("attachPublicWorkCarousel"), true);
   assert.equal(following.includes("attachPublicWorkCarousel"), true);
   assert.equal(profile.includes("attachPublicWorkCarousel"), true);
-  assert.equal(artwork.includes("attachPublicWorkCarousel"), true);
-  assert.equal(artwork.includes("artwork-carousel-controls"), true);
-  assert.equal(artwork.includes("if (total < 2) return null"), true);
+  assert.equal(discover.includes("createControls: createPublicWorkCarouselControls"), true);
+  assert.equal(following.includes("createControls: createPublicWorkCarouselControls"), true);
+  assert.equal(profile.includes("createPublicWorkCarouselControls(document)"), true);
+  assert.equal(artwork.includes("public-work-carousel.mjs"), false);
+  assert.equal(artwork.includes("content.replaceChildren(\n      ...images.map"), true);
+  assert.equal(styles.includes("[data-public-carousel-hit-area]"), true);
+  assert.equal(styles.includes("--discover-image-hit-top"), false);
+  exports.forEach((source) => assert.equal(source.includes("public-work-carousel"), false));
 });

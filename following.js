@@ -119,6 +119,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const title = document.createElement("a");
     const imageLink = document.createElement("a");
     const image = document.createElement("img");
+    const carouselControls = carousel?.createControls?.(document) || null;
 
     article.className = "discover-work";
     article.dataset.workId = work.id;
@@ -164,8 +165,12 @@ document.addEventListener("DOMContentLoaded", () => {
       coverImage: work.image,
       loadImages: carousel.loadImages,
       label: `View ${work.title} by ${work.artistName}`,
+      previousButton: carouselControls?.previous,
+      nextButton: carouselControls?.next,
+      counter: carouselControls?.counter,
       onImageChange: (current) => updatePublicResponsiveImage(image, picture, current)
     });
+    if (carouselControls) metadata.append(carouselControls.root);
     article.append(metadata, imageLink);
     return article;
   }
@@ -208,7 +213,7 @@ document.addEventListener("DOMContentLoaded", () => {
         { appendFollowingPage },
         { createArchiveWorkAction, loadArchiveWorkState },
         { createPublicWorkImageLoader },
-        { attachPublicWorkCarousel }
+        { attachPublicWorkCarousel, createPublicWorkCarouselControls }
       ] = await Promise.all([
         import("./data/following-repository.mjs"),
         import("./data/following-mapping.mjs"),
@@ -221,7 +226,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const publicImages = createPublicWorkImageLoader(runtime.client, runtime.config);
       const carousel = Object.freeze({
         loadImages: (workId, coverImage) => publicImages.load(workId, coverImage),
-        attach: attachPublicWorkCarousel
+        attach: attachPublicWorkCarousel,
+        createControls: createPublicWorkCarouselControls
       });
 
       const archiveStatePromise = loadArchiveWorkState();
