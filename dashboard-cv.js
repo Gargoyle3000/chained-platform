@@ -502,7 +502,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function createExportEntryRow(entry) {
-    const row = document.createElement("article");
+    const row = document.createElement("label");
     const select = document.createElement("input");
     const year = document.createElement("p");
     const content = document.createElement("div");
@@ -533,7 +533,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       content.append(hidden);
     }
 
-    row.append(select, year, content);
+    row.append(year, content, select);
     return row;
   }
 

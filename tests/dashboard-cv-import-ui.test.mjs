@@ -69,6 +69,10 @@ test("Dashboard CV opens a native PDF picker and keeps real extraction on the sa
   assert.match(cancelExport, /renderCategories\(currentCategories\)/);
   assert.match(script, /exportPreviewState === "selection"/);
   assert.match(css, /dashboard-cv-export-entry/);
+  assert.match(script, /row\.append\(year, content, select\)/);
+  assert.match(css, /appearance: none/);
+  assert.match(css, /grid-template-columns: 7\.5rem minmax\(0, 1fr\) max-content/);
+  assert.match(css, /dashboard-cv-export-entry > input:focus-visible/);
   assert.equal((page.match(/dashboard-cv\.js/g) ?? []).length, 1);
 });
 

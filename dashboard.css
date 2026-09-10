@@ -1594,14 +1594,52 @@
 }
 
 .dashboard-cv-export-entry {
-  grid-template-columns: max-content minmax(95px, 0.22fr) minmax(0, 1fr);
+  grid-template-columns: 7.5rem minmax(0, 1fr) max-content;
+  width: min(100%, 760px);
+  cursor: pointer;
 }
 
 .dashboard-cv-export-entry > input {
-  width: auto;
+  appearance: none;
+  display: grid;
+  place-content: center;
+
+  width: 14px;
+  height: 14px;
   margin: 3px 0 0;
 
+  border: 1px solid var(--black);
+  border-radius: 0;
+  background: var(--white);
+
   accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.dashboard-cv-export-entry > input::before {
+  width: 7px;
+  height: 4px;
+
+  border-bottom: 1px solid var(--black);
+  border-left: 1px solid var(--black);
+
+  content: "";
+  transform: rotate(-45deg) scale(0);
+  transition: transform 80ms ease-out;
+}
+
+.dashboard-cv-export-entry > input:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.dashboard-cv-export-entry > input:checked::before {
+  transform: rotate(-45deg) scale(1);
+}
+
+.dashboard-cv-export-entry > input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .dashboard-cv-export-actions .text-action:last-child {
@@ -1634,7 +1672,8 @@
   }
 
   .dashboard-cv-export-entry {
-    grid-template-columns: max-content minmax(0, 1fr);
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
+    column-gap: 10px;
   }
 
   .dashboard-cv-import-entry > .dashboard-cv-entry-year {
@@ -1646,11 +1685,6 @@
   }
 
   .dashboard-cv-import-entry > .dashboard-cv-entry-actions {
-    grid-column: 2;
-  }
-
-  .dashboard-cv-export-entry > .dashboard-cv-entry-year,
-  .dashboard-cv-export-entry > .dashboard-cv-entry-text {
     grid-column: 2;
   }
 
