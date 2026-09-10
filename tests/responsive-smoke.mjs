@@ -79,12 +79,15 @@ try {
     for (const page of responsivePages) {
       await command("Emulation.setDeviceMetricsOverride", { width, height: width === 1440 ? 900 : 844, deviceScaleFactor: 1, mobile: width < 700 });
       const loaded = once("Page.loadEventFired");
-      await command("Page.navigate", { url: `http://127.0.0.1:5500/${page}` });
+      const pageUrl = page === "dashboard-cv.html"
+        ? `${page}?cv-export-state=selection`
+        : page;
+      await command("Page.navigate", { url: `http://127.0.0.1:5500/${pageUrl}` });
       await Promise.race([loaded, wait(5000)]);
       await wait(1200);
       if (page === "dashboard-cv.html") {
         await command("Runtime.evaluate", {
-          expression: "document.querySelector('#dashboard-cv-import')?.click()"
+          expression: "document.querySelector('#dashboard-cv-export')?.click()"
         });
         await wait(80);
       }
@@ -104,7 +107,9 @@ try {
             cvImportSurface: (() => {
               if (!document.querySelector('#dashboard-cv-import')) return true;
               const state = new URLSearchParams(location.search).get('cv-import-state');
+              const exportState = new URLSearchParams(location.search).get('cv-export-state');
               const text = document.body.innerText;
+              if (exportState === 'selection') return text.includes('EXPORT CV') && text.includes('1 ENTRY SELECTED') && text.includes('EXPORT 1 ENTRY');
               if (state === 'processing') return text.includes('PROCESSING CV...') && text.includes('EXTERNAL AI SERVICE');
               if (state === 'review') return text.includes('ENTRIES FOUND') && text.includes('ADD 10 ENTRIES');
               if (state === 'error') return text.includes('CV COULD NOT BE PROCESSED') && text.includes('TRY AGAIN') && text.includes('CANCEL');

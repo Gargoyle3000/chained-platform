@@ -13,7 +13,7 @@ test("Dashboard CV opens a native PDF picker and keeps real extraction on the sa
 
   assert.match(page, /id="dashboard-cv-import"[^>]*disabled/);
   assert.match(page, /id="dashboard-cv-import-file"[\s\S]*type="file"[\s\S]*accept="application\/pdf,\.pdf"[\s\S]*hidden/);
-  assert.match(page, /id="dashboard-cv-export"[^>]*disabled/);
+  assert.match(page, /id="dashboard-cv-export"/);
   assert.match(script, /requestImportPdfSelection/);
   assert.match(script, /importFileInput\.click\(\)/);
   assert.match(script, /PROCESSING CV\.\.\./);
@@ -46,6 +46,29 @@ test("Dashboard CV opens a native PDF picker and keeps real extraction on the sa
   assert.doesNotMatch(script, /api\.openai\.com|OPENAI_API_KEY|Authorization/);
   assert.match(css, /dashboard-cv-import-entry/);
   assert.match(css, /dashboard-cv-import-actions/);
+  assert.match(page, /id="dashboard-cv-pdf-delivery"[\s\S]*id="dashboard-cv-share-pdf"[\s\S]*id="dashboard-cv-download-pdf"/);
+  assert.match(page, /assets\/vendor\/pdf-lib\.min\.js[\s\S]*assets\/vendor\/fontkit\.umd\.min\.js/);
+  assert.match(script, /createCvExportSelectionState/);
+  assert.match(script, /renderCvPdf/);
+  assert.match(script, /createPdfDelivery/);
+  assert.match(script, /EXPORT CV/);
+  assert.match(script, /GENERATING PDF\.\.\./);
+  assert.match(script, /CV COULD NOT BE EXPORTED/);
+  assert.match(script, /setExportAvailable\(categories\.some/);
+  assert.match(script, /clearPdfDelivery\(\)/);
+  const exportHandler = script.slice(script.indexOf("async function generateCvExport"), script.indexOf("function leaveImportReview"));
+  assert.doesNotMatch(exportHandler, /repository\.|\.insert\(|\.upsert\(/);
+  assert.match(exportHandler, /exportGenerationActive\) return/);
+  assert.match(exportHandler, /exportFailed = true/);
+  assert.match(exportHandler, /CV COULD NOT BE EXPORTED/);
+  assert.match(script, /generate\.disabled = exportGenerationActive \|\| summary\.selected < 1/);
+  const exportMode = script.slice(script.indexOf("function renderExportMode"), script.indexOf("function enterExportMode"));
+  assert.doesNotMatch(exportMode, /EDIT|createInlineEditor|repository\./);
+  const cancelExport = script.slice(script.indexOf("function leaveExportMode"), script.indexOf("async function generateCvExport"));
+  assert.match(cancelExport, /exportSelection = null/);
+  assert.match(cancelExport, /renderCategories\(currentCategories\)/);
+  assert.match(script, /exportPreviewState === "selection"/);
+  assert.match(css, /dashboard-cv-export-entry/);
   assert.equal((page.match(/dashboard-cv\.js/g) ?? []).length, 1);
 });
 

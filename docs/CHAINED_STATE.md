@@ -38,6 +38,7 @@ Current focus: complete and polish core product surfaces before broader rollout.
 - SELECT is limited to 20 Works / 40 selected images, has a 19 MiB target and 20 MiB hard maximum, preserves its deterministic artist/year/title/image ordering, and never falls back to private media or legacy JPGs.
 - SELECT uses CHAINED green only for its cover identity, selector name and artist names. Its index no longer prints raw Work URLs.
 - Portfolio uses the same export-local picker principle while retaining its separate authorized private-original `pdf_export` path and neutral PDF styling. Picker previews use authorized private previews, are cached for the lifetime of the picker, and are revoked when it closes.
+- CV Export v1 is implemented locally pending release: Dashboard CV enters a same-page temporary selection mode whose defaults mirror `is_visible`; it uses the existing CV ordering, generates a text-based CHAINED PDF and reuses browser-local share/download delivery without database, Storage or provider mutation.
 
 ### Recently completed interaction and delivery work
 

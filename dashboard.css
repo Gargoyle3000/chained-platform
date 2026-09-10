@@ -1585,6 +1585,29 @@
   color: var(--accent);
 }
 
+.dashboard-cv-pdf-delivery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+
+  margin: 0 0 38px;
+}
+
+.dashboard-cv-export-entry {
+  grid-template-columns: max-content minmax(95px, 0.22fr) minmax(0, 1fr);
+}
+
+.dashboard-cv-export-entry > input {
+  width: auto;
+  margin: 3px 0 0;
+
+  accent-color: var(--accent);
+}
+
+.dashboard-cv-export-actions .text-action:last-child {
+  color: var(--accent);
+}
+
 @media (max-width: 700px) {
   .dashboard-cv-header-controls,
   .dashboard-cv-page-actions {
@@ -1610,6 +1633,10 @@
     grid-template-columns: max-content minmax(0, 1fr) max-content;
   }
 
+  .dashboard-cv-export-entry {
+    grid-template-columns: max-content minmax(0, 1fr);
+  }
+
   .dashboard-cv-import-entry > .dashboard-cv-entry-year {
     grid-column: 2;
   }
@@ -1619,6 +1646,11 @@
   }
 
   .dashboard-cv-import-entry > .dashboard-cv-entry-actions {
+    grid-column: 2;
+  }
+
+  .dashboard-cv-export-entry > .dashboard-cv-entry-year,
+  .dashboard-cv-export-entry > .dashboard-cv-entry-text {
     grid-column: 2;
   }
 

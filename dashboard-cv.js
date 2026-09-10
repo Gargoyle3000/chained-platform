@@ -29,6 +29,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { createCvImportPersistenceFlow } =
     await import("./data/cv-import-persistence.mjs");
 
+  const {
+    createCvExportSelectionState,
+    cvExportFilename,
+    cvExportSelectionSummary,
+    renderCvPdf,
+    selectedCvExportCategories,
+    updateCvExportSelection
+  } = await import("./data/cv-export.mjs");
+
+  const { createPdfDelivery } =
+    await import("./data/pdf-delivery.mjs");
+
   const liveCv =
     document.querySelector("#dashboard-cv-live");
 
@@ -53,6 +65,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const importFileInput =
     document.querySelector("#dashboard-cv-import-file");
 
+  const exportButton =
+    document.querySelector("#dashboard-cv-export");
+
+  const pdfDeliveryRoot =
+    document.querySelector("#dashboard-cv-pdf-delivery");
+
+  const sharePdfButton =
+    document.querySelector("#dashboard-cv-share-pdf");
+
+  const downloadPdfButton =
+    document.querySelector("#dashboard-cv-download-pdf");
+
   let repository;
   let managedProfiles = [];
   let selectedProfileId = null;
@@ -61,6 +85,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   let importAvailable = false;
   let importRequestActive = false;
   let importAddActive = false;
+  let exportAvailable = false;
+  let exportSelection = null;
+  let exportGenerationActive = false;
+  let exportFailed = false;
+  let pdfDelivery = null;
+  let fontBytesPromise = null;
 
   function setError(message = "") {
     errorElement.textContent = message;
@@ -75,6 +105,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   function setImportAvailable(available) {
     importAvailable = Boolean(available);
     importButton.disabled = !importAvailable || importRequestActive;
+  }
+
+  function setExportAvailable(available) {
+    exportAvailable = Boolean(available);
+    exportButton.disabled = !exportAvailable || exportGenerationActive;
   }
 
   function setImportRequestActive(active) {
@@ -232,6 +267,45 @@ document.addEventListener("DOMContentLoaded", async () => {
   function setImportReviewMode(active) {
     pageActions.hidden = active;
     profileField.hidden = active || managedProfiles.length <= 1;
+  }
+
+  function clearPdfDelivery() {
+    pdfDelivery?.dispose();
+    pdfDelivery = null;
+    pdfDeliveryRoot.hidden = true;
+    sharePdfButton.hidden = true;
+  }
+
+  function setPdfDelivery(data, filename) {
+    clearPdfDelivery();
+    pdfDelivery = createPdfDelivery(data, { filename });
+    pdfDeliveryRoot.hidden = false;
+    sharePdfButton.hidden = !pdfDelivery.canShareFile;
+  }
+
+  async function sharePdf() {
+    const result = await pdfDelivery?.share();
+    if (result?.status === "cancelled") setNotice("PDF READY");
+    else if (result?.status === "failed") setNotice("PDF READY · DOWNLOAD PDF IS AVAILABLE");
+  }
+
+  function downloadPdf() {
+    try {
+      pdfDelivery?.download();
+      setNotice("PDF READY · DOWNLOAD STARTED");
+    } catch {
+      setNotice("PDF READY · DOWNLOAD PDF IS AVAILABLE");
+    }
+  }
+
+  async function fontBytes() {
+    if (!fontBytesPromise) {
+      fontBytesPromise = fetch("assets/fonts/CascadiaCode-Regular.ttf")
+        .then((response) => response.ok
+          ? response.arrayBuffer()
+          : Promise.reject(new Error("font unavailable")));
+    }
+    return fontBytesPromise;
   }
 
   function createReviewSummary(summary) {
@@ -408,6 +482,167 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     section.append(heading, entries);
     return section;
+  }
+
+  function exportableCategories() {
+    return currentCategories.map((category) => ({
+      id: category.id,
+      label: category.label,
+      entries: sortEntries(category.entries).map((entry) => ({
+        id: entry.id,
+        yearLabel: getEntryYear(entry),
+        line: getEntryLine(entry),
+        isVisible: entry.isVisible
+      }))
+    }));
+  }
+
+  function selectedProfileName() {
+    return managedProfiles.find((profile) => profile.id === selectedProfileId)?.name || "";
+  }
+
+  function createExportEntryRow(entry) {
+    const row = document.createElement("article");
+    const select = document.createElement("input");
+    const year = document.createElement("p");
+    const content = document.createElement("div");
+    const line = document.createElement("p");
+
+    row.className = "dashboard-cv-entry dashboard-cv-export-entry";
+    select.type = "checkbox";
+    select.checked = entry.selected;
+    select.disabled = exportGenerationActive;
+    select.setAttribute("aria-label", `Include ${entry.line} in this CV PDF`);
+    select.addEventListener("change", () => {
+      exportSelection = updateCvExportSelection(exportSelection, entry.id, select.checked);
+      exportFailed = false;
+      setError();
+      renderExportMode();
+    });
+
+    year.className = "dashboard-cv-entry-year";
+    year.textContent = entry.yearLabel;
+    content.className = "dashboard-cv-entry-text";
+    line.textContent = entry.line;
+    content.append(line);
+
+    if (!entry.isVisible) {
+      const hidden = document.createElement("p");
+      hidden.className = "dashboard-cv-entry-source";
+      hidden.textContent = "HIDDEN ON PUBLIC CV";
+      content.append(hidden);
+    }
+
+    row.append(select, year, content);
+    return row;
+  }
+
+  function renderExportMode() {
+    if (!exportSelection) return;
+
+    const summary = cvExportSelectionSummary(exportSelection);
+    const header = document.createElement("header");
+    const title = document.createElement("h3");
+    const selection = document.createElement("p");
+    const status = document.createElement("p");
+    const actions = document.createElement("div");
+    const cancel = createTextButton("CANCEL", "Cancel CV export selection");
+    const generate = createTextButton(
+      exportGenerationActive
+        ? "GENERATING PDF..."
+        : exportFailed
+          ? "TRY AGAIN"
+          : `EXPORT ${summary.selected} ${summary.selected === 1 ? "ENTRY" : "ENTRIES"}`,
+      exportFailed
+        ? "Try exporting this CV selection again"
+        : `Export ${summary.selected} selected CV entries`
+    );
+
+    header.className = "dashboard-cv-import-header dashboard-cv-export-header";
+    title.textContent = "EXPORT CV";
+    selection.className = "dashboard-cv-import-summary";
+    selection.textContent = `${summary.selected} ${summary.selected === 1 ? "ENTRY" : "ENTRIES"} SELECTED`;
+    header.append(title, selection);
+
+    if (exportGenerationActive) {
+      status.className = "dashboard-cv-import-status";
+      status.textContent = "GENERATING PDF...";
+      header.append(status);
+    }
+
+    const sections = exportSelection.categories.map((category) => {
+      const section = document.createElement("section");
+      const heading = document.createElement("h3");
+      const entries = document.createElement("div");
+
+      section.className = "dashboard-cv-section dashboard-cv-export-section";
+      heading.textContent = category.label;
+      entries.className = "dashboard-cv-entries";
+      entries.append(...category.entries.map(createExportEntryRow));
+      section.append(heading, entries);
+      return section;
+    });
+
+    actions.className = "dashboard-cv-import-actions dashboard-cv-export-actions";
+    cancel.disabled = exportGenerationActive;
+    generate.disabled = exportGenerationActive || summary.selected < 1;
+    cancel.addEventListener("click", leaveExportMode);
+    generate.addEventListener("click", generateCvExport);
+    actions.append(cancel, generate);
+    liveCv.replaceChildren(header, ...sections, actions);
+  }
+
+  function enterExportMode() {
+    if (!exportAvailable) return;
+    clearPdfDelivery();
+    setError();
+    setNotice();
+    exportFailed = false;
+    exportSelection = createCvExportSelectionState(exportableCategories());
+    setImportReviewMode(true);
+    renderExportMode();
+  }
+
+  function leaveExportMode() {
+    if (exportGenerationActive) return;
+    exportSelection = null;
+    exportFailed = false;
+    setError();
+    setImportReviewMode(false);
+    renderCategories(currentCategories);
+  }
+
+  async function generateCvExport() {
+    const categories = selectedCvExportCategories(exportSelection);
+    const artistName = selectedProfileName();
+    if (!categories.length || !artistName || exportGenerationActive) return;
+
+    exportGenerationActive = true;
+    exportFailed = false;
+    setError();
+    renderExportMode();
+
+    try {
+      const output = await renderCvPdf({
+        PDFLib: window.PDFLib,
+        fontkit: window.fontkit,
+        fontBytes: await fontBytes(),
+        artistName,
+        categories
+      });
+      setPdfDelivery(output.bytes, cvExportFilename(artistName));
+      exportSelection = null;
+      setImportReviewMode(false);
+      renderCategories(currentCategories);
+      setNotice("PDF READY");
+    } catch {
+      exportFailed = true;
+      setError("CV COULD NOT BE EXPORTED");
+      renderExportMode();
+    } finally {
+      exportGenerationActive = false;
+      if (exportSelection) renderExportMode();
+    }
   }
 
   function leaveImportReview(message = "") {
@@ -619,6 +854,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     currentCategories = categories;
     renderCategories(categories);
+    setExportAvailable(categories.some((category) => category.entries.length));
   }
 
   function createInlineEditor(entry, row) {
@@ -1025,9 +1261,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   importButton.addEventListener("click", requestImportPdfSelection);
   importFileInput.addEventListener("change", handleImportPdfSelection);
+  exportButton.addEventListener("click", enterExportMode);
+  sharePdfButton.addEventListener("click", sharePdf);
+  downloadPdfButton.addEventListener("click", downloadPdf);
+
+  window.addEventListener("pagehide", clearPdfDelivery, { once: true });
 
   profileSelect.addEventListener("change", async () => {
     selectedProfileId = profileSelect.value;
+    exportSelection = null;
+    clearPdfDelivery();
     await reloadCv();
   });
 
@@ -1047,8 +1290,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderCategories([]);
       selectedProfileId = "local-review";
       setImportAvailable(true);
+      setExportAvailable(false);
 
-      const previewState = new URLSearchParams(window.location.search).get("cv-import-state");
+      const previewParameters = new URLSearchParams(window.location.search);
+      const previewState = previewParameters.get("cv-import-state");
+      const exportPreviewState = previewParameters.get("cv-export-state");
       if (previewState === "processing") {
         renderImportProcessing("sample-cv.pdf");
       } else if (previewState === "error") {
@@ -1058,6 +1304,32 @@ document.addEventListener("DOMContentLoaded", async () => {
         importReview = createCvImportReviewState(CV_IMPORT_REVIEW_FIXTURE);
         setImportReviewMode(true);
         renderImportReview();
+      } else if (exportPreviewState === "selection") {
+        managedProfiles = [{ id: selectedProfileId, name: "ARTIST PREVIEW" }];
+        currentCategories = [{
+          id: "selected-works",
+          label: "SELECTED WORKS",
+          entries: [
+            {
+              id: "preview-public-entry",
+              yearLabel: "2026",
+              title: "CURRENT WORK",
+              organization: "CHAINED",
+              locationText: "AMSTERDAM",
+              isVisible: true
+            },
+            {
+              id: "preview-private-entry",
+              yearLabel: "2025",
+              title: "PRIVATE REFERENCE",
+              organization: "STUDIO",
+              locationText: "ROTTERDAM",
+              isVisible: false
+            }
+          ]
+        }];
+        setExportAvailable(true);
+        enterExportMode();
       }
       return;
     }
@@ -1071,6 +1343,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       setNotice("ARTIST PROFILE SETUP REQUIRED");
       renderCategories([]);
       setImportAvailable(false);
+      setExportAvailable(false);
       return;
     }
 
@@ -1092,5 +1365,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     renderCategories([]);
     setImportAvailable(false);
+    setExportAvailable(false);
   }
 });

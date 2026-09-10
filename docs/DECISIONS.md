@@ -258,6 +258,11 @@ Last updated: 2026-09-09
 \- ADD persists only the selected reviewed manual-entry projection through one profile-authorized atomic database operation. Exact duplicates use category, conservatively normalized year/period and complete CV line; existing and within-batch duplicates are skipped without fuzzy matching.
 \- Imported rows always use the existing manual CV model with `source_activity_id = null`. PDFs, provider metadata, source excerpts and unsupported sections are never persisted, and CV Import never creates or mutates Presentations or Agenda state.
 
+\## CV Export
+
+\- CV Export is a private, same-page Dashboard CV selection mode. It initializes from each stored CV entry's public `is_visible` value (public entries selected; hidden entries unselected), then becomes export-local and independent: an artist may include a hidden entry or exclude a public one without altering the stored CV or its public visibility.
+\- The generated PDF uses the existing CV category/order display semantics, includes only selected entries and non-empty categories, exposes no origin/provider metadata, and reuses CHAINED's browser-local PDF delivery. CV Export performs no database, Storage or provider write/call.
+
 \## Archive PDF export
 
 \- Archive should eventually provide a separate export from public Portfolio export. Users should be able to select a subset through Projects, Tags and useful filters such as medium, dimensions or availability, then export/share it for galleries, exhibitions, applications or other external use.
