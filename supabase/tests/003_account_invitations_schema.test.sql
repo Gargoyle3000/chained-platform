@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(25);
+select plan(34);
 
 select has_type(
   'public',
@@ -29,6 +29,75 @@ select col_type_is(
   'approved_roles',
   'public.application_role[]',
   'approved invitation roles use the application role type'
+);
+
+select has_column(
+  'public',
+  'account_invitations',
+  'approved_account_plan',
+  'approved account plan is stored with the invitation'
+);
+
+select col_type_is(
+  'public',
+  'account_invitations',
+  'approved_account_plan',
+  'public.account_plan',
+  'approved invitation plan uses the private account plan type'
+);
+
+select col_not_null(
+  'public',
+  'account_invitations',
+  'approved_account_plan',
+  'approved invitation plan is required'
+);
+
+select col_has_default(
+  'public',
+  'account_invitations',
+  'approved_account_plan',
+  'legacy and generic invitations receive a safe default plan'
+);
+
+select ok(
+  to_regprocedure('public.service_grant_trusted_account_plan(uuid,uuid)') is not null,
+  'trusted existing-account grant wrapper exists'
+);
+
+select is(
+  has_function_privilege('anon', 'public.service_grant_trusted_account_plan(uuid,uuid)', 'execute'),
+  false,
+  'anon cannot execute the trusted account plan grant'
+);
+
+select is(
+  has_function_privilege('authenticated', 'public.service_grant_trusted_account_plan(uuid,uuid)', 'execute'),
+  false,
+  'authenticated users cannot execute the trusted account plan grant'
+);
+
+select is(
+  has_function_privilege('service_role', 'public.service_grant_trusted_account_plan(uuid,uuid)', 'execute'),
+  true,
+  'service role can execute the trusted account plan grant'
+);
+
+select results_eq(
+  $$
+    select p.prosecdef,
+           exists (
+             select 1
+               from unnest(coalesce(p.proconfig, array[]::text[])) as setting
+              where setting like 'search_path=%'
+           )
+      from pg_catalog.pg_proc as p
+      join pg_catalog.pg_namespace as n on n.oid = p.pronamespace
+     where n.nspname = 'private'
+       and p.proname = 'grant_trusted_account_plan'
+  $$,
+  $$values (true, true)$$,
+  'private trusted plan grant is SECURITY DEFINER with an empty search path'
 );
 
 select is(

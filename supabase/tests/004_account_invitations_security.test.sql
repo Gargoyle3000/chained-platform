@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(77);
+select plan(94);
 
 insert into auth.users (
   instance_id,
@@ -83,6 +83,27 @@ select is(
 
 select is(
   (
+    select approved_account_plan::text
+      from public.account_invitations
+     where id = '00000000-0000-0000-0000-000000001201'
+  ),
+  'chained',
+  'trusted Artist approval derives the CHAINED account plan'
+);
+
+select throws_ok(
+  $$
+    update public.account_invitations
+       set approved_account_plan = 'unchained'
+     where id = '00000000-0000-0000-0000-000000001201'
+  $$,
+  '42501',
+  null,
+  'approved account plan is immutable after invitation approval'
+);
+
+select is(
+  (
     select artist_workspace_display_name || ':' || artist_workspace_slug
       from public.account_invitations
      where id = '00000000-0000-0000-0000-000000001201'
@@ -129,8 +150,8 @@ select lives_ok(
       'authenticated',
       'authenticated',
       'INVITED.ARTIST@EXAMPLE.TEST',
-      '{"role":"admin","roles":["admin"]}'::jsonb,
-      '{"application_role":"admin"}'::jsonb,
+      '{"role":"admin","roles":["admin"],"account_plan":"unchained"}'::jsonb,
+      '{"application_role":"admin","account_plan":"unchained"}'::jsonb,
       now(),
       now()
     )
@@ -192,6 +213,25 @@ select results_eq(
   $$select count(*) from public.accounts where id = '00000000-0000-0000-0000-000000001103' and status = 'active'$$,
   array[1::bigint],
   'confirmed valid invitation creates exactly one active account'
+);
+
+select results_eq(
+  $$select account_plan::text from public.accounts where id = '00000000-0000-0000-0000-000000001103'$$,
+  $$values ('chained'::text)$$,
+  'accepted Artist receives only the locked invitation plan despite Auth metadata'
+);
+
+select results_eq(
+  $$
+    select count(*)
+      from public.audit_events
+     where action = 'account.plan_granted'
+       and target_id = '00000000-0000-0000-0000-000000001103'
+       and metadata ->> 'source' = 'trusted_invitation'
+       and metadata ->> 'invitation_id' = '00000000-0000-0000-0000-000000001201'
+  $$,
+  array[1::bigint],
+  'invitation CHAINED grant records one provenance audit event'
 );
 
 select results_eq(
@@ -307,6 +347,12 @@ select results_eq(
   'repeated acceptance does not duplicate the artist workspace'
 );
 
+select results_eq(
+  $$select count(*) from public.audit_events where action = 'account.plan_granted' and target_id = '00000000-0000-0000-0000-000000001103'$$,
+  array[1::bigint],
+  'replayed acceptance does not duplicate the plan grant audit event'
+);
+
 insert into auth.users (
   instance_id, id, aud, role, email, invited_at, created_at, updated_at
 ) values (
@@ -323,13 +369,14 @@ insert into auth.users (
 set local session_replication_role = replica;
 insert into public.account_invitations (
   id, email_normalized, status, approved_roles, approved_by_account_id,
-  auth_user_id, approved_at, sending_at, sent_at, expires_at
+  approved_account_plan, auth_user_id, approved_at, sending_at, sent_at, expires_at
 ) values (
   '00000000-0000-0000-0000-000000001211',
   'legacy.artist@example.test',
   'sent',
   array['private_member'::public.application_role, 'artist'::public.application_role],
   '00000000-0000-0000-0000-000000001101',
+  'chained'::public.account_plan,
   '00000000-0000-0000-0000-000000001111',
   now(), now(), now(), now() + interval '1 hour'
 );
@@ -358,6 +405,10 @@ select results_eq(
   $$values ('active'::text, 1::bigint, 1::bigint)$$,
   'legacy acceptance creates the active account and approved roles'
 );
+
+update public.accounts
+   set account_plan = 'unchained'
+ where id = '00000000-0000-0000-0000-000000001111';
 
 select is_empty(
   $$
@@ -598,6 +649,25 @@ select results_eq(
   'repair creates exactly the expected workspace, owner membership, and audit event'
 );
 
+select results_eq(
+  $$select account_plan::text from public.accounts where id = '00000000-0000-0000-0000-000000001111'$$,
+  $$values ('chained'::text)$$,
+  'repair restores the accepted invitation CHAINED plan'
+);
+
+select results_eq(
+  $$
+    select count(*)
+      from public.audit_events
+     where action = 'account.plan_granted'
+       and target_id = '00000000-0000-0000-0000-000000001111'
+       and metadata ->> 'source' = 'trusted_invitation'
+       and metadata ->> 'invitation_id' = '00000000-0000-0000-0000-000000001211'
+  $$,
+  array[2::bigint],
+  'repair records one new trusted invitation grant after the simulated plan loss'
+);
+
 set local role service_role;
 select lives_ok(
   $$
@@ -622,6 +692,12 @@ select results_eq(
   $$,
   $$values (1::bigint), (1::bigint), (1::bigint)$$,
   'repair retry creates no duplicate profile, membership, or audit event'
+);
+
+select results_eq(
+  $$select count(*) from public.audit_events where action = 'account.plan_granted' and target_id = '00000000-0000-0000-0000-000000001111'$$,
+  array[2::bigint],
+  'repair retry does not add another plan grant audit event'
 );
 
 set local role service_role;
@@ -721,6 +797,16 @@ select lives_ok(
      where id = '00000000-0000-0000-0000-000000001202';
   $$,
   'a second approved invitation can enter dispatch'
+);
+
+select is(
+  (
+    select approved_account_plan::text
+      from public.account_invitations
+     where id = '00000000-0000-0000-0000-000000001202'
+  ),
+  'unchained',
+  'generic private-member invitation remains UNCHAINED'
 );
 
 select lives_ok(
@@ -1056,6 +1142,92 @@ select throws_ok(
 );
 
 reset role;
+
+set local role anon;
+select throws_ok(
+  $$select public.service_grant_trusted_account_plan('00000000-0000-0000-0000-000000001112', '00000000-0000-0000-0000-000000001101')$$,
+  '42501',
+  null,
+  'anon cannot invoke the trusted account plan grant'
+);
+reset role;
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-000000001101","role":"authenticated"}',
+  true
+);
+select throws_ok(
+  $$select public.service_grant_trusted_account_plan('00000000-0000-0000-0000-000000001112', '00000000-0000-0000-0000-000000001101')$$,
+  '42501',
+  null,
+  'authenticated admin cannot directly invoke the service-only plan grant'
+);
+reset role;
+
+set local role service_role;
+select throws_ok(
+  $$select public.service_grant_trusted_account_plan('00000000-0000-0000-0000-000000001112', '00000000-0000-0000-0000-000000001112')$$,
+  '42501',
+  null,
+  'service invocation still rejects a non-admin actor'
+);
+reset role;
+
+update public.accounts set status = 'suspended'
+ where id = '00000000-0000-0000-0000-000000001101';
+set local role service_role;
+select throws_ok(
+  $$select public.service_grant_trusted_account_plan('00000000-0000-0000-0000-000000001112', '00000000-0000-0000-0000-000000001101')$$,
+  '42501',
+  null,
+  'service invocation rejects an inactive admin actor'
+);
+reset role;
+update public.accounts set status = 'active'
+ where id = '00000000-0000-0000-0000-000000001101';
+
+set local role service_role;
+select is(
+  public.service_grant_trusted_account_plan(
+    '00000000-0000-0000-0000-000000001112',
+    '00000000-0000-0000-0000-000000001101'
+  ),
+  true,
+  'service role can apply one trusted complimentary CHAINED grant'
+);
+reset role;
+
+select results_eq(
+  $$select account_plan::text from public.accounts where id = '00000000-0000-0000-0000-000000001112'$$,
+  $$values ('chained'::text)$$,
+  'trusted existing-account grant upgrades only the intended account'
+);
+
+set local role service_role;
+select is(
+  public.service_grant_trusted_account_plan(
+    '00000000-0000-0000-0000-000000001112',
+    '00000000-0000-0000-0000-000000001101'
+  ),
+  false,
+  'repeated trusted account plan grant is an idempotent no-op'
+);
+reset role;
+
+select results_eq(
+  $$
+    select count(*)
+      from public.audit_events
+     where action = 'account.plan_granted'
+       and target_id = '00000000-0000-0000-0000-000000001112'
+       and metadata ->> 'source' = 'trusted_complimentary_admin'
+  $$,
+  array[1::bigint],
+  'existing-account transition records one complimentary grant audit event'
+);
+
 update public.accounts set status = 'disabled'
  where id = '00000000-0000-0000-0000-000000001103';
 

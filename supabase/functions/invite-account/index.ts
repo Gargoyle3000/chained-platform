@@ -53,7 +53,7 @@ async function readInvitationById(id: string): Promise<InvitationRecord | null> 
   const response = await fetch(
     restUrl("account_invitations", {
       id: `eq.${id}`,
-      select: "id,status,approved_roles,expires_at,artist_workspace_display_name,artist_workspace_slug",
+      select: "id,status,approved_roles,approved_account_plan,expires_at,artist_workspace_display_name,artist_workspace_slug",
       limit: "1",
     }),
     { headers: serviceHeaders() },
@@ -69,7 +69,7 @@ async function readActionableInvitation(
     restUrl("account_invitations", {
       email_normalized: `eq.${email}`,
       status: "in.(approved,sending,sent)",
-      select: "id,status,approved_roles,expires_at,artist_workspace_display_name,artist_workspace_slug",
+      select: "id,status,approved_roles,approved_account_plan,expires_at,artist_workspace_display_name,artist_workspace_slug",
       order: "created_at.desc",
       limit: "1",
     }),
@@ -86,7 +86,7 @@ async function readActionableInvitationByWorkspaceSlug(
     restUrl("account_invitations", {
       artist_workspace_slug: `eq.${slug}`,
       status: "in.(approved,sending,sent)",
-      select: "id,status,approved_roles,expires_at,artist_workspace_display_name,artist_workspace_slug",
+      select: "id,status,approved_roles,approved_account_plan,expires_at,artist_workspace_display_name,artist_workspace_slug",
       order: "created_at.desc",
       limit: "1",
     }),
@@ -114,6 +114,10 @@ async function existingProfileUsesSlug(slug: string): Promise<boolean> {
 function sameRoles(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length
     && left.every((role, index) => role === right[index]);
+}
+
+function samePlan(left: string, right: InvitationRecord): boolean {
+  return left === right.approved_account_plan;
 }
 
 function sameWorkspace(
@@ -185,14 +189,14 @@ const handler = createInviteHandler({
     };
   },
 
-  async approveInvitation({ email, roles, artistWorkspace, approvedByAccountId }) {
+  async approveInvitation({ email, roles, approvedAccountPlan, artistWorkspace, approvedByAccountId }) {
     if (artistWorkspace && await existingProfileUsesSlug(artistWorkspace.slug)) {
       throw new WorkspaceSlugConflictFailure();
     }
 
     const response = await fetch(
       restUrl("account_invitations", {
-        select: "id,status,approved_roles,expires_at,artist_workspace_display_name,artist_workspace_slug",
+        select: "id,status,approved_roles,approved_account_plan,expires_at,artist_workspace_display_name,artist_workspace_slug",
       }),
       {
         method: "POST",
@@ -200,6 +204,7 @@ const handler = createInviteHandler({
         body: JSON.stringify({
           email_normalized: email,
           approved_roles: roles,
+          approved_account_plan: approvedAccountPlan,
           artist_workspace_display_name: artistWorkspace?.displayName ?? null,
           artist_workspace_slug: artistWorkspace?.slug ?? null,
           approved_by_account_id: approvedByAccountId,
@@ -218,7 +223,12 @@ const handler = createInviteHandler({
     }
 
     const existing = await readActionableInvitation(email);
-    if (existing && sameRoles(existing.approved_roles, roles) && sameWorkspace(artistWorkspace, existing)) {
+    if (
+      existing
+      && sameRoles(existing.approved_roles, roles)
+      && samePlan(approvedAccountPlan, existing)
+      && sameWorkspace(artistWorkspace, existing)
+    ) {
       return { invitation: existing, created: false };
     }
 
@@ -238,7 +248,7 @@ const handler = createInviteHandler({
       restUrl("account_invitations", {
         id: `eq.${id}`,
         status: "eq.approved",
-        select: "id,status,approved_roles,expires_at,artist_workspace_display_name,artist_workspace_slug",
+        select: "id,status,approved_roles,approved_account_plan,expires_at,artist_workspace_display_name,artist_workspace_slug",
       }),
       {
         method: "PATCH",

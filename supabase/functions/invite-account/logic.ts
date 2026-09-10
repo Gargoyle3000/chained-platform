@@ -8,6 +8,7 @@ export const ALLOWED_ROLES = [
 ] as const;
 
 export type AllowedRole = (typeof ALLOWED_ROLES)[number];
+export type ApprovedAccountPlan = "unchained" | "chained";
 
 export type InvitationStatus =
   | "approved"
@@ -22,6 +23,7 @@ export interface InvitationRecord {
   id: string;
   status: InvitationStatus;
   approved_roles: AllowedRole[];
+  approved_account_plan: ApprovedAccountPlan;
   expires_at: string;
   artist_workspace_display_name?: string | null;
   artist_workspace_slug?: string | null;
@@ -51,6 +53,7 @@ export interface InviteDependencies {
   approveInvitation(input: {
     email: string;
     roles: AllowedRole[];
+    approvedAccountPlan: ApprovedAccountPlan;
     artistWorkspace: ArtistWorkspace | null;
     approvedByAccountId: string;
   }): Promise<ApprovalResult>;
@@ -319,6 +322,16 @@ export function createInviteHandler(dependencies: InviteDependencies) {
 
       const email = normalizeEmail(body.email);
       const roles = normalizeRoles(body.roles);
+      if (
+        Object.hasOwn(body, "accountPlan")
+        || Object.hasOwn(body, "approvedAccountPlan")
+        || Object.hasOwn(body, "approved_account_plan")
+      ) {
+        throw new RequestFailure(400, "unsupported_plan_input");
+      }
+      const approvedAccountPlan: ApprovedAccountPlan = roles.includes("artist")
+        ? "chained"
+        : "unchained";
       const artistWorkspace = roles.includes("artist")
         ? normalizeArtistWorkspace(body.artistWorkspace)
         : null;
@@ -329,6 +342,7 @@ export function createInviteHandler(dependencies: InviteDependencies) {
       const approval = await dependencies.approveInvitation({
         email,
         roles,
+        approvedAccountPlan,
         artistWorkspace,
         approvedByAccountId: caller.id,
       });

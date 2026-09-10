@@ -37,10 +37,12 @@ function testDependencies(overrides: Partial<InviteDependencies> = {}) {
     id: "00000000-0000-0000-0000-000000001001",
     status: "approved",
     approved_roles: ["private_member", "artist"],
+    approved_account_plan: "chained",
     expires_at: "2099-01-01T00:00:00.000Z",
   };
   let inviteCalls = 0;
   let approvedRoles: readonly string[] = [];
+  let approvedAccountPlan = "";
   let approvedWorkspace: unknown = null;
   let repairInput: unknown = null;
   let failureCode: string | null = null;
@@ -55,10 +57,12 @@ function testDependencies(overrides: Partial<InviteDependencies> = {}) {
     },
     async approveInvitation(input) {
       approvedRoles = input.roles;
+      approvedAccountPlan = input.approvedAccountPlan;
       approvedWorkspace = input.artistWorkspace;
       invitation = {
         ...invitation,
         approved_roles: [...input.roles],
+        approved_account_plan: input.approvedAccountPlan,
         artist_workspace_display_name: input.artistWorkspace?.displayName ?? null,
         artist_workspace_slug: input.artistWorkspace?.slug ?? null,
       };
@@ -92,6 +96,9 @@ function testDependencies(overrides: Partial<InviteDependencies> = {}) {
     },
     get approvedRoles() {
       return approvedRoles;
+    },
+    get approvedAccountPlan() {
+      return approvedAccountPlan;
     },
     get approvedWorkspace() {
       return approvedWorkspace;
@@ -165,6 +172,7 @@ Deno.test("active admin can issue a successful invitation", async () => {
   assertEquals(body.code, "invitation_sent");
   assertEquals(fixture.inviteCalls, 1);
   assertEquals(fixture.approvedWorkspace, { displayName: "Artist Name", slug: "artist-name" });
+  assertEquals(fixture.approvedAccountPlan, "chained");
 });
 
 Deno.test("artist invitation requires explicit workspace identity", async () => {
@@ -231,6 +239,21 @@ Deno.test("empty requested roles becomes private_member only", async () => {
   const response = await fixture.handler(post({ email: "member@example.test", roles: [] }));
   assertEquals(response.status, 201);
   assertEquals(fixture.approvedRoles, ["private_member"]);
+  assertEquals(fixture.approvedAccountPlan, "unchained");
+});
+
+Deno.test("client-supplied account plan cannot become invitation authority", async () => {
+  const fixture = testDependencies();
+  const response = await fixture.handler(post({
+    email: "artist@example.test",
+    roles: ["artist"],
+    artistWorkspace: { displayName: "Artist", slug: "artist" },
+    accountPlan: "unchained",
+  }));
+  assertEquals(response.status, 400);
+  assertEquals((await responseBody(response)).code, "unsupported_plan_input");
+  assertEquals(fixture.inviteCalls, 0);
+  assertEquals(fixture.approvedAccountPlan, "");
 });
 
 Deno.test("admin role assignment is forbidden", async () => {
@@ -245,6 +268,7 @@ Deno.test("sent duplicate request is idempotent and sends no second email", asyn
     id: "00000000-0000-0000-0000-000000001002",
     status: "sent",
     approved_roles: ["private_member"],
+    approved_account_plan: "unchained",
     expires_at: "2099-01-01T00:00:00.000Z",
   };
   const fixture = testDependencies({
@@ -263,6 +287,7 @@ Deno.test("concurrent sending request does not dispatch twice", async () => {
     id: "00000000-0000-0000-0000-000000001003",
     status: "sending",
     approved_roles: ["private_member"],
+    approved_account_plan: "unchained",
     expires_at: "2099-01-01T00:00:00.000Z",
   };
   const fixture = testDependencies({
