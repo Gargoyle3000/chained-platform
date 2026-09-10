@@ -2,7 +2,7 @@
 
 
 
-Last updated: 2026-09-09
+Last updated: 2026-09-10
 
 
 
@@ -114,7 +114,7 @@ Last updated: 2026-09-09
 
 \- MATERIALS is one free comma-separated field in v1, without autocomplete or a dropdown.
 
-\- User-facing metadata values use normal prose capitalization and conjunctions, for example `Acrylic, canvas and aluminium frame`; do not render conjunctions such as `AND` in system-style uppercase.
+\- User-facing metadata values use normal prose capitalization. Structured MATERIALS display as comma-separated values only, for example `Acrylic, canvas, aluminium frame`; CHAINED does not insert a final conjunction.
 
 \- Material terms are trimmed and de-duplicated case-insensitively for display and future normalized search; legacy material fields are unified on read and migrated when that Work is saved.
 
@@ -161,15 +161,15 @@ Last updated: 2026-09-09
 
 \## Public Work carousel
 
-\- The carousel is public-only and limited to Discover, Following and Public Profile.
-\- Work detail remains a full vertical image sequence.
+\- The carousel is public-only and applies to Discover, Following, Public Profile and Work detail.
+\- Work detail uses one centered contained image stage rather than a vertical image sequence.
 \- The current `is_cover=true` image is first; remaining public images use `sort_order`, then deterministic `id` order.
 \- The cover defines fixed stage geometry; secondary ratios use contain behavior with no crop or stretch.
 \- No visible arrows, dots or autoplay are required.
 \- Media carousels loop circularly: last → next returns to first, and first → previous returns to last.
-\- Interaction remains an invisible swipe/drag model with keyboard Left/Right support; no persistent carousel chrome.
+\- Discover, Following and Public Profile retain the invisible swipe/drag model with keyboard Left/Right support and no persistent carousel chrome. Work detail places a compact green `< current/total >` control beneath its metadata; it uses real accessible previous/next buttons while preserving swipe/drag.
 
-\- Work detail with one image should prefer a fixed, non-scrolling visual presentation where the viewport permits it. Work detail with multiple images allows scrolling/swiping through media. Metadata must remain accessible on smaller screens even when a fixed presentation is preferred.
+\- Work detail with one image prefers a fixed, non-scrolling visual presentation where the viewport permits it. Multiple images use the same stage with circular browsing; metadata remains accessible on smaller screens.
 
 \## Portfolio export images
 
@@ -235,8 +235,12 @@ Last updated: 2026-09-09
 
 \## Unclaimed, APPEARS IN and FOLLOW
 
-\- External Artist/Institution identities may exist through legitimate Presentation context. Public UI does not show `UNCLAIMED`, does not label them `UNCHAINED`, and does not show a public `IS THIS YOU?` or claim button; a minimal identity/context page is sufficient.
+\- CHAINED uses a profile/entity model rather than assuming one Auth user equals one profile. Relevant types include Artist and Gallery, with Curator and other organization/profile types remaining extensible. Galleries and later Curators may create unclaimed Artist profiles: these have no login/Auth account and are not full Artist subscriptions/accounts, but provide a network reference that can connect to Presentations and permitted public CV/Work/Presentation information until the actual Artist claims it.
+\- External Artist/Institution identities may exist through legitimate Presentation context. Public UI does not show `UNCLAIMED`, does not label them `UNCHAINED`, and does not show a public `IS THIS YOU?` or claim button; a minimal identity/context page is sufficient. Unclaimed profiles are network references under temporary management, not free full Artist accounts.
 \- Claim starts from the claimant's Dashboard/Settings via `CLAIM EXISTING PROFILE` and is initially human-reviewed. Suggested states are `CLAIM REQUESTED`, `IN REVIEW`, `APPROVED`, `TRANSFER IN PROGRESS`, `CLAIMED` and `DECLINED`. Identity, history and Presentation relations remain after claim. Institution-entered Works are not forced into an Artist's Works; the Artist may choose `ADD TO MY WORKS` or `IGNORE`. Aliases/duplicates can be merged during human/admin handling. Do not automatically email referenced external identities.
+\- Claiming an unclaimed profile must not create a duplicate Artist profile: it establishes ownership of the existing profile, preserves Works/CV/Presentation/network relationships, and retains provenance/audit history of who created or changed data.
+\- Gallery access to a claimed Artist is never implied by account/entity type. It derives from explicit relationship, capabilities and approval state. Delegated capabilities may eventually cover WORKS, CV and PRESENTATIONS, but not ARCHIVE, SELECT, private Workspace data, Auth/account settings or email/password/account ownership controls. Delegated public Work management must not grant access to private Archive media or private originals; existing broad work-management authorization must be reviewed against this boundary.
+\- For claimed Artists, Gallery-originated CV, Presentation or Work changes use a proposal/change-set flow for Artist review and acceptance/rejection rather than silently becoming authoritative. REQUESTS is the central approval layer for relationship requests, delegated management, proposed data changes and related confirmations. Curators later reuse these relationship/capability/request primitives rather than a separate permission system.
 \- APPEARS IN connects a Work to meaningful PRESENTATION, CURATED or PUBLICATION context; it is discovery, not a count/status/popularity metric. An Artist may hide an individual APPEARS IN entry on their own Work/Profile representation, but this does not erase the legitimate source context and is not an automatic CV dump.
 \- FOLLOW exists only to construct personal Following and Agenda. There are no follower counts, following counts, public follower graph or follow notifications. Unfollow happens from the encountered account/profile. Follow is not a social-status mechanic.
 

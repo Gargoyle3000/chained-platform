@@ -1,14 +1,11 @@
 # CHAINED — ROADMAP
 
-Last updated: 2026-09-09
+Last updated: 2026-09-10
 
 ## POLISH
 
 - Archive SINGLE / GRID should gain the same proven swipe interaction as Discover and Following, while preserving existing view behavior, image ratios, and layout.
-- Implement circular media-carousel navigation: last → next returns to first, and first → previous returns to last.
 - Add Agenda `[ ALL ]` and `[ FOLLOWING ]` views.
-- Use normal prose capitalization and conjunctions for user-facing metadata values, rather than system-style uppercase conjunctions.
-- Refine Work detail so a single image prefers a fixed/non-scrolling presentation where the viewport permits it, while multiple images remain scrollable/swipeable and metadata stays accessible on smaller screens.
 - Investigate a possible cover-image deletion/state issue observed during testing: non-cover images appeared to delete immediately while the probable cover remained visible until `SAVE AS DRAFT`. This is an observation/hypothesis, not a confirmed root cause.
 - Improve stale soft-deleted Work UX: a locally stale save currently collapses `THIS WORK IS NOT AVAILABLE` into generic `WORK COULD NOT BE SAVED`. This does not block private-preview rollout.
 - Dashboard WORKS publication-readiness status: surface the existing Work readiness state on authenticated Works surfaces, for example `DRAFT · PREPARING IMAGES`, `DRAFT · READY TO PUBLISH`, or `DRAFT · IMAGE PROCESSING FAILED`. This is Work state, not a REQUEST notification; do not add a notification center, badge system, pop-up, or gamified alert. Final copy remains open for polish.
@@ -96,6 +93,11 @@ Implementation should verify the largest real preview display and HiDPI needs be
 - Add Publications as a separate documented object with representative images and external links, not hosted PDFs.
 - Extend Projects with ordered Work sets and export/select/share workflows, plus tier limits; keep Tags freeform and filter-oriented.
 - Add human-reviewed profile claim flows and Artist-controlled APPEARS IN visibility controls.
+
+## NETWORK / ACCOUNT ARCHITECTURE
+
+- Near-term sequence: trusted Artist alpha with a small number of known Artists; shared multi-entity relationship/permission primitives; unclaimed Artist profiles and claiming; Gallery profile/account; delegated access with proposed-change approval; claim-transfer/provenance validation; Curator profile/account reusing the same primitives; dedicated staging/pre-production; paid Supabase production setup when operationally appropriate; focused RLS/Auth/Storage/security audit; then broader beta.
+- GALLERY-CREATED UNCLAIMED ARTIST CAPACITY remains open before Gallery beta: decide how many unclaimed Artist profiles a Gallery may create/manage, whether limits depend on plan/tier/verification, entitlement boundaries versus a paid Artist account, anti-spam/abuse/rate limits, what happens to capacity after claiming, and whether larger Galleries need higher limits. Prevent a low-cost Gallery subscription from effectively providing many full Artist subscriptions. No exact numeric limit or price is decided yet; unclaimed profiles do not receive the full entitlements/value of independent Artist accounts.
 
 ## ADMIN / SECURITY / OPERATIONS
 

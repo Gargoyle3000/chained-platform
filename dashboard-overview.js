@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     await import("./data/dashboard-requests.mjs");
   const { renderDashboardAccountIdentity } =
     await import("./data/dashboard-context.mjs");
+  const { RECENT_WORKS_LIMIT, recentWorksCountLabel } =
+    await import("./data/dashboard-recent-work-copy.mjs");
 
   const totalElement = document.querySelector("#dashboard-work-total");
   const breakdownElement = document.querySelector(
@@ -460,8 +462,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.createElement("br"),
       document.createTextNode(`${draftCount} DRAFTS`)
     );
-    recentTotalElement.textContent =
-      `${works.length} ${works.length === 1 ? "WORK" : "WORKS"}`;
+    recentTotalElement.textContent = recentWorksCountLabel(
+      works.length,
+      Math.min(works.length, RECENT_WORKS_LIMIT)
+    );
   }
 
 
@@ -724,7 +728,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const recentWorks = works.slice(0, 10);
+    const recentWorks = works.slice(0, RECENT_WORKS_LIMIT);
     const privateCovers = recentWorks.map((work) => {
       const cover = getCoverImage(work);
       return cover && !(cover.publicPath && work.visibility === "published") ? cover : null;

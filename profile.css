@@ -167,7 +167,9 @@
     - 105px
   );
 
-  transform: none;
+  transform: translateX(
+    calc(-1 * ((var(--work-meta-width) + var(--work-gap)) / 2))
+  );
 }
 
 .profile-image-link img {

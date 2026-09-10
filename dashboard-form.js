@@ -1072,19 +1072,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (values.length === 0) {
       return "MATERIALS WILL APPEAR HERE";
     }
-
-    if (values.length === 1) {
-      return values[0];
-    }
-
-    if (values.length === 2) {
-      return `${values[0]} AND ${values[1]}`;
-    }
-
-    return (
-      `${values.slice(0, -1).join(", ")} ` +
-      `AND ${values.at(-1)}`
-    );
+    return values.join(", ");
   }
 
 

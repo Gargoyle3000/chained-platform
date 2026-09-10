@@ -1,6 +1,6 @@
 # CHAINED — CURRENT STATE
 
-Last updated: 2026-09-06
+Last updated: 2026-09-10
 
 ## NOW
 
@@ -27,7 +27,7 @@ Current focus: complete and polish core product surfaces before broader rollout.
 - Management pages use the static `+` / `PROFILE LOADING` / `ARTIST ACCOUNT` identity.
 - Portfolio Export uses immediate disabled `EXPORTING…` progress and final `PORTFOLIO READY` status.
 - Management language uses concise `WORKS`, `PRESENTATIONS`, and `AGENDA` headings.
-- Public multi-image carousel is live and manually validated on Discover, Following and Public Profile; Work detail remains a vertical full-image sequence.
+- Public multi-image carousel is live on Discover, Following, Public Profile and Work detail. Navigation is circular; Work detail uses one centered contained image stage with a compact green accessible `< current/total >` control beneath metadata, while swipe/drag remains available.
 - Published Works can be removed directly from WORKS through `[ DELETE ]` → `[ CONFIRM DELETE ]`; the backend unpublishes, recalls exact public derivatives, and soft-deletes only after cleanup succeeds. A cleanup-pending retry resumes the same lifecycle.
 - Public Presentation v1 is live: profile lists use canonical Presentation detail links, and public detail pages show core metadata with optional description and validated external URL. Presentation media and Work links are not yet modeled.
 - Presentation v2 trust layer, management context, participation consent, and Dashboard REQUESTS are live. Public Presentation pages can render their safe context projection, including participants, accepted visible Works and Program; authorized recipients can decide co-operator invitations, Work proposals and participation requests from Dashboard.

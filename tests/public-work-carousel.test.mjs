@@ -46,11 +46,35 @@ const images = Object.freeze([
   { id: "third", src: "third.webp", width: 900, height: 900 }
 ]);
 
-test("carousel state starts on the cover and clamps three-image navigation", () => {
+test("carousel state starts on the cover and wraps three-image navigation", () => {
   assert.equal(createPublicWorkCarouselState(images).activeIndex, 0);
-  assert.equal(nextCarouselIndex(0, -1, 3), 0);
+  assert.equal(nextCarouselIndex(0, -1, 3), 2);
   assert.equal(nextCarouselIndex(0, 1, 3), 1);
-  assert.equal(nextCarouselIndex(2, 1, 3), 2);
+  assert.equal(nextCarouselIndex(2, 1, 3), 0);
+});
+
+test("compact carousel controls update the count and wrap in both directions", async () => {
+  const link = element();
+  const image = element();
+  const article = element();
+  const previous = element();
+  const next = element();
+  const counter = element();
+  counter.parentElement = { hidden: true };
+  attachPublicWorkCarousel({
+    link, image, article, workId: "11111111-1111-4111-8111-111111111111",
+    coverImage: images[0], loadImages: async () => images, label: "View Work",
+    previousButton: previous, nextButton: next, counter, eager: true
+  });
+  await Promise.resolve();
+  assert.equal(counter.textContent, "1/3");
+  assert.equal(counter.parentElement.hidden, false);
+  previous.dispatchEvent(new Event("click", { cancelable: true }));
+  assert.equal(image.src, "third.webp");
+  assert.equal(counter.textContent, "3/3");
+  next.dispatchEvent(new Event("click", { cancelable: true }));
+  assert.equal(image.src, "cover.webp");
+  assert.equal(counter.textContent, "1/3");
 });
 
 test("a cover-only card makes no secondary request or navigation change until it is interacted with", () => {
@@ -111,6 +135,23 @@ test("swipe changes images, vertical movement does not, and a completed drag sup
   link.dispatchEvent(verticalUp);
   assert.equal(image.src, "second.webp");
   assert.equal(verticalUp.defaultPrevented, false);
+});
+
+test("swipe navigation also wraps from the final Work image to the first", async () => {
+  const link = element();
+  const image = element();
+  const article = element();
+  attachPublicWorkCarousel({
+    link, image, article, workId: "11111111-1111-4111-8111-111111111111",
+    coverImage: images[0], loadImages: async () => images, label: "View Work"
+  });
+  for (const pointerId of [1, 2, 3]) {
+    link.dispatchEvent(pointer("pointerdown", { pointerId, clientX: 140, clientY: 40 }));
+    await Promise.resolve();
+    link.dispatchEvent(pointer("pointermove", { pointerId, clientX: 80, clientY: 42 }));
+    link.dispatchEvent(pointer("pointerup", { pointerId, clientX: 80, clientY: 42 }));
+  }
+  assert.equal(image.src, "cover.webp");
 });
 
 test("pointer capture keeps an intentional drag alive outside the stage and releases on pointerup", async () => {
@@ -206,7 +247,7 @@ test("keyboard changes the accessible current-image position without adding visi
   assert.equal(link.dataset.carouselCount, "3");
 });
 
-test("carousel integration remains limited to the three public listing surfaces", async () => {
+test("public listing and Work detail carousel integrations use the shared circular behavior", async () => {
   const [discover, following, profile, artwork] = await Promise.all([
     readFile(new URL("../discover.js", import.meta.url), "utf8"),
     readFile(new URL("../following.js", import.meta.url), "utf8"),
@@ -216,5 +257,7 @@ test("carousel integration remains limited to the three public listing surfaces"
   assert.equal(discover.includes("attachPublicWorkCarousel"), true);
   assert.equal(following.includes("attachPublicWorkCarousel"), true);
   assert.equal(profile.includes("attachPublicWorkCarousel"), true);
-  assert.equal(artwork.includes("public-work-carousel"), false);
+  assert.equal(artwork.includes("attachPublicWorkCarousel"), true);
+  assert.equal(artwork.includes("artwork-carousel-controls"), true);
+  assert.equal(artwork.includes("if (total < 2) return null"), true);
 });

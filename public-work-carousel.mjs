@@ -9,8 +9,8 @@ export function createPublicWorkCarouselState(images = []) {
 
 export function nextCarouselIndex(index, direction, length) {
   if (!Number.isInteger(index) || !Number.isInteger(length) || length < 2) return 0;
-  if (direction > 0) return Math.min(index + 1, length - 1);
-  if (direction < 0) return Math.max(index - 1, 0);
+  if (direction > 0) return (index + 1) % length;
+  if (direction < 0) return (index - 1 + length) % length;
   return index;
 }
 
@@ -36,6 +36,10 @@ export function attachPublicWorkCarousel({
   coverImage,
   loadImages,
   label,
+  previousButton = null,
+  nextButton = null,
+  counter = null,
+  eager = false,
   onImageChange = () => {}
 }) {
   if (!link || !image || !article || typeof loadImages !== "function") return () => {};
@@ -86,6 +90,10 @@ export function attachPublicWorkCarousel({
     link.setAttribute("aria-label", describeImage(state.activeIndex, state.images.length, label));
     link.dataset.carouselIndex = String(state.activeIndex + 1);
     link.dataset.carouselCount = String(state.images.length);
+    if (counter) {
+      counter.textContent = `${state.activeIndex + 1}/${state.images.length}`;
+      counter.parentElement.hidden = state.images.length < 2;
+    }
     onImageChange(current, state);
   };
 
@@ -96,6 +104,8 @@ export function attachPublicWorkCarousel({
       if (!Array.isArray(images) || images.length < 2) return;
       state = createPublicWorkCarouselState(images);
       article.classList.add("has-public-work-carousel");
+      if (previousButton) previousButton.hidden = false;
+      if (nextButton) nextButton.hidden = false;
       if (coverImage.width && coverImage.height) {
         article.style.setProperty(
           "--public-carousel-cover-ratio",
@@ -116,6 +126,14 @@ export function attachPublicWorkCarousel({
     state = Object.freeze({ ...state, activeIndex: next });
     update();
     return true;
+  };
+
+  const changeFromControl = (direction) => {
+    if (state.images.length < 2) {
+      void (load()?.then(() => change(direction)));
+      return;
+    }
+    change(direction);
   };
 
   const onPointerDown = (event) => {
@@ -144,7 +162,7 @@ export function attachPublicWorkCarousel({
       suppressClick = true;
       const direction = event.clientX < pointer.x ? 1 : -1;
       if (state.images.length < 2) {
-        void (load()?.then(() => change(direction)));
+        changeFromControl(direction);
       } else {
         change(direction);
       }
@@ -172,10 +190,18 @@ export function attachPublicWorkCarousel({
     if (!direction) return;
     event.preventDefault();
     if (state.images.length < 2) {
-      void (load()?.then(() => change(direction)));
+      changeFromControl(direction);
     } else {
       change(direction);
     }
+  };
+  const onPreviousClick = (event) => {
+    event.preventDefault();
+    changeFromControl(-1);
+  };
+  const onNextClick = (event) => {
+    event.preventDefault();
+    changeFromControl(1);
   };
 
   link.addEventListener("pointerdown", onPointerDown);
@@ -186,6 +212,10 @@ export function attachPublicWorkCarousel({
   image.addEventListener("dragstart", onDragStart);
   link.addEventListener("click", onClick, true);
   link.addEventListener("keydown", onKeyDown);
+  previousButton?.addEventListener("click", onPreviousClick);
+  nextButton?.addEventListener("click", onNextClick);
+
+  if (eager) void load();
 
   if (typeof IntersectionObserver === "function") {
     const observer = new IntersectionObserver((entries) => {
@@ -206,5 +236,7 @@ export function attachPublicWorkCarousel({
     image.removeEventListener("dragstart", onDragStart);
     link.removeEventListener("click", onClick, true);
     link.removeEventListener("keydown", onKeyDown);
+    previousButton?.removeEventListener("click", onPreviousClick);
+    nextButton?.removeEventListener("click", onNextClick);
   };
 }
