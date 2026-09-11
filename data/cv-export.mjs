@@ -1,5 +1,5 @@
 const A4_PAGE = Object.freeze({ width: 595.28, height: 841.89 });
-const CHAINED_GREEN = Object.freeze([0, 0.831372549, 0.133333333]);
+const CHAINED_GREEN = Object.freeze([0, 0.9882352941, 0.1568627451]);
 
 function text(value) {
   return typeof value === "string" ? value.trim() : "";

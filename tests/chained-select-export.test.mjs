@@ -82,6 +82,6 @@ test("CHAINED Select renders document provenance and artist attribution on every
   assert.ok(values.includes("CURATOR"));
   assert.ok(values.includes("01A · "));
   assert.ok(values.includes("01B · "));
-  assert.equal(drawn.find((entry) => entry.value === "<CHAINED>").color, "0,0.831372549,0.133333333");
-  assert.equal(drawn.find((entry) => entry.value === "CURATOR").color, "0,0.831372549,0.133333333");
+  assert.equal(drawn.find((entry) => entry.value === "<CHAINED>").color, "0,0.9882352941,0.1568627451");
+  assert.equal(drawn.find((entry) => entry.value === "CURATOR").color, "0,0.9882352941,0.1568627451");
 });

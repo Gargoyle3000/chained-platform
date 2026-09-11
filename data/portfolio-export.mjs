@@ -427,7 +427,7 @@ export async function renderPortfolioPdf({
   pdf.registerFontkit(fontkit);
   const font = await pdf.embedFont(fontBytes, { subset: true });
   const black = rgb(0, 0, 0);
-  const accent = accentColor ? rgb(0, 0.831372549, 0.133333333) : black;
+  const accent = accentColor ? rgb(0, 0.9882352941, 0.1568627451) : black;
   const margin = 54;
   const contentWidth = A4_PAGE.width - margin * 2;
   const contentHeight = A4_PAGE.height - margin * 2;

@@ -10,7 +10,7 @@ function text(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-const CHAINED_GREEN = "#00D422";
+const CHAINED_GREEN = "#00FC28";
 
 export function createChainedSelectPlan(works = []) {
   return createPortfolioPlan(works);
