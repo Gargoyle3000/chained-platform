@@ -64,8 +64,8 @@ select is(
       from public.account_invitations
      where id = '00000000-0000-0000-0000-000000001201'
   ),
-  interval '24 hours',
-  'new invitation defaults to a 24-hour expiry after approval'
+  interval '12 hours',
+  'new invitation defaults to a 12-hour expiry after approval'
 );
 
 select is(
