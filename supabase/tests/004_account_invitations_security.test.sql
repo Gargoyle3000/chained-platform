@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(94);
+select plan(95);
 
 insert into auth.users (
   instance_id,
@@ -56,6 +56,16 @@ select lives_ok(
     )
   $$,
   'active admin can persist approval before Auth invitation creation'
+);
+
+select is(
+  (
+    select expires_at - approved_at
+      from public.account_invitations
+     where id = '00000000-0000-0000-0000-000000001201'
+  ),
+  interval '24 hours',
+  'new invitation defaults to a 24-hour expiry after approval'
 );
 
 select is(
