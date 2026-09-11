@@ -1,5 +1,6 @@
 import { resolveManagedProfileState } from "../data/work-mapping.mjs";
 import { createPublicProfileLink } from "../data/public-work-mapping.mjs";
+import { readAdminAccess } from "./admin-access.mjs";
 
 const DASHBOARD_HREF = "dashboard.html";
 
@@ -9,6 +10,33 @@ function uniqueProfileIds(memberships) {
       .map((membership) => membership?.profile_id)
       .filter(Boolean)
   )];
+}
+
+async function ensureAdminInvitationNavigation(client) {
+  const navigations = document.querySelectorAll(".dashboard-navigation");
+  if (navigations.length === 0) return;
+
+  let access;
+  try {
+    access = await readAdminAccess(client);
+  } catch {
+    return;
+  }
+
+  navigations.forEach((navigation) => {
+    const existing = navigation.querySelector("[data-admin-invitations-link]");
+    if (access.kind !== "admin") {
+      existing?.remove();
+      return;
+    }
+
+    if (existing) return;
+    const link = document.createElement("a");
+    link.href = "dashboard-admin-invite.html";
+    link.dataset.adminInvitationsLink = "true";
+    link.textContent = "INVITATIONS";
+    navigation.append(link);
+  });
 }
 
 export async function readManagedProfiles(client) {
@@ -172,6 +200,7 @@ export async function applyAuthenticatedNavigation(client) {
   const actions = ensureHeaderActions(header, navigation);
   ensureProfileGroup(navigation);
   ensureSessionIndicator(actions, client);
+  await ensureAdminInvitationNavigation(client);
 
   header.dataset.authNavigationReady = "true";
 

@@ -4,6 +4,7 @@ export const PROTECTED_DASHBOARD_PAGES = Object.freeze([
   "dashboard.html",
   "dashboard-works.html",
   "dashboard-work-edit.html",
+  "dashboard-admin-invite.html",
   "following.html",
   "archive.html",
   "archive-project.html",

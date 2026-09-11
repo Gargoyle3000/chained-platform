@@ -523,6 +523,85 @@
   display: none;
 }
 
+/* ADMIN ARTIST INVITATIONS */
+
+[data-admin-protected="true"] .dashboard-admin-invite-layout {
+  display: none;
+}
+
+.dashboard-admin-access {
+  margin: calc(var(--header-height) + 54px) var(--page-gutter);
+  padding-left: 12px;
+  border-left: 1px solid var(--black);
+  font-size: var(--font-meta);
+}
+
+.dashboard-admin-access[hidden] {
+  display: none;
+}
+
+.dashboard-admin-invite-form {
+  display: grid;
+  gap: 34px;
+  width: 100%;
+  max-width: 680px;
+}
+
+.dashboard-admin-invite-form > p {
+  margin: 0;
+  font-size: var(--font-meta);
+}
+
+.dashboard-admin-invite-fields {
+  display: grid;
+  gap: 22px;
+}
+
+.dashboard-admin-invite-fields label {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 28px;
+  align-items: baseline;
+  font-size: var(--font-meta);
+}
+
+.dashboard-admin-invite-fields input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 9px 0;
+  border: 0;
+  border-bottom: 1px solid var(--black);
+  border-radius: 0;
+  background: transparent;
+  color: var(--black);
+  font: inherit;
+  font-size: var(--font-meta);
+  outline: none;
+}
+
+.dashboard-admin-invite-fields input:focus {
+  border-bottom-color: var(--accent);
+}
+
+.dashboard-admin-invite-form .text-action {
+  width: max-content;
+  color: var(--accent);
+}
+
+.dashboard-admin-invite-form .text-action:disabled {
+  color: var(--black);
+  opacity: 0.45;
+  cursor: wait;
+}
+
+@media (max-width: 700px) {
+  .dashboard-admin-invite-fields label {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
 .dashboard-work-image-state {
   margin-top: 8px !important;
   font-size: 9px !important;

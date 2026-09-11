@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Artist Invitation &mdash; CHAINED Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="auth/auth.css">
+  <script type="module" src="auth/guard.mjs"></script>
+</head>
+<body class="dashboard-page" data-auth-protected="true" data-admin-protected="true">
+  <header class="site-header">
+    <a class="wordmark" href="discover.html">&lt;CHAINED&gt;</a>
+    <nav class="main-nav main-nav-with-dashboard" aria-label="Primary navigation">
+      <a href="discover.html">DISCOVER</a><a href="following.html">FOLLOWING</a><a href="archive.html">SELECT</a><a href="agenda.html">AGENDA</a>
+      <span class="profile-nav-group"><a data-own-profile-link href="profile.html">PROFILE</a><a class="dashboard-link is-active" href="dashboard.html" aria-label="Open dashboard">+</a></span>
+    </nav>
+  </header>
+  <p class="dashboard-admin-access" id="dashboard-admin-invite-access" role="alert" aria-live="polite" hidden></p>
+  <main class="dashboard-layout dashboard-admin-invite-layout">
+    <aside class="dashboard-sidebar"><div class="dashboard-sidebar-inner">
+      <header class="dashboard-intro"><div class="dashboard-page-marker" aria-hidden="true">+</div><p class="dashboard-account-identity"><span>CHAINED ADMIN</span><br><span>ARTIST INVITATIONS</span></p></header>
+      <nav class="dashboard-navigation" aria-label="Dashboard navigation">
+        <a href="dashboard.html">OVERVIEW</a><a href="dashboard-works.html">WORKS</a><a href="dashboard-presentations.html">PRESENTATIONS</a><a href="dashboard-agenda.html">AGENDA</a><a href="dashboard-cv.html">CV</a><a href="dashboard-press.html">PRESS</a><a href="dashboard-settings.html">SETTINGS</a><a class="is-active" data-admin-invitations-link href="dashboard-admin-invite.html">INVITATIONS</a>
+      </nav>
+    </div></aside>
+    <section class="dashboard-content">
+      <header class="dashboard-content-header"><div><p>ADMIN</p><h2>ARTIST INVITATION</h2></div></header>
+      <p class="dashboard-inline-error" id="dashboard-admin-invite-error" role="alert" aria-live="polite" hidden></p>
+      <p class="dashboard-local-notice" id="dashboard-admin-invite-status" role="status" aria-live="polite" hidden></p>
+      <form class="dashboard-admin-invite-form" id="dashboard-admin-invite-form" novalidate>
+        <p>INVITE A TRUSTED ARTIST TO CHAINED.</p>
+        <div class="dashboard-admin-invite-fields">
+          <label><span>NAME</span><input id="dashboard-admin-invite-name" maxlength="160" autocomplete="name" required></label>
+          <label><span>EMAIL</span><input id="dashboard-admin-invite-email" type="email" maxlength="254" autocomplete="email" required></label>
+          <label><span>SLUG</span><input id="dashboard-admin-invite-slug" maxlength="160" autocapitalize="none" autocomplete="off" required></label>
+        </div>
+        <button class="text-action" id="dashboard-admin-invite-submit" type="submit">SEND INVITATION</button>
+      </form>
+    </section>
+  </main>
+  <script type="module" src="dashboard-admin-invite.js"></script>
+</body>
+</html>
