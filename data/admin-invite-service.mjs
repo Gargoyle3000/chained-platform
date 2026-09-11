@@ -55,7 +55,7 @@ export function invitationMessage(code) {
   const messages = {
     invitation_sent: "INVITATION SENT",
     invalid_email: "ENTER A VALID EMAIL",
-    invalid_artist_workspace: "ENTER A VALID ARTIST NAME AND SLUG",
+    invalid_artist_workspace: "ENTER A VALID ARTIST NAME AND PROFILE URL",
     artist_workspace_slug_conflict: "THIS ARTIST SLUG IS ALREADY IN USE",
     invitation_conflict: "THIS EMAIL ALREADY HAS AN ACCOUNT",
     invitation_already_sent: "AN INVITATION HAS ALREADY BEEN SENT",

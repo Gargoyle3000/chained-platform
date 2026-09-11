@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>Artist Invitation &mdash; CHAINED Dashboard</title>
+  <title>Admin Console &mdash; CHAINED Dashboard</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="auth/auth.css">
@@ -21,24 +21,29 @@
   <p class="dashboard-admin-access" id="dashboard-admin-invite-access" role="alert" aria-live="polite" hidden></p>
   <main class="dashboard-layout dashboard-admin-invite-layout">
     <aside class="dashboard-sidebar"><div class="dashboard-sidebar-inner">
-      <header class="dashboard-intro"><div class="dashboard-page-marker" aria-hidden="true">+</div><p class="dashboard-account-identity"><span>CHAINED ADMIN</span><br><span>ARTIST INVITATIONS</span></p></header>
+      <header class="dashboard-intro"><div class="dashboard-page-marker" aria-hidden="true">+</div><p class="dashboard-account-identity"><span>CHAINED ADMIN</span><br><span>ADMIN CONSOLE</span></p></header>
       <nav class="dashboard-navigation" aria-label="Dashboard navigation">
-        <a href="dashboard.html">OVERVIEW</a><a href="dashboard-works.html">WORKS</a><a href="dashboard-presentations.html">PRESENTATIONS</a><a href="dashboard-agenda.html">AGENDA</a><a href="dashboard-cv.html">CV</a><a href="dashboard-press.html">PRESS</a><a href="dashboard-settings.html">SETTINGS</a><a class="is-active" data-admin-invitations-link href="dashboard-admin-invite.html">INVITATIONS</a>
+        <a href="dashboard.html">OVERVIEW</a><a href="dashboard-works.html">WORKS</a><a href="dashboard-presentations.html">PRESENTATIONS</a><a href="dashboard-agenda.html">AGENDA</a><a href="dashboard-cv.html">CV</a><a href="dashboard-press.html">PRESS</a><a href="dashboard-settings.html">SETTINGS</a><a class="is-active" data-admin-invitations-link href="dashboard-admin-invite.html">ADMIN CONSOLE</a>
       </nav>
     </div></aside>
     <section class="dashboard-content">
-      <header class="dashboard-content-header"><div><p>ADMIN</p><h2>ARTIST INVITATION</h2></div></header>
+      <header class="dashboard-content-header"><div><p>ADMIN</p><h2>ADMIN CONSOLE</h2></div></header>
       <p class="dashboard-inline-error" id="dashboard-admin-invite-error" role="alert" aria-live="polite" hidden></p>
       <p class="dashboard-local-notice" id="dashboard-admin-invite-status" role="status" aria-live="polite" hidden></p>
-      <form class="dashboard-admin-invite-form" id="dashboard-admin-invite-form" novalidate>
-        <p>INVITE A TRUSTED ARTIST TO CHAINED.</p>
-        <div class="dashboard-admin-invite-fields">
-          <label><span>NAME</span><input id="dashboard-admin-invite-name" maxlength="160" autocomplete="name" required></label>
-          <label><span>EMAIL</span><input id="dashboard-admin-invite-email" type="email" maxlength="254" autocomplete="email" required></label>
-          <label><span>SLUG</span><input id="dashboard-admin-invite-slug" maxlength="160" autocapitalize="none" autocomplete="off" required></label>
-        </div>
-        <button class="text-action" id="dashboard-admin-invite-submit" type="submit">SEND INVITATION</button>
-      </form>
+      <section class="dashboard-admin-console-tool" aria-labelledby="dashboard-admin-invitation-heading">
+        <header class="dashboard-admin-console-tool-heading">
+          <p class="dashboard-label">INVITATIONS</p>
+          <h3 id="dashboard-admin-invitation-heading">ARTIST INVITATION</h3>
+        </header>
+        <form class="dashboard-admin-invite-form" id="dashboard-admin-invite-form" novalidate>
+          <div class="dashboard-admin-invite-fields">
+            <label><span>NAME</span><input id="dashboard-admin-invite-name" maxlength="160" autocomplete="name" required></label>
+            <label><span>EMAIL</span><input id="dashboard-admin-invite-email" type="email" maxlength="254" autocomplete="email" required></label>
+            <label><span>PROFILE URL</span><input id="dashboard-admin-invite-slug" maxlength="160" autocapitalize="none" autocomplete="off" required></label>
+          </div>
+          <button class="text-action" id="dashboard-admin-invite-submit" type="submit">SEND INVITATION</button>
+        </form>
+      </section>
     </section>
   </main>
   <script type="module" src="dashboard-admin-invite.js"></script>

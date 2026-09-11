@@ -121,23 +121,35 @@ test("admin access requires an active account and unrevoke admin role", async ()
   }), { kind: "unavailable" });
 });
 
-test("admin invite page remains artist-only and guarded", async () => {
-  const [page, script, css, authLogic] = await Promise.all([
+test("admin console remains artist-only, admin-guarded, and uses Profile URL copy", async () => {
+  const [page, script, css, authLogic, navigation, service] = await Promise.all([
     read("dashboard-admin-invite.html"),
     read("dashboard-admin-invite.js"),
     read("dashboard.css"),
-    read("auth/auth-logic.mjs")
+    read("auth/auth-logic.mjs"),
+    read("auth/navigation.mjs"),
+    read("data/admin-invite-service.mjs")
   ]);
   assert.match(page, /data-admin-protected="true"/);
+  assert.match(page, /<h2>ADMIN CONSOLE<\/h2>/);
+  assert.match(page, /<p class="dashboard-label">INVITATIONS<\/p>/);
   assert.match(page, /ARTIST INVITATION/);
   assert.match(page, /id="dashboard-admin-invite-name"/);
   assert.match(page, /id="dashboard-admin-invite-email"/);
   assert.match(page, /id="dashboard-admin-invite-slug"/);
+  assert.match(page, /PROFILE URL/);
+  assert.doesNotMatch(page, />SLUG</);
+  assert.match(page, /data-admin-invitations-link[^>]*>ADMIN CONSOLE/);
+  assert.doesNotMatch(page, /data-admin-invitations-link[^>]*>INVITATIONS/);
   assert.doesNotMatch(page, /ACCOUNT PLAN|SUBSCRIPTION|BILLING|PRIVATE_MEMBER/);
   assert.doesNotMatch(page, /accountPlan|approvedAccountPlan/);
   assert.match(script, /if \(flow\.sending\) return/);
   assert.match(script, /SENDING INVITATION/);
   assert.match(script, /form\.querySelectorAll\("input,button"\)/);
   assert.match(css, /\[data-admin-protected="true"\] \.dashboard-admin-invite-layout/);
+  assert.match(css, /\.dashboard-admin-console-tool/);
   assert.match(authLogic, /"dashboard-admin-invite\.html"/);
+  assert.match(navigation, /link\.textContent = "ADMIN CONSOLE"/);
+  assert.doesNotMatch(navigation, /link\.textContent = "INVITATIONS"/);
+  assert.match(service, /artistWorkspace: Object\.freeze\(\{ displayName, slug \}\)/);
 });

@@ -34,7 +34,7 @@ async function ensureAdminInvitationNavigation(client) {
     const link = document.createElement("a");
     link.href = "dashboard-admin-invite.html";
     link.dataset.adminInvitationsLink = "true";
-    link.textContent = "INVITATIONS";
+    link.textContent = "ADMIN CONSOLE";
     navigation.append(link);
   });
 }

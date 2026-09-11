@@ -523,7 +523,7 @@
   display: none;
 }
 
-/* ADMIN ARTIST INVITATIONS */
+/* ADMIN CONSOLE */
 
 [data-admin-protected="true"] .dashboard-admin-invite-layout {
   display: none;
@@ -540,11 +540,32 @@
   display: none;
 }
 
+.dashboard-admin-console-tool {
+  display: grid;
+  gap: 20px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.dashboard-admin-console-tool-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.dashboard-admin-console-tool-heading p,
+.dashboard-admin-console-tool-heading h3 {
+  margin: 0;
+}
+
+.dashboard-admin-console-tool-heading h3 {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
 .dashboard-admin-invite-form {
   display: grid;
-  gap: 34px;
-  width: 100%;
-  max-width: 680px;
+  gap: 20px;
 }
 
 .dashboard-admin-invite-form > p {
@@ -554,13 +575,13 @@
 
 .dashboard-admin-invite-fields {
   display: grid;
-  gap: 22px;
+  gap: 14px;
 }
 
 .dashboard-admin-invite-fields label {
   display: grid;
-  grid-template-columns: 100px minmax(0, 1fr);
-  gap: 28px;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 18px;
   align-items: baseline;
   font-size: var(--font-meta);
 }
@@ -569,7 +590,7 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  padding: 9px 0;
+  padding: 5px 0;
   border: 0;
   border-bottom: 1px solid var(--black);
   border-radius: 0;
