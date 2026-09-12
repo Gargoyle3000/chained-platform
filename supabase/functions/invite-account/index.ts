@@ -1,6 +1,7 @@
 import {
   AuthInviteFailure,
   createInviteHandler,
+  InternalFailure,
   type InvitationRecord,
   InvitationConflictFailure,
   WorkspaceSlugConflictFailure,
@@ -11,6 +12,8 @@ import {
   resolveSupabaseApiKeys,
   userScopedHeaders,
 } from "../_shared/supabase-api-keys.ts";
+
+class InvalidCallerFailure extends Error {}
 
 const supabaseUrl = requiredEnvironment("SUPABASE_URL");
 const apiKeys = resolveSupabaseApiKeys((name) => Deno.env.get(name));
@@ -42,15 +45,37 @@ function serviceHeaders(extra: HeadersInit = {}): Headers {
   return headers;
 }
 
-async function parseRows(response: Response): Promise<InvitationRecord[]> {
-  if (!response.ok) throw new Error("Invitation database operation failed");
-  const value: unknown = await response.json();
-  if (!Array.isArray(value)) throw new Error("Unexpected invitation response");
+async function fetchInternal(
+  stage: string,
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch {
+    throw new InternalFailure(stage);
+  }
+}
+
+async function parseRows(
+  response: Response,
+  stage: string,
+): Promise<InvitationRecord[]> {
+  if (!response.ok) throw new InternalFailure(stage, response.status);
+
+  let value: unknown;
+  try {
+    value = await response.json();
+  } catch {
+    throw new InternalFailure(stage, response.status);
+  }
+  if (!Array.isArray(value)) throw new InternalFailure(stage, response.status);
   return value as InvitationRecord[];
 }
 
 async function readInvitationById(id: string): Promise<InvitationRecord | null> {
-  const response = await fetch(
+  const response = await fetchInternal(
+    "invitation_relink_read",
     restUrl("account_invitations", {
       id: `eq.${id}`,
       select: "id,status,approved_roles,approved_account_plan,expires_at,artist_workspace_display_name,artist_workspace_slug",
@@ -58,14 +83,15 @@ async function readInvitationById(id: string): Promise<InvitationRecord | null> 
     }),
     { headers: serviceHeaders() },
   );
-  const rows = await parseRows(response);
+  const rows = await parseRows(response, "invitation_relink_read");
   return rows[0] ?? null;
 }
 
 async function readActionableInvitation(
   email: string,
 ): Promise<InvitationRecord | null> {
-  const response = await fetch(
+  const response = await fetchInternal(
+    "actionable_invitation_read",
     restUrl("account_invitations", {
       email_normalized: `eq.${email}`,
       status: "in.(approved,sending,sent)",
@@ -75,14 +101,15 @@ async function readActionableInvitation(
     }),
     { headers: serviceHeaders() },
   );
-  const rows = await parseRows(response);
+  const rows = await parseRows(response, "actionable_invitation_read");
   return rows[0] ?? null;
 }
 
 async function readActionableInvitationByWorkspaceSlug(
   slug: string,
 ): Promise<InvitationRecord | null> {
-  const response = await fetch(
+  const response = await fetchInternal(
+    "actionable_workspace_slug_read",
     restUrl("account_invitations", {
       artist_workspace_slug: `eq.${slug}`,
       status: "in.(approved,sending,sent)",
@@ -92,12 +119,13 @@ async function readActionableInvitationByWorkspaceSlug(
     }),
     { headers: serviceHeaders() },
   );
-  const rows = await parseRows(response);
+  const rows = await parseRows(response, "actionable_workspace_slug_read");
   return rows[0] ?? null;
 }
 
 async function existingProfileUsesSlug(slug: string): Promise<boolean> {
-  const response = await fetch(
+  const response = await fetchInternal(
+    "existing_profile_slug_lookup",
     restUrl("public_profiles", {
       slug: `eq.${slug}`,
       deleted_at: "is.null",
@@ -106,8 +134,15 @@ async function existingProfileUsesSlug(slug: string): Promise<boolean> {
     }),
     { headers: serviceHeaders() },
   );
-  if (!response.ok) throw new Error("Profile slug lookup failed");
-  const rows: unknown = await response.json();
+  if (!response.ok) {
+    throw new InternalFailure("existing_profile_slug_lookup", response.status);
+  }
+  let rows: unknown;
+  try {
+    rows = await response.json();
+  } catch {
+    throw new InternalFailure("existing_profile_slug_lookup", response.status);
+  }
   return Array.isArray(rows) && rows.length > 0;
 }
 
@@ -135,13 +170,23 @@ const handler = createInviteHandler({
   allowedOrigins,
 
   async verifyCaller(token) {
-    const response = await fetch(new URL("/auth/v1/user", supabaseUrl), {
+    const response = await fetchInternal("verify_caller_auth_request", new URL("/auth/v1/user", supabaseUrl), {
       headers: userScopedHeaders(apiKeys.publishable, `Bearer ${token}`),
     });
-    if (!response.ok) throw new Error("Invalid caller token");
-    const user: unknown = await response.json();
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new InvalidCallerFailure();
+      }
+      throw new InternalFailure("verify_caller_auth_request", response.status);
+    }
+    let user: unknown;
+    try {
+      user = await response.json();
+    } catch {
+      throw new InternalFailure("verify_caller_auth_request", response.status);
+    }
     if (!user || typeof user !== "object" || !("id" in user)) {
-      throw new Error("Invalid caller identity");
+      throw new InvalidCallerFailure();
     }
     return { id: String((user as { id: unknown }).id) };
   },
@@ -153,7 +198,8 @@ const handler = createInviteHandler({
     );
 
     const [accountResponse, roleResponse] = await Promise.all([
-      fetch(
+      fetchInternal(
+        "caller_account_authorization_lookup",
         restUrl("accounts", {
           id: `eq.${callerId}`,
           select: "status",
@@ -161,7 +207,8 @@ const handler = createInviteHandler({
         }),
         { headers: callerHeaders },
       ),
-      fetch(
+      fetchInternal(
+        "caller_admin_role_lookup",
         restUrl("account_roles", {
           account_id: `eq.${callerId}`,
           role: "eq.admin",
@@ -173,13 +220,33 @@ const handler = createInviteHandler({
       ),
     ]);
 
-    if (!accountResponse.ok || !roleResponse.ok) {
-      throw new Error("Caller authorization lookup failed");
+    if (!accountResponse.ok) {
+      throw new InternalFailure(
+        "caller_account_authorization_lookup",
+        accountResponse.status,
+      );
+    }
+    if (!roleResponse.ok) {
+      throw new InternalFailure(
+        "caller_admin_role_lookup",
+        roleResponse.status,
+      );
     }
 
-    const accounts = await accountResponse.json() as Array<{ status: string }>;
-    const roles = await roleResponse.json() as Array<{ id: string }>;
-    const status = accounts[0]?.status;
+    let accounts: unknown;
+    let roles: unknown;
+    try {
+      [accounts, roles] = await Promise.all([
+        accountResponse.json(),
+        roleResponse.json(),
+      ]);
+    } catch {
+      throw new InternalFailure("caller_authorization_lookup");
+    }
+    if (!Array.isArray(accounts) || !Array.isArray(roles)) {
+      throw new InternalFailure("caller_authorization_lookup");
+    }
+    const status = (accounts[0] as { status?: unknown } | undefined)?.status;
 
     return {
       accountStatus: status === "active" || status === "suspended" || status === "disabled"
@@ -194,7 +261,8 @@ const handler = createInviteHandler({
       throw new WorkspaceSlugConflictFailure();
     }
 
-    const response = await fetch(
+    const response = await fetchInternal(
+      "invitation_approval_insert",
       restUrl("account_invitations", {
         select: "id,status,approved_roles,approved_account_plan,expires_at,artist_workspace_display_name,artist_workspace_slug",
       }),
@@ -213,13 +281,13 @@ const handler = createInviteHandler({
     );
 
     if (response.ok) {
-      const rows = await parseRows(response);
-      if (!rows[0]) throw new Error("Invitation approval returned no row");
+      const rows = await parseRows(response, "invitation_approval_insert");
+      if (!rows[0]) throw new InternalFailure("invitation_approval_insert", response.status);
       return { invitation: rows[0], created: true };
     }
 
     if (response.status !== 409) {
-      throw new Error("Invitation approval failed");
+      throw new InternalFailure("invitation_approval_insert", response.status);
     }
 
     const existing = await readActionableInvitation(email);
@@ -244,7 +312,8 @@ const handler = createInviteHandler({
   },
 
   async claimInvitationForSending(id) {
-    const response = await fetch(
+    const response = await fetchInternal(
+      "claim_invitation",
       restUrl("account_invitations", {
         id: `eq.${id}`,
         status: "eq.approved",
@@ -256,7 +325,7 @@ const handler = createInviteHandler({
         body: JSON.stringify({ status: "sending" }),
       },
     );
-    const rows = await parseRows(response);
+    const rows = await parseRows(response, "claim_invitation");
     return rows[0] ?? null;
   },
 
@@ -266,7 +335,7 @@ const handler = createInviteHandler({
     const url = new URL("/auth/v1/invite", supabaseUrl);
     if (configuredRedirect) url.searchParams.set("redirect_to", configuredRedirect);
 
-    const response = await fetch(url, {
+    const response = await fetchInternal("auth_invite_request", url, {
       method: "POST",
       headers: serviceHeaders({
         "content-type": "application/json",
@@ -278,7 +347,8 @@ const handler = createInviteHandler({
   },
 
   async markInvitationFailed(id, failureCode) {
-    const response = await fetch(
+    const response = await fetchInternal(
+      "failure_state_write",
       restUrl("account_invitations", {
         id: `eq.${id}`,
         status: "in.(approved,sending,sent)",
@@ -292,7 +362,9 @@ const handler = createInviteHandler({
         }),
       },
     );
-    if (!response.ok) throw new Error("Unable to record invitation failure");
+    if (!response.ok) {
+      throw new InternalFailure("failure_state_write", response.status);
+    }
   },
 
   async repairAcceptedArtistWorkspace({
@@ -300,7 +372,8 @@ const handler = createInviteHandler({
     artistWorkspace,
     approvedByAccountId,
   }) {
-    const response = await fetch(
+    const response = await fetchInternal(
+      "artist_workspace_repair",
       restUrl("rpc/service_repair_accepted_artist_workspace", {}),
       {
         method: "POST",
@@ -313,7 +386,9 @@ const handler = createInviteHandler({
         }),
       },
     );
-    if (!response.ok) throw new Error("Artist workspace repair failed");
+    if (!response.ok) {
+      throw new InternalFailure("artist_workspace_repair", response.status);
+    }
   },
 });
 

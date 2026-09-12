@@ -1,6 +1,7 @@
 import {
   AuthInviteFailure,
   createInviteHandler,
+  InternalFailure,
   type InviteDependencies,
   type InvitationRecord,
   MAX_BODY_BYTES,
@@ -146,6 +147,70 @@ Deno.test("unallowed origin remains rejected before invitation handling", async 
   assertEquals(response.status, 403);
   assertEquals((await responseBody(response)).code, "origin_not_allowed");
   assertEquals(fixture.inviteCalls, 0);
+});
+
+Deno.test("unexpected internal failures log only safe fixed diagnostics", async () => {
+  const fixture = testDependencies({
+    async approveInvitation() {
+      throw new InternalFailure("invitation_approval_insert", 500);
+    },
+  });
+  const records: unknown[][] = [];
+  const originalError = console.error;
+  console.error = (...values: unknown[]) => records.push(values);
+
+  try {
+    const response = await fixture.handler(post({
+      email: "private.artist@example.test",
+      roles: ["artist"],
+      artistWorkspace: { displayName: "Private Artist", slug: "private-artist" },
+    }));
+    const raw = await response.text();
+
+    assertEquals(response.status, 500);
+    assertEquals(JSON.parse(raw).code, "internal_error");
+    assert(!raw.includes("private.artist@example.test"));
+    assert(!raw.includes("private-artist"));
+  } finally {
+    console.error = originalError;
+  }
+
+  assertEquals(records, [[
+    "invite-account internal failure",
+    { stage: "invitation_approval_insert", status: 500 },
+  ]]);
+});
+
+Deno.test("generic unexpected errors do not log sensitive error messages", async () => {
+  const fixture = testDependencies({
+    async approveInvitation() {
+      throw new Error("authorization=private-token email=private.artist@example.test");
+    },
+  });
+  const records: unknown[][] = [];
+  const originalError = console.error;
+  console.error = (...values: unknown[]) => records.push(values);
+
+  try {
+    const response = await fixture.handler(post({
+      email: "private.artist@example.test",
+      roles: ["artist"],
+      artistWorkspace: { displayName: "Private Artist", slug: "private-artist" },
+    }));
+    const raw = await response.text();
+
+    assertEquals(response.status, 500);
+    assertEquals(JSON.parse(raw).code, "internal_error");
+    assert(!raw.includes("private-token"));
+    assert(!raw.includes("private.artist@example.test"));
+  } finally {
+    console.error = originalError;
+  }
+
+  assertEquals(records, [[
+    "invite-account internal failure",
+    { stage: "unexpected" },
+  ]]);
 });
 
 Deno.test("missing JWT is rejected before request processing", async () => {

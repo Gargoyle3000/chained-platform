@@ -82,9 +82,21 @@ class RequestFailure extends Error {
 
 export class AuthInviteFailure extends Error {
   readonly status: number;
+  readonly stage = "auth_invite_request";
 
   constructor(status: number) {
     super("Auth invitation request failed");
+    this.status = status;
+  }
+}
+
+export class InternalFailure extends Error {
+  readonly stage: string;
+  readonly status: number | null;
+
+  constructor(stage: string, status: number | null = null) {
+    super("Internal invite-account failure");
+    this.stage = stage;
     this.status = status;
   }
 }
@@ -213,6 +225,14 @@ export function sanitizedAuthFailureCode(error: unknown): string {
   return "auth_invite_failed";
 }
 
+function logInternalFailure(error: InternalFailure) {
+  const diagnostics = {
+    stage: error.stage,
+    ...(error.status === null ? {} : { status: error.status }),
+  };
+  console.error("invite-account internal failure", diagnostics);
+}
+
 async function parseBody(request: Request): Promise<Record<string, unknown>> {
   const declaredLength = Number(request.headers.get("content-length") ?? "0");
   if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
@@ -290,7 +310,8 @@ export function createInviteHandler(dependencies: InviteDependencies) {
       let caller: { id: string };
       try {
         caller = await dependencies.verifyCaller(token);
-      } catch {
+      } catch (error) {
+        if (error instanceof InternalFailure) logInternalFailure(error);
         throw new RequestFailure(401, "invalid_token");
       }
 
@@ -405,6 +426,11 @@ export function createInviteHandler(dependencies: InviteDependencies) {
       }
       if (error instanceof RequestFailure) {
         return jsonResponse(error.status, error.code, {}, corsHeaders);
+      }
+      if (error instanceof InternalFailure) {
+        logInternalFailure(error);
+      } else {
+        console.error("invite-account internal failure", { stage: "unexpected" });
       }
       return jsonResponse(500, "internal_error", {}, corsHeaders);
     }
