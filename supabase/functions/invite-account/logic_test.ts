@@ -112,6 +112,42 @@ function testDependencies(overrides: Partial<InviteDependencies> = {}) {
   };
 }
 
+Deno.test("allowed origin receives the Supabase client preflight headers without invitation dispatch", async () => {
+  const fixture = testDependencies({
+    allowedOrigins: new Set(["https://chained.work"]),
+  });
+  const response = await fixture.handler(new Request("http://localhost", {
+    method: "OPTIONS",
+    headers: {
+      origin: "https://chained.work",
+      "access-control-request-method": "POST",
+      "access-control-request-headers": "authorization, x-client-info, apikey, content-type",
+    },
+  }));
+
+  assertEquals(response.status, 204);
+  assertEquals(response.headers.get("access-control-allow-origin"), "https://chained.work");
+  assertEquals(
+    response.headers.get("access-control-allow-headers"),
+    "authorization, x-client-info, apikey, content-type",
+  );
+  assertEquals(fixture.inviteCalls, 0);
+});
+
+Deno.test("unallowed origin remains rejected before invitation handling", async () => {
+  const fixture = testDependencies({
+    allowedOrigins: new Set(["https://chained.work"]),
+  });
+  const response = await fixture.handler(new Request("http://localhost", {
+    method: "OPTIONS",
+    headers: { origin: "https://unrelated.example" },
+  }));
+
+  assertEquals(response.status, 403);
+  assertEquals((await responseBody(response)).code, "origin_not_allowed");
+  assertEquals(fixture.inviteCalls, 0);
+});
+
 Deno.test("missing JWT is rejected before request processing", async () => {
   const fixture = testDependencies();
   const response = await fixture.handler(new Request("http://localhost", {
