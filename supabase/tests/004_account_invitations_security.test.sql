@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(95);
+select plan(105);
 
 insert into auth.users (
   instance_id,
@@ -1254,6 +1254,135 @@ select is(
   'disabled admitted account remains denied by existing authorization helpers'
 );
 
+reset role;
+
+select ok(
+  to_regprocedure('public.current_account_has_password()') is not null,
+  'current account password state RPC exists without user-controlled arguments'
+);
+
+select is(
+  to_regprocedure('public.current_account_has_password(uuid)'),
+  null,
+  'password state RPC exposes no target user argument'
+);
+
+select is(
+  has_function_privilege('anon', 'public.current_account_has_password()', 'execute'),
+  false,
+  'anon cannot execute the current account password state RPC'
+);
+
+select is(
+  has_function_privilege('authenticated', 'public.current_account_has_password()', 'execute'),
+  true,
+  'authenticated users can execute the current account password state RPC'
+);
+
+select results_eq(
+  $$
+    select p.prosecdef,
+           exists (
+             select 1
+               from unnest(coalesce(p.proconfig, array[]::text[])) as setting
+              where setting = 'search_path=""'
+           )
+      from pg_catalog.pg_proc as p
+      join pg_catalog.pg_namespace as n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.proname = 'current_account_has_password'
+       and p.pronargs = 0
+  $$,
+  $$values (true, true)$$,
+  'password state RPC is SECURITY DEFINER with an empty search path'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-000000001101","role":"authenticated"}',
+  true
+);
+select is(
+  public.current_account_has_password(),
+  false,
+  'active account without a password hash is not password-ready'
+);
+reset role;
+
+update auth.users
+   set encrypted_password = 'test-password-hash'
+ where id = '00000000-0000-0000-0000-000000001101';
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-000000001101","role":"authenticated"}',
+  true
+);
+select is(
+  public.current_account_has_password(),
+  true,
+  'active account with its own password hash is password-ready'
+);
+reset role;
+
+insert into auth.users (
+  instance_id, id, aud, role, email, email_confirmed_at, created_at, updated_at
+) values (
+  '00000000-0000-0000-0000-000000000000',
+  '00000000-0000-0000-0000-000000001115',
+  'authenticated',
+  'authenticated',
+  'passwordless.active@example.test',
+  now(),
+  now(),
+  now()
+);
+insert into public.accounts (id, status, display_name)
+values (
+  '00000000-0000-0000-0000-000000001115',
+  'active',
+  'PASSWORDLESS ACTIVE ACCOUNT'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-000000001115","role":"authenticated"}',
+  true
+);
+select is(
+  public.current_account_has_password(),
+  false,
+  'password state is self-scoped and cannot use another account password hash'
+);
+reset role;
+
+update public.accounts set status = 'disabled'
+ where id = '00000000-0000-0000-0000-000000001101';
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-000000001101","role":"authenticated"}',
+  true
+);
+select is(
+  public.current_account_has_password(),
+  false,
+  'inactive account is not password-ready even with a password hash'
+);
+reset role;
+update public.accounts set status = 'active'
+ where id = '00000000-0000-0000-0000-000000001101';
+
+set local role anon;
+select throws_ok(
+  $$select public.current_account_has_password()$$,
+  '42501',
+  null,
+  'anon cannot invoke the current account password state RPC'
+);
 reset role;
 
 select cmp_ok(

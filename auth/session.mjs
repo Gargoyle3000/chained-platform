@@ -34,3 +34,25 @@ export async function readApplicationSession(client) {
   });
 }
 
+export async function readCurrentAccountPasswordState(client) {
+  let result;
+  try {
+    result = await client.rpc("current_account_has_password");
+  } catch {
+    return Object.freeze({ kind: "unavailable" });
+  }
+
+  if (result?.error || typeof result?.data !== "boolean") {
+    return Object.freeze({ kind: "unavailable" });
+  }
+
+  return Object.freeze({
+    kind: result.data ? "ready" : "setup-required"
+  });
+}
+
+export function passwordGateDecision(passwordState) {
+  if (passwordState?.kind === "ready") return "allow";
+  if (passwordState?.kind === "setup-required") return "password-update";
+  return "unavailable";
+}

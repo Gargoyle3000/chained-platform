@@ -3,7 +3,10 @@ import {
   GENERIC_RECOVERY_CONFIRMATION,
   mapLoginResult
 } from "./auth-logic.mjs";
-import { readApplicationSession } from "./session.mjs";
+import {
+  readApplicationSession,
+  readCurrentAccountPasswordState
+} from "./session.mjs";
 
 async function signOutQuietly(client) {
   try {
@@ -147,4 +150,24 @@ export async function updateSameUserPassword(client, { password, userId }) {
   }
 
   return Object.freeze({ kind: "updated", userId });
+}
+
+export async function updateSameUserPasswordAndConfirm(
+  client,
+  { password, userId },
+  readPasswordState = readCurrentAccountPasswordState
+) {
+  const update = await updateSameUserPassword(client, { password, userId });
+  if (update.kind !== "updated") return update;
+
+  let passwordState;
+  try {
+    passwordState = await readPasswordState(client);
+  } catch {
+    return Object.freeze({ kind: "unconfirmed" });
+  }
+
+  return passwordState?.kind === "ready"
+    ? Object.freeze({ kind: "ready", userId })
+    : Object.freeze({ kind: "unconfirmed" });
 }

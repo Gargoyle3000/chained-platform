@@ -5,7 +5,7 @@ import {
 } from "./auth-logic.mjs";
 import {
   establishPasswordLinkSession,
-  updateSameUserPassword
+  updateSameUserPasswordAndConfirm
 } from "./auth-flows.mjs";
 import { getFrontendRuntime } from "./supabase-client.mjs";
 
@@ -101,7 +101,7 @@ async function initializePasswordUpdate() {
     setBusy(true);
     setStatus("SETTING PASSWORD");
 
-    const result = await updateSameUserPassword(runtime.client, {
+    const result = await updateSameUserPasswordAndConfirm(runtime.client, {
       password,
       userId: activeUserId
     });
@@ -109,7 +109,7 @@ async function initializePasswordUpdate() {
     passwordInput.value = "";
     confirmationInput.value = "";
 
-    if (result.kind === "updated") {
+    if (result.kind === "ready") {
       window.location.replace("dashboard.html");
       return;
     }

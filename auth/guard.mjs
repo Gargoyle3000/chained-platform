@@ -4,7 +4,11 @@ import {
   resolveNextPage
 } from "./auth-logic.mjs";
 import { getFrontendRuntime } from "./supabase-client.mjs";
-import { readApplicationSession } from "./session.mjs";
+import {
+  passwordGateDecision,
+  readApplicationSession,
+  readCurrentAccountPasswordState
+} from "./session.mjs";
 import { applyAuthenticatedNavigation } from "./navigation.mjs";
 
 const guardFlag = "__chainedAuthGuardInitialized";
@@ -55,6 +59,10 @@ function redirectToLogin() {
   window.location.replace(loginLocation());
 }
 
+function redirectToPasswordUpdate() {
+  window.location.replace("password-update.html");
+}
+
 async function authorize(client) {
   const applicationSession = await readApplicationSession(client);
 
@@ -70,6 +78,19 @@ async function authorize(client) {
     showAccessUnavailable(
       "DASHBOARD ACCESS IS UNAVAILABLE FOR THIS ACCOUNT. CONTACT CHAINED SUPPORT."
     );
+    return false;
+  }
+
+  const passwordGate = passwordGateDecision(
+    await readCurrentAccountPasswordState(client)
+  );
+  if (passwordGate === "password-update") {
+    redirectToPasswordUpdate();
+    return false;
+  }
+
+  if (passwordGate !== "allow") {
+    showAccessUnavailable("AUTHENTICATION IS CURRENTLY UNAVAILABLE.");
     return false;
   }
 
