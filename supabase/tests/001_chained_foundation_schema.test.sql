@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(38);
+select plan(42);
 
 select has_table('public', 'accounts', 'accounts table exists');
 select has_table('public', 'account_roles', 'account_roles table exists');
@@ -280,6 +280,30 @@ select is(
   has_column_privilege('anon', 'public.work_images', 'private_object_path', 'select'),
   false,
   'anon has no column privilege for private image paths'
+);
+
+select is(
+  has_column_privilege('service_role', 'public.public_profiles', 'id', 'select'),
+  true,
+  'service role can read public profile ids for trusted Artist invitation slug lookup'
+);
+
+select is(
+  has_column_privilege('service_role', 'public.public_profiles', 'slug', 'select'),
+  true,
+  'service role can read public profile slugs for trusted Artist invitation slug lookup'
+);
+
+select is(
+  has_column_privilege('service_role', 'public.public_profiles', 'deleted_at', 'select'),
+  true,
+  'service role can read public profile deletion state for trusted Artist invitation slug lookup'
+);
+
+select is(
+  has_table_privilege('service_role', 'public.public_profiles', 'select'),
+  false,
+  'service role has no table-level public profile select privilege'
 );
 
 select is(
