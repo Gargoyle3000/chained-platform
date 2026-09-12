@@ -6,7 +6,6 @@ Last updated: 2026-09-12
 
 - Archive SINGLE / GRID should gain the same proven swipe interaction as Discover and Following, while preserving existing view behavior, image ratios, and layout.
 - Add Agenda `[ ALL ]` and `[ FOLLOWING ]` views.
-- Investigate a possible cover-image deletion/state issue observed during testing: non-cover images appeared to delete immediately while the probable cover remained visible until `SAVE AS DRAFT`. This is an observation/hypothesis, not a confirmed root cause.
 - Improve stale soft-deleted Work UX: a locally stale save currently collapses `THIS WORK IS NOT AVAILABLE` into generic `WORK COULD NOT BE SAVED`. This does not block private-preview rollout.
 - Dashboard actionable Work reminder: if image processing becomes ready after its user has left the Work editor, show a quiet `WORK READY TO PUBLISH — <TITLE>` item that opens the relevant Work. Remove it when the Work is published or otherwise no longer needs publication. This belongs with actionable Dashboard / REQUESTS items, not an engagement notification center, badge system or pop-up.
 - Polish empty/new-user states and Dashboard / REQUESTS presentation before broader testing.
