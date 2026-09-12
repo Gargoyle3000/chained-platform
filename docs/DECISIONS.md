@@ -2,7 +2,7 @@
 
 
 
-Last updated: 2026-09-10
+Last updated: 2026-09-12
 
 
 
@@ -145,6 +145,16 @@ Last updated: 2026-09-10
 \- Email + password is the primary login method; email magic link remains a secondary fallback.
 
 \- Passwords are handled only by Supabase Auth, and adding a password preserves the existing Auth user/account UUID.
+
+\- Trusted account invitations expire after 12 hours, matching the configured Supabase Auth invite/OTP expiry. This is the current security/usability compromise.
+
+\- An accepted invite's temporary Auth session is not sufficient for Dashboard access: a self-scoped server check requires a password hash for an active CHAINED account, redirects passwordless users to the shared password-update route, and rechecks after password creation.
+
+\- Trusted Artist invitations derive immutable `CHAINED` plan intent in the database; an invited client cannot select or change its plan. Non-Artist invitations remain `UNCHAINED`.
+
+\- `CHAINED` currently denotes trusted complimentary access, not payment, subscription, finalized quota or public tier. An existing active account may receive the same audited, service-role-only `UNCHAINED` → `CHAINED` upgrade through an active administrator; no downgrade path exists.
+
+\- There is no separate publishing-approval flag. Publishing continues to require an active account, legitimate Profile authority and the existing content lifecycle gates.
 
 \## Public entry
 

@@ -1,6 +1,6 @@
 # CHAINED — CURRENT STATE
 
-Last updated: 2026-09-10
+Last updated: 2026-09-12
 
 ## NOW
 
@@ -11,6 +11,9 @@ Current focus: complete and polish core product surfaces before broader rollout.
 - Frontend auth is password-first: email + password login, Forgot password, and one invite/recovery password-update route.
 - Magic-link login remains an invitation-only fallback; no public signup exists.
 - Hosted redirect allowlist, invite redirect and recovery configuration are deployed and validated in production.
+- The trusted Artist invitation journey is production-validated end-to-end: Admin Console → transactional invite → password-update → Dashboard → ordinary password login. The disposable production test account and its related Auth, account, profile, membership, invitation and test-audit data were removed after validation; the first real Artist invitation remains intentionally pending Peer's onboarding availability.
+- Trusted account invitations expire after 12 hours in both the database default/approval fallback and Supabase Auth invite/OTP configuration.
+- An invite-only Auth session without a password cannot enter Dashboard: the self-scoped `current_account_has_password()` guard redirects to `password-update.html`, and password creation is rechecked server-side before Dashboard access.
 - Public entry is Discover-first: anonymous visitors browse Discover with `<CHAINED>` and `[ LOG IN ]`; Private Access returns with `[ DISCOVER ]`.
 
 ### Validated frontend polish
@@ -63,6 +66,8 @@ Current focus: complete and polish core product surfaces before broader rollout.
 - Mobile core flows usable.
 - Work metadata uses structured MEDIUM and one comma-separated MATERIALS field; legacy material fields are unified on read and migrated when that Work is saved.
 - Artist workspace provisioning is live: a fresh official artist invite receives a managed profile, can create a draft Work, finalize images, publish the Work, and publish the profile through Settings.
+- Trusted Artist admission now carries server-derived, invitation-immutable `CHAINED` plan intent. Existing-account complimentary upgrades are active-admin-to-active-account, service-only, upgrade-only and audited; the plan is not billing, a payment state or a publishing-approval flag.
+- `invite-account` keeps strict origin CORS while allowing the standard Supabase client headers, and records only privacy-safe stage/status diagnostics for unexpected internal failures. Its least-privilege Artist-slug lookup has `service_role` SELECT only on `public_profiles.id`, `slug` and `deleted_at`, never table-level SELECT.
 - Production security validation is complete: anonymous and cross-account private-media access is denied without URL leakage; an existing session loses protected access immediately when its account is suspended and regains it after reactivation. The fresh artist invite → workspace → Work → images → publish → profile-publish flow is also validated.
 - Phase 4 public image derivatives are live: verified Works publish exact WebP SMALL and LARGE renditions, SMALL serves public grid/feed contexts, LARGE serves strict Work detail paths, originals remain private, and legacy public paths remain compatible.
 - Strict publication requires current-source READY SMALL and LARGE derivatives. Public visitors do not receive `work-originals` or `work-derivative-staging` objects.
@@ -73,9 +78,9 @@ Current focus: complete and polish core product surfaces before broader rollout.
 
 ## NEXT
 
-- WORKS / MEDIA LIFECYCLE HARDENING: the reported Published Work → draft preview incident did not reproduce in the stateful lifecycle fixture or recent read-only production audit. Private-preview UI now distinguishes genuine unavailability from authorized resolver/request failure; monitor any recurrence through its safe failure category without changing private/public media trust.
-- Continue the compact pre-tester security and usability pass.
-- First 1–2 external testers.
+- Add a quiet Dashboard actionable item when background image processing becomes ready after a user has left the Work editor: `WORK READY TO PUBLISH — <TITLE>` should open that Work and disappear when publication is no longer needed.
+- Polish empty/new-user states and Dashboard / REQUESTS presentation.
+- Observe the first real Artist onboarding intentionally when Peer is available, then prioritize actual tester feedback rather than a new large feature.
 
 ## LATER
 

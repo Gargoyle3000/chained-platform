@@ -1,6 +1,6 @@
 # CHAINED — ROADMAP
 
-Last updated: 2026-09-10
+Last updated: 2026-09-12
 
 ## POLISH
 
@@ -8,7 +8,9 @@ Last updated: 2026-09-10
 - Add Agenda `[ ALL ]` and `[ FOLLOWING ]` views.
 - Investigate a possible cover-image deletion/state issue observed during testing: non-cover images appeared to delete immediately while the probable cover remained visible until `SAVE AS DRAFT`. This is an observation/hypothesis, not a confirmed root cause.
 - Improve stale soft-deleted Work UX: a locally stale save currently collapses `THIS WORK IS NOT AVAILABLE` into generic `WORK COULD NOT BE SAVED`. This does not block private-preview rollout.
-- Dashboard WORKS publication-readiness status: surface the existing Work readiness state on authenticated Works surfaces, for example `DRAFT · PREPARING IMAGES`, `DRAFT · READY TO PUBLISH`, or `DRAFT · IMAGE PROCESSING FAILED`. This is Work state, not a REQUEST notification; do not add a notification center, badge system, pop-up, or gamified alert. Final copy remains open for polish.
+- Dashboard actionable Work reminder: if image processing becomes ready after its user has left the Work editor, show a quiet `WORK READY TO PUBLISH — <TITLE>` item that opens the relevant Work. Remove it when the Work is published or otherwise no longer needs publication. This belongs with actionable Dashboard / REQUESTS items, not an engagement notification center, badge system or pop-up.
+- Polish empty/new-user states and Dashboard / REQUESTS presentation before broader testing.
+- Observe the first real trusted Artist onboarding intentionally when Peer is available, then prioritize actual tester feedback rather than a new large feature.
 - Add an optional, compact `[?]` GUIDE / HELP layer. It should be system-oriented and context-aware (for example Work publication, Archive privacy/projects/tags, or Profile draft/published state), with a possible central GUIDE entry from Settings/navigation. No mandatory onboarding or tutorial.
 - Clarify the valid state where a Work is published while its owner profile remains draft/private, for example `WORK PUBLISHED · PROFILE STILL PRIVATE [?]`, optionally linking to Settings. Never auto-publish the profile as a Work-publication side effect.
 
@@ -96,6 +98,7 @@ Implementation should verify the largest real preview display and HiDPI needs be
 
 ## NETWORK / ACCOUNT ARCHITECTURE
 
+- Trusted Artist alpha admission now has server-derived, invitation-immutable `CHAINED` plan intent and an audited service-only complimentary upgrade path for existing active accounts. It is not billing, a public tier or publishing approval; commercial quotas/limits remain undecided.
 - Near-term sequence: trusted Artist alpha with a small number of known Artists; shared multi-entity relationship/permission primitives; unclaimed Artist profiles and claiming; Gallery profile/account; delegated access with proposed-change approval; claim-transfer/provenance validation; Curator profile/account reusing the same primitives; dedicated staging/pre-production; paid Supabase production setup when operationally appropriate; focused RLS/Auth/Storage/security audit; then broader beta.
 - GALLERY-CREATED UNCLAIMED ARTIST CAPACITY remains open before Gallery beta: decide how many unclaimed Artist profiles a Gallery may create/manage, whether limits depend on plan/tier/verification, entitlement boundaries versus a paid Artist account, anti-spam/abuse/rate limits, what happens to capacity after claiming, and whether larger Galleries need higher limits. Prevent a low-cost Gallery subscription from effectively providing many full Artist subscriptions. No exact numeric limit or price is decided yet; unclaimed profiles do not receive the full entitlements/value of independent Artist accounts.
 
