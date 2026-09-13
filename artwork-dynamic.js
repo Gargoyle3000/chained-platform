@@ -99,7 +99,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     backLink.textContent = "← BACK";
     backLink.setAttribute(
       "aria-label",
-      `Return to ${origin.origin === "discover" ? "Discover" : "Following"}`
+      `Return to ${origin.origin === "discover" ? "Discover" : "Follow"}`
     );
     backLink.addEventListener("click", (event) => {
       if (

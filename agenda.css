@@ -182,7 +182,6 @@
   gap: clamp(24px, 4vw, 70px);
 
   padding: 24px 0 30px;
-  border-top: 1px solid var(--black);
 }
 
 .agenda-event[hidden] {

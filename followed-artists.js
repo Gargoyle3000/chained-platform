@@ -97,7 +97,7 @@
       );
 
       button.textContent = following
-        ? "[ FOLLOWING ]"
+        ? "[ FOLLOW ]"
         : "[ FOLLOW ]";
     });
   }

@@ -14,7 +14,10 @@ test("anonymous root is the restrained public CHAINED introduction", async () =>
   ]);
 
   assert.match(page, /<header class="site-header" data-public-header>/);
-  assert.match(page, /<h1 id="about-title">CHAINED<\/h1>/);
+  assert.match(page, /<h1 id="about-title">&lt;CHAINED&gt;<\/h1>/);
+  assert.doesNotMatch(page, /class="about-label">ABOUT/);
+  assert.match(css, /\.about-intro h1 \{[\s\S]*color: var\(--accent\);/);
+  assert.doesNotMatch(css, /\.about-section \{[\s\S]*border-top/);
   assert.match(page, /Digital infrastructure for the professional art practice\./);
   assert.match(page, /<h2 id="about-portfolio">PORTFOLIO<\/h2>/);
   assert.match(page, /<h2 id="about-network">NETWORK<\/h2>/);

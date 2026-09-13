@@ -10,6 +10,14 @@ test("Archive SINGLE centers its existing content column without changing image 
   assert.match(css, /\.archive-page\[data-view="single"\] \.saved-work img \{[\s\S]*max-height: 78svh;[\s\S]*object-fit: contain;/);
 });
 
+test("Archive reuses the contained shared carousel without changing its Work action state", async () => {
+  const [script, css] = await Promise.all([read("archive.js"), read("archive.css")]);
+  assert.match(script, /attachPublicWorkCarousel\(\{[\s\S]*listArchivedSelectWorks\(\[workId\]\)[\s\S]*current\?\.images \|\| \[work\.image\]/);
+  assert.match(script, /createPublicWorkCarouselControls\(document\)/);
+  assert.match(css, /\.saved-work\.has-public-work-carousel > \.saved-work-image-link \{[\s\S]*touch-action: pan-y;/);
+  assert.match(css, /\.archive-page\[data-view="grid"\] \.saved-work\.has-public-work-carousel > \.saved-work-image-link \{[\s\S]*aspect-ratio: var\(--public-carousel-cover-ratio\);/);
+});
+
 test("Archive Project clearing resets delivery and export-local selection state", async () => {
   const script = await read("archive.js");
   assert.match(script, /function clearProjectExportState\(\) \{[\s\S]*clearProjectPdfDelivery\(\);[\s\S]*projectImageSelection = createExportImageSelectionState\(\);[\s\S]*projectImageSelectionId = null;[\s\S]*projectSelectWorks = \[\];/);

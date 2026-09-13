@@ -100,7 +100,7 @@ Last updated: 2026-09-12
 
 \- Cascadia Code should render normally; no stretched/distorted lettering.
 
-\- Avoid unnecessary horizontal black separators outside Agenda.
+\- Do not use decorative black horizontal divider lines. Prefer whitespace, typographic hierarchy and imagery for separation.
 
 \- Do not hide major view controls inside a dropdown when they benefit from being directly visible.
 

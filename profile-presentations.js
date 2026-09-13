@@ -301,7 +301,7 @@ function renderFollowState(state) {
 
   followAction.textContent =
     isFollowing
-      ? "[ FOLLOWING ]"
+      ? "[ FOLLOW ]"
       : "[ FOLLOW ]";
 
   followAction.setAttribute(
@@ -352,7 +352,7 @@ async function initialiseFollowControl(
       if (
         removing &&
         !window.confirm(
-          "STOP FOLLOWING THIS PROFILE?"
+          "STOP FOLLOW THIS PROFILE?"
         )
       ) {
         return;

@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await import("./data/dashboard-requests.mjs");
   const { renderDashboardAccountIdentity } =
     await import("./data/dashboard-context.mjs");
-  const { RECENT_WORKS_LIMIT, recentWorksCountLabel } =
+  const { RECENT_WORKS_LIMIT, nextRecentItemsCount, recentWorksCountLabel } =
     await import("./data/dashboard-recent-work-copy.mjs");
 
   const totalElement = document.querySelector("#dashboard-work-total");
@@ -39,6 +39,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const recentList = document.querySelector(
     "#dashboard-recent-work-list"
   );
+  const recentWorkLoadMore = document.querySelector(
+    "#dashboard-recent-work-load-more"
+  );
+  const recentPresentationLoadMore = document.querySelector(
+    "#dashboard-recent-presentation-load-more"
+  );
   const errorElement = document.querySelector(
     "#dashboard-overview-error"
   );
@@ -55,6 +61,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   const activeObjectUrls = new Set();
   const requestActionInFlight = new Set();
   let repository = null;
+  let recentWorks = [];
+  let recentPresentations = [];
+  let recentWorksVisibleCount = RECENT_WORKS_LIMIT;
+  let recentPresentationsVisibleCount = RECENT_WORKS_LIMIT;
+
+  const mobileRecentQuery = window.matchMedia("(max-width: 700px)");
+
+  function renderLoadMore(root, total, visible, onLoadMore) {
+    if (!root) return;
+    root.replaceChildren();
+    root.hidden = !mobileRecentQuery.matches || visible >= total;
+    if (root.hidden) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "text-action";
+    button.textContent = "[ LOAD MORE ]";
+    button.addEventListener("click", onLoadMore);
+    root.append(button);
+  }
+
+  function visibleRecentCount(visibleCount, totalCount) {
+    return mobileRecentQuery.matches
+      ? Math.min(totalCount, visibleCount)
+      : totalCount;
+  }
 
   function releaseObjectUrls() {
     activeObjectUrls.forEach((url) => URL.revokeObjectURL(url));
@@ -522,7 +553,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
     recentTotalElement.textContent = recentWorksCountLabel(
       works.length,
-      Math.min(works.length, RECENT_WORKS_LIMIT)
+      visibleRecentCount(recentWorksVisibleCount, works.length)
     );
   }
 
@@ -692,23 +723,36 @@ document.addEventListener("DOMContentLoaded", async () => {
           includeAddLink
         )
       );
+      renderLoadMore(recentPresentationLoadMore, 0, 0, () => {});
 
       return;
     }
 
-    const recentPresentations =
-      [...presentations]
-        .sort(
-          (first, second) =>
-            parseTimestamp(second.updatedAt) -
-            parseTimestamp(first.updatedAt)
-        )
-        .slice(0, 10);
+    recentPresentations = [...presentations].sort(
+      (first, second) =>
+        parseTimestamp(second.updatedAt) - parseTimestamp(first.updatedAt)
+    );
+    const visibleCount = visibleRecentCount(
+      recentPresentationsVisibleCount,
+      recentPresentations.length
+    );
 
     recentPresentationList.replaceChildren(
-      ...recentPresentations.map(
+      ...recentPresentations.slice(0, visibleCount).map(
         createRecentPresentationRow
       )
+    );
+    renderLoadMore(
+      recentPresentationLoadMore,
+      recentPresentations.length,
+      visibleCount,
+      () => {
+        recentPresentationsVisibleCount = nextRecentItemsCount(
+          recentPresentationsVisibleCount,
+          recentPresentations.length
+        );
+        renderRecentPresentations(recentPresentations);
+      }
     );
   }
 
@@ -783,11 +827,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       recentList.replaceChildren(
         createEmptyState(emptyMessage, includeAddLink)
       );
+      renderLoadMore(recentWorkLoadMore, 0, 0, () => {});
       return;
     }
 
-    const recentWorks = works.slice(0, RECENT_WORKS_LIMIT);
-    const privateCovers = recentWorks.map((work) => {
+    recentWorks = [...works];
+    const visibleCount = visibleRecentCount(recentWorksVisibleCount, recentWorks.length);
+    recentTotalElement.textContent = recentWorksCountLabel(
+      recentWorks.length,
+      visibleCount
+    );
+    const visibleWorks = recentWorks.slice(0, visibleCount);
+    const privateCovers = visibleWorks.map((work) => {
       const cover = getCoverImage(work);
       return cover && !(cover.publicPath && work.visibility === "published") ? cover : null;
     }).filter(Boolean);
@@ -797,8 +848,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     recentList.replaceChildren(
       ...await Promise.all(
-        recentWorks.map((work) => createRecentWorkRow(work, privatePreviewResult))
+        visibleWorks.map((work) => createRecentWorkRow(work, privatePreviewResult))
       )
+    );
+    renderLoadMore(
+      recentWorkLoadMore,
+      recentWorks.length,
+      visibleCount,
+      () => {
+        recentWorksVisibleCount = nextRecentItemsCount(
+          recentWorksVisibleCount,
+          recentWorks.length
+        );
+        void renderRecentWorks(recentWorks);
+      }
     );
   }
 
@@ -876,6 +939,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   initialiseRecentScrollIndicators();
+
+  mobileRecentQuery.addEventListener("change", () => {
+    if (recentWorks.length) void renderRecentWorks(recentWorks);
+    if (recentPresentations.length) renderRecentPresentations(recentPresentations);
+  });
 
   window.addEventListener("beforeunload", releaseObjectUrls);
   initialiseOverview();

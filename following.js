@@ -192,7 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
     emptyRegion.hidden = false;
     emptyRegion.setAttribute("aria-live", "polite");
     emptyRegion.replaceChildren(
-      createState("FOLLOWING IS CURRENTLY UNAVAILABLE.", true),
+      createState("FOLLOW IS CURRENTLY UNAVAILABLE.", true),
       action
     );
   }
@@ -204,7 +204,7 @@ document.addEventListener("DOMContentLoaded", () => {
     emptyRegion.hidden = true;
     stream.setAttribute("aria-live", "polite");
     stream.setAttribute("aria-busy", "true");
-    stream.replaceChildren(createState("LOADING FOLLOWING"));
+    stream.replaceChildren(createState("LOADING FOLLOW"));
 
     try {
       const [

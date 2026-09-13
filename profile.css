@@ -346,6 +346,25 @@
   padding-top: 22px;
 }
 }
+
+@media (max-width: 700px) {
+  /* The profile's mobile Work stream uses the same image-first carousel stage. */
+  .profile-work-meta {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding-top: 0;
+  }
+
+  .profile-work-meta > .public-work-carousel-controls {
+    grid-row: 1;
+    justify-self: center;
+    margin: 8px 0 0;
+  }
+
+  .profile-work-meta > h2 {
+    margin-top: 22px;
+  }
+}
 .profile-year {
   display: block;
 }

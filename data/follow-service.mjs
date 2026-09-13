@@ -5,7 +5,7 @@ import {
 } from "./public-work-mapping.mjs";
 
 export const FOLLOW_MESSAGES = Object.freeze({
-  unavailable: "FOLLOWING IS CURRENTLY UNAVAILABLE.",
+  unavailable: "FOLLOW IS CURRENTLY UNAVAILABLE.",
   followFailed: "THE PROFILE COULD NOT BE FOLLOWED. TRY AGAIN.",
   unfollowFailed: "THE PROFILE COULD NOT BE UNFOLLOWED. TRY AGAIN."
 });

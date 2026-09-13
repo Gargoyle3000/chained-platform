@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { RECENT_WORKS_LIMIT, recentWorksCountLabel } from "../data/dashboard-recent-work-copy.mjs";
+import { RECENT_WORKS_LIMIT, nextRecentItemsCount, recentWorksCountLabel } from "../data/dashboard-recent-work-copy.mjs";
 
 test("Recent Works wording is truthful for every visible subset", () => {
   assert.equal(RECENT_WORKS_LIMIT, 10);
@@ -10,6 +10,21 @@ test("Recent Works wording is truthful for every visible subset", () => {
   assert.equal(recentWorksCountLabel(7, 7), "7 WORKS");
   assert.equal(recentWorksCountLabel(10, 10), "10 WORKS");
   assert.equal(recentWorksCountLabel(13, 10), "10 OF 13");
+  assert.equal(nextRecentItemsCount(10, 27), 20);
+  assert.equal(nextRecentItemsCount(20, 27), 27);
+});
+
+test("mobile Dashboard recent lists page independently while desktop retains every row", async () => {
+  const [page, script] = await Promise.all([
+    readFile(new URL("../dashboard.html", import.meta.url), "utf8"),
+    readFile(new URL("../dashboard-overview.js", import.meta.url), "utf8")
+  ]);
+  assert.match(page, /id="dashboard-recent-work-load-more"/);
+  assert.match(page, /id="dashboard-recent-presentation-load-more"/);
+  assert.match(script, /const mobileRecentQuery = window\.matchMedia\("\(max-width: 700px\)"\)/);
+  assert.match(script, /nextRecentItemsCount\(\s*recentWorksVisibleCount/);
+  assert.match(script, /nextRecentItemsCount\(\s*recentPresentationsVisibleCount/);
+  assert.match(script, /return mobileRecentQuery\.matches[\s\S]*: totalCount;/);
 });
 
 test("Work material preview uses comma-only display punctuation without changing stored values", async () => {

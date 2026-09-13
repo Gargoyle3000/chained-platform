@@ -18,6 +18,10 @@ import { PortfolioExportError } from "./data/portfolio-export.mjs";
 import { createExportImageSelectionState } from "./data/export-image-selection-state.mjs";
 import { openExportImageSelection } from "./data/export-image-selection-ui.mjs";
 import { createPdfDelivery } from "./data/pdf-delivery.mjs";
+import {
+  attachPublicWorkCarousel,
+  createPublicWorkCarouselControls
+} from "./public-work-carousel.mjs";
 
 const page = document.querySelector(".archive-page");
 const grid = document.querySelector(".saved-grid");
@@ -440,6 +444,7 @@ function createSavedWork(work) {
   const article = document.createElement("article");
   article.className = "saved-work";
   const artworkLink = document.createElement("a");
+  artworkLink.className = "saved-work-image-link";
   artworkLink.href = work.artworkHref;
   const image = document.createElement("img");
   image.src = work.image.src;
@@ -447,6 +452,22 @@ function createSavedWork(work) {
   if (work.image.width) image.width = work.image.width;
   if (work.image.height) image.height = work.image.height;
   artworkLink.append(image);
+  const carouselControls = createPublicWorkCarouselControls(document);
+  attachPublicWorkCarousel({
+    link: artworkLink,
+    image,
+    article,
+    workId: work.id,
+    coverImage: work.image,
+    loadImages: async (workId) => {
+      const [current] = await repository.listArchivedSelectWorks([workId]);
+      return current?.images || [work.image];
+    },
+    label: `View ${work.title} by ${work.artistName}`,
+    previousButton: carouselControls?.previous,
+    nextButton: carouselControls?.next,
+    counter: carouselControls?.counter
+  });
   const metadata = document.createElement("div");
   metadata.className = "saved-work-meta";
   const artist = document.createElement("a");
@@ -476,6 +497,7 @@ function createSavedWork(work) {
   management.menu.append(remove);
   actions.append(management.toggle, management.menu);
   metadata.append(artist, title, year, createAssignedTags(work));
+  if (carouselControls) metadata.append(carouselControls.root);
   const memberships = createProjectMemberships(work);
   if (memberships) metadata.append(memberships);
   metadata.append(actions);

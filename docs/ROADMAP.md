@@ -4,7 +4,6 @@ Last updated: 2026-09-12
 
 ## POLISH
 
-- Archive SINGLE / GRID should gain the same proven swipe interaction as Discover and Following, while preserving existing view behavior, image ratios, and layout.
 - Add Agenda `[ ALL ]` and `[ FOLLOWING ]` views.
 - Improve stale soft-deleted Work UX: a locally stale save currently collapses `THIS WORK IS NOT AVAILABLE` into generic `WORK COULD NOT BE SAVED`. This does not block private-preview rollout.
 - Polish empty/new-user states and Dashboard / REQUESTS presentation before broader testing.
@@ -14,12 +13,6 @@ Last updated: 2026-09-12
 
 - Video support direction: support video and video documentation without changing the still, image-led feed. Every video Work requires a cover still for Discover, Following, GRID, Archive overviews and relevant exports; no autoplay or moving thumbnails. Playback belongs on Work detail, with mixed media (for example `IMAGE · IMAGE · VIDEO · IMAGE`) supported later. Prefer external hosting/embed for v1; managed video infrastructure can follow if scale warrants it.
 
-- Mobile dashboard:
-  - Show 10 recent Works / Presentations initially.
-  - If more than 10 exist, show `[ LOAD MORE ]`.
-  - Each click reveals 10 more.
-  - No infinite scroll.
-  - Desktop internal-scroll behavior stays unchanged.
 
 ## PRESENTATIONS + AGENDA
 

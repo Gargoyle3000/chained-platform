@@ -341,7 +341,7 @@ function renderFollowState(state) {
   const isFollowing = state.kind === "following";
   followControl.hidden = false;
   followAction.dataset.following = String(isFollowing);
-  followAction.textContent = isFollowing ? "[ FOLLOWING ]" : "[ FOLLOW ]";
+  followAction.textContent = "[ FOLLOW ]";
   followAction.setAttribute(
     "aria-label",
     isFollowing ? "Unfollow this artist profile" : "Follow this artist profile"
@@ -363,7 +363,7 @@ async function initialiseFollowControl(client, identity) {
   followAction.addEventListener("click", async () => {
     if (followAction.disabled) return;
     const removing = state.kind === "following";
-    if (removing && !window.confirm("STOP FOLLOWING THIS PROFILE?")) return;
+    if (removing && !window.confirm("STOP FOLLOW THIS PROFILE?")) return;
 
     followAction.disabled = true;
     followAction.setAttribute("aria-busy", "true");

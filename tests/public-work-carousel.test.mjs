@@ -286,11 +286,12 @@ test("keyboard changes the accessible current-image position without adding visi
   assert.equal(link.dataset.carouselCount, "3");
 });
 
-test("every compact public Work viewer uses shared circular state, controls, and contained hit areas", async () => {
-  const [discover, following, profile, artwork, styles, exports] = await Promise.all([
+test("every compact Work viewer uses shared circular state, controls, and contained hit areas", async () => {
+  const [discover, following, profile, archive, artwork, styles, exports] = await Promise.all([
     readFile(new URL("../discover.js", import.meta.url), "utf8"),
     readFile(new URL("../following.js", import.meta.url), "utf8"),
     readFile(new URL("../profile-dynamic.js", import.meta.url), "utf8"),
+    readFile(new URL("../archive.js", import.meta.url), "utf8"),
     readFile(new URL("../artwork-dynamic.js", import.meta.url), "utf8"),
     readFile(new URL("../styles.css", import.meta.url), "utf8"),
     Promise.all([
@@ -301,9 +302,11 @@ test("every compact public Work viewer uses shared circular state, controls, and
   assert.equal(discover.includes("attachPublicWorkCarousel"), true);
   assert.equal(following.includes("attachPublicWorkCarousel"), true);
   assert.equal(profile.includes("attachPublicWorkCarousel"), true);
+  assert.equal(archive.includes("attachPublicWorkCarousel"), true);
   assert.equal(discover.includes("createControls: createPublicWorkCarouselControls"), true);
   assert.equal(following.includes("createControls: createPublicWorkCarouselControls"), true);
   assert.equal(profile.includes("createPublicWorkCarouselControls(document)"), true);
+  assert.equal(archive.includes("createPublicWorkCarouselControls(document)"), true);
   assert.equal(artwork.includes("public-work-carousel.mjs"), false);
   assert.equal(artwork.includes("content.replaceChildren(\n      ...images.map"), true);
   assert.equal(styles.includes("[data-public-carousel-hit-area]"), true);
@@ -311,13 +314,27 @@ test("every compact public Work viewer uses shared circular state, controls, and
   exports.forEach((source) => assert.equal(source.includes("public-work-carousel"), false));
 });
 
-test("compact carousel counter precedes SELECT action on Discover and Following", async () => {
-  const [discover, following] = await Promise.all([
+test("compact carousel counter precedes SELECT action on Discover, Follow, and Archive", async () => {
+  const [discover, following, archive] = await Promise.all([
     readFile(new URL("../discover.js", import.meta.url), "utf8"),
-    readFile(new URL("../following.js", import.meta.url), "utf8")
+    readFile(new URL("../following.js", import.meta.url), "utf8"),
+    readFile(new URL("../archive.js", import.meta.url), "utf8")
   ]);
   const controlsAppend = "if (carouselControls) metadata.append(carouselControls.root);";
   const selectAppend = 'metadata.append(createArchiveAction(work, archiveState, announceArchiveStatus, "discover-archive-action"));';
   assert.ok(discover.indexOf(controlsAppend) < discover.indexOf(selectAppend));
   assert.ok(following.indexOf(controlsAppend) < following.indexOf(selectAppend));
+  assert.ok(archive.indexOf("if (carouselControls) metadata.append(carouselControls.root);") < archive.indexOf("metadata.append(actions);"));
+});
+
+test("mobile Work grids place each compact carousel control directly below its own image stage", async () => {
+  const [styles, archiveCss, profileCss] = await Promise.all([
+    readFile(new URL("../styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../archive.css", import.meta.url), "utf8"),
+    readFile(new URL("../profile.css", import.meta.url), "utf8")
+  ]);
+
+  assert.match(styles, /@media \(max-width: 700px\) \{[\s\S]*\.discover-page\[data-view="grid"\] \.discover-meta \{[\s\S]*display: grid;[\s\S]*\.discover-meta > \.public-work-carousel-controls \{[\s\S]*grid-row: 1;[\s\S]*justify-self: center;/);
+  assert.match(archiveCss, /@media \(max-width: 700px\) \{[\s\S]*\.archive-page\[data-view="grid"\] \.saved-work-meta,[\s\S]*display: grid;[\s\S]*\.saved-work-meta > \.public-work-carousel-controls \{[\s\S]*grid-row: 1;[\s\S]*justify-self: center;/);
+  assert.match(profileCss, /@media \(max-width: 700px\) \{[\s\S]*\.profile-work-meta \{[\s\S]*display: grid;[\s\S]*\.profile-work-meta > \.public-work-carousel-controls \{[\s\S]*grid-row: 1;[\s\S]*justify-self: center;/);
 });

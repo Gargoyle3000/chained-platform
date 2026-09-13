@@ -328,14 +328,14 @@ try {
   record("active profile control begins at FOLLOW", await evaluate("document.querySelector('#profile-follow-action').textContent.includes('FOLLOW') && !document.querySelector('#profile-follow-action').textContent.includes('FOLLOWING')"));
   stage = "activating the first profile follow";
   await evaluate("document.querySelector('#profile-follow-action').click()");
-  for (let attempt = 0; attempt < 50 && !(await evaluate("document.querySelector('#profile-follow-action').textContent.includes('FOLLOWING')")); attempt += 1) await wait(100);
-  record("follow state reloads as FOLLOWING", await evaluate("document.querySelector('#profile-follow-action').textContent.includes('FOLLOWING')"));
+  for (let attempt = 0; attempt < 50 && !(await evaluate("document.querySelector('#profile-follow-action').dataset.following === 'true'")); attempt += 1) await wait(100);
+  record("follow state reloads while retaining FOLLOW action copy", await evaluate("document.querySelector('#profile-follow-action').dataset.following === 'true' && document.querySelector('#profile-follow-action').textContent.includes('FOLLOW')"));
   stage = "waiting for the second authenticated profile control";
   await navigate(`profile.html?slug=${encodeURIComponent(slugs[1])}`, "!document.querySelector('#profile-follow-control').hidden");
   stage = "activating the second profile follow";
   await evaluate("document.querySelector('#profile-follow-action').click()");
-  for (let attempt = 0; attempt < 50 && !(await evaluate("document.querySelector('#profile-follow-action').textContent.includes('FOLLOWING')")); attempt += 1) await wait(100);
-  record("second published profile can be followed", await evaluate("document.querySelector('#profile-follow-action').textContent.includes('FOLLOWING')"));
+  for (let attempt = 0; attempt < 50 && !(await evaluate("document.querySelector('#profile-follow-action').dataset.following === 'true'")); attempt += 1) await wait(100);
+  record("second published profile can be followed", await evaluate("document.querySelector('#profile-follow-action').dataset.following === 'true'"));
 
   const duplicateResponse = await insertFollow(status, session.accessToken, primaryId, profiles[0]);
   const ownFollows = await rest(status, session.accessToken, "profile_follows", "?select=profile_id");
@@ -375,12 +375,12 @@ try {
   await navigate(`profile.html?slug=${encodeURIComponent(slugs[1])}`, "document.querySelectorAll('.profile-work').length === 1");
   await setBrowserSession(reactivatedSession);
   stage = "waiting for the reactivated follow state";
-  await navigate(`profile.html?slug=${encodeURIComponent(slugs[1])}`, "document.querySelector('#profile-follow-action')?.textContent.includes('FOLLOWING')");
+  await navigate(`profile.html?slug=${encodeURIComponent(slugs[1])}`, "document.querySelector('#profile-follow-action')?.dataset.following === 'true'");
   stage = "asserting the reactivated private relationship";
-  record("reactivation restores only the existing private relationship", await evaluate("document.querySelector('#profile-follow-action').textContent.includes('FOLLOWING')"));
+  record("reactivation restores only the existing private relationship", await evaluate("document.querySelector('#profile-follow-action').dataset.following === 'true'"));
   stage = "unfollowing through the reactivated profile control";
   await evaluate("window.confirm = () => true; document.querySelector('#profile-follow-action').click()");
-  for (let attempt = 0; attempt < 50 && !(await evaluate("document.querySelector('#profile-follow-action').textContent.includes('FOLLOW') && !document.querySelector('#profile-follow-action').textContent.includes('FOLLOWING')")); attempt += 1) await wait(100);
+  for (let attempt = 0; attempt < 50 && !(await evaluate("document.querySelector('#profile-follow-action').dataset.following === 'false' && document.querySelector('#profile-follow-action').textContent.includes('FOLLOW')")); attempt += 1) await wait(100);
   stage = "waiting for the feed after unfollow";
   await navigate("following.html", "document.querySelectorAll('.discover-work[data-artist-slug]').length === 3");
   stage = "asserting feed removal after unfollow";

@@ -15,4 +15,5 @@ test("Agenda uses semantic canonical Presentation links and keeps external links
   assert.match(script, /external\.rel\s*=\s*"noopener noreferrer"/);
   assert.match(css, /\.agenda-event-main \.agenda-presentation-link/);
   assert.match(css, /\.agenda-presentation-link:focus-visible/);
+  assert.doesNotMatch(css, /\.agenda-event \{[\s\S]*border-top:/);
 });
