@@ -325,6 +325,10 @@ test("compact carousel counter precedes SELECT action on Discover, Follow, and A
   assert.ok(discover.indexOf(controlsAppend) < discover.indexOf(selectAppend));
   assert.ok(following.indexOf(controlsAppend) < following.indexOf(selectAppend));
   assert.ok(archive.indexOf("if (carouselControls) metadata.append(carouselControls.root);") < archive.indexOf("metadata.append(actions);"));
+  assert.match(
+    archive,
+    /metadata\.append\(artist, title, year\);[\s\S]*?if \(carouselControls\) metadata\.append\(carouselControls\.root\);[\s\S]*?metadata\.append\(createAssignedTags\(work\)\);[\s\S]*?metadata\.append\(actions\);/
+  );
 });
 
 test("mobile Work grids place each compact carousel control directly below its own image stage", async () => {

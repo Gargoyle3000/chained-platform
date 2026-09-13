@@ -496,8 +496,9 @@ function createSavedWork(work) {
   if (projectAssignment) management.menu.append(projectAssignment);
   management.menu.append(remove);
   actions.append(management.toggle, management.menu);
-  metadata.append(artist, title, year, createAssignedTags(work));
+  metadata.append(artist, title, year);
   if (carouselControls) metadata.append(carouselControls.root);
+  metadata.append(createAssignedTags(work));
   const memberships = createProjectMemberships(work);
   if (memberships) metadata.append(memberships);
   metadata.append(actions);
