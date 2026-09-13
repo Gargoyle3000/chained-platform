@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  acknowledgeDashboardPublishReadyWork,
   decideDashboardRequest,
+  dashboardWorkEditorHref,
+  loadDashboardPublishReadyWorks,
   loadDashboardRequests
 } from "../data/dashboard-requests.mjs";
 
@@ -105,6 +108,62 @@ test("Dashboard request loader batches all three server summaries once and keeps
     "list-work-requests",
     "list-participation-requests"
   ]);
+});
+
+test("Dashboard obtains all current publish-ready actions through one server projection", async () => {
+  const calls = [];
+  const repository = {
+    async listPublishReadyWorkActions() {
+      calls.push("list-publish-ready-actions");
+      return [{ workId: "ready-b", workTitle: "Zebra" }, {
+        workId: "ready-a", workTitle: "Apple" }];
+    }
+  };
+
+  const items = await loadDashboardPublishReadyWorks(repository);
+
+  assert.deepEqual(items, [
+    {
+      kind: "work_ready_to_publish",
+      workId: "ready-a",
+      workTitle: "Apple",
+      href: "dashboard-work-edit.html?id=ready-a"
+    },
+    {
+      kind: "work_ready_to_publish",
+      workId: "ready-b",
+      workTitle: "Zebra",
+      href: "dashboard-work-edit.html?id=ready-b"
+    }
+  ]);
+  assert.deepEqual(calls, ["list-publish-ready-actions"]);
+  assert.equal(
+    dashboardWorkEditorHref("a work/id"),
+    "dashboard-work-edit.html?id=a%20work%2Fid"
+  );
+});
+
+test("Dashboard explicitly acknowledges only a publish-ready Work action", async () => {
+  const calls = [];
+  const repository = {
+    async acknowledgePublishReadyWorkAction(workId) {
+      calls.push(workId);
+    }
+  };
+
+  await acknowledgeDashboardPublishReadyWork(repository, {
+    kind: "work_ready_to_publish",
+    workId: "ready-work"
+  });
+  assert.deepEqual(calls, ["ready-work"]);
+
+  await assert.rejects(
+    () => acknowledgeDashboardPublishReadyWork(repository, {
+      kind: "work",
+      workId: "ready-work"
+    }),
+    /WORK READY STATE COULD NOT BE UPDATED/
+  );
 });
 
 test("Dashboard request decisions use trusted repository actions then reload both summaries", async () => {

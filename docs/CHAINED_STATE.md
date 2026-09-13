@@ -34,6 +34,7 @@ Current focus: complete and polish core product surfaces before broader rollout.
 - Published Works can be removed directly from WORKS through `[ DELETE ]` → `[ CONFIRM DELETE ]`; the backend unpublishes, recalls exact public derivatives, and soft-deletes only after cleanup succeeds. A cleanup-pending retry resumes the same lifecycle.
 - Public Presentation v1 is live: profile lists use canonical Presentation detail links, and public detail pages show core metadata with optional description and validated external URL. Presentation media and Work links are not yet modeled.
 - Presentation v2 trust layer, management context, participation consent, and Dashboard REQUESTS are live. Public Presentation pages can render their safe context projection, including participants, accepted visible Works and Program; authorized recipients can decide co-operator invitations, Work proposals and participation requests from Dashboard.
+- Dashboard derives a quiet `WORK READY TO PUBLISH — <TITLE>` action only from a managed Work media-ready generation completed after this narrow lifecycle was activated and not explicitly handled by that account. Existing READY drafts remain silent. It opens that Work editor; `[ NOT NOW ]` acknowledges only that generation. It disappears on acknowledgement, publication, deletion, lost management or obsolete media, and a later current ready generation can create a new action. This is a narrow Work lifecycle, not a generic notification, counter, badge, inbox or read/unread system.
 
 ### Exports
 
@@ -78,7 +79,6 @@ Current focus: complete and polish core product surfaces before broader rollout.
 
 ## NEXT
 
-- Add a quiet Dashboard actionable item when background image processing becomes ready after a user has left the Work editor: `WORK READY TO PUBLISH — <TITLE>` should open that Work and disappear when publication is no longer needed.
 - Polish empty/new-user states and Dashboard / REQUESTS presentation.
 - Observe the first real Artist onboarding intentionally when Peer is available, then prioritize actual tester feedback rather than a new large feature.
 

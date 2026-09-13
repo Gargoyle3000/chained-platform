@@ -93,8 +93,14 @@ test("Dashboard requests use only safe server summaries and preserve both action
   assert.match(page, /dashboard-summary-item dashboard-requests-section/);
   assert.match(page, /<p class="dashboard-label">REQUESTS<\/p>/);
   assert.match(script, /loadDashboardRequests\(presentationRepository\)/);
+  assert.match(script, /loadDashboardPublishReadyWorks\(repository\)/);
+  assert.match(script, /acknowledgeDashboardPublishReadyWork\(repository, request\)/);
   assert.match(script, /decideDashboardRequest\(/);
   assert.match(script, /request\.kind === "work"/);
+  assert.match(script, /request\.kind === "work_ready_to_publish"/);
+  assert.match(script, /WORK READY TO PUBLISH — \$\{request\.workTitle\}/);
+  assert.match(script, /createRequestAction\("NOT NOW"/);
+  assert.match(script, /link\.href = request\.href/);
   assert.match(script, /requestActionInFlight/);
   assert.match(script, /NO REQUESTS/);
   assert.doesNotMatch(script, /listWorkPresentationRequestSummaries\(/);

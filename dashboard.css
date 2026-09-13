@@ -238,7 +238,9 @@
   padding: 0;
 }
 
-.dashboard-request-row p {
+.dashboard-request-row p,
+.dashboard-request-link {
+  color: inherit;
   margin: 0;
 
   font-size: var(--font-meta);

@@ -6,6 +6,49 @@ function pendingRequests(rows, kind) {
     : [];
 }
 
+function comparePublishReadyWorks(first, second) {
+  const firstTitle = String(first.workTitle || "").toLowerCase();
+  const secondTitle = String(second.workTitle || "").toLowerCase();
+
+  if (firstTitle < secondTitle) return -1;
+  if (firstTitle > secondTitle) return 1;
+  return String(first.workId).localeCompare(String(second.workId));
+}
+
+export function dashboardWorkEditorHref(workId) {
+  return `dashboard-work-edit.html?id=${encodeURIComponent(workId)}`;
+}
+
+export async function loadDashboardPublishReadyWorks(repository) {
+  if (typeof repository?.listPublishReadyWorkActions !== "function") {
+    return Object.freeze([]);
+  }
+
+  const rows = await repository.listPublishReadyWorkActions();
+  return Object.freeze(
+    (Array.isArray(rows) ? rows : [])
+      .filter((row) => typeof row?.workId === "string" && row.workId.trim())
+      .map((row) => Object.freeze({
+        kind: "work_ready_to_publish",
+        workId: row.workId,
+        workTitle: row.workTitle || "UNTITLED",
+        href: dashboardWorkEditorHref(row.workId)
+      }))
+      .sort(comparePublishReadyWorks)
+  );
+}
+
+export async function acknowledgeDashboardPublishReadyWork(repository, request) {
+  if (request?.kind !== "work_ready_to_publish"
+    || typeof request.workId !== "string"
+    || !request.workId.trim()
+    || typeof repository?.acknowledgePublishReadyWorkAction !== "function") {
+    throw new Error("WORK READY STATE COULD NOT BE UPDATED");
+  }
+
+  await repository.acknowledgePublishReadyWorkAction(request.workId);
+}
+
 export async function loadDashboardRequests(repository) {
   const [cooperatorInvitations, workRequests, participationRequests] = await Promise.all([
     repository.listIncomingCooperatorInvitations(),

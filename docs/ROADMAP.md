@@ -7,7 +7,6 @@ Last updated: 2026-09-12
 - Archive SINGLE / GRID should gain the same proven swipe interaction as Discover and Following, while preserving existing view behavior, image ratios, and layout.
 - Add Agenda `[ ALL ]` and `[ FOLLOWING ]` views.
 - Improve stale soft-deleted Work UX: a locally stale save currently collapses `THIS WORK IS NOT AVAILABLE` into generic `WORK COULD NOT BE SAVED`. This does not block private-preview rollout.
-- Dashboard actionable Work reminder: if image processing becomes ready after its user has left the Work editor, show a quiet `WORK READY TO PUBLISH — <TITLE>` item that opens the relevant Work. Remove it when the Work is published or otherwise no longer needs publication. This belongs with actionable Dashboard / REQUESTS items, not an engagement notification center, badge system or pop-up.
 - Polish empty/new-user states and Dashboard / REQUESTS presentation before broader testing.
 - Observe the first real trusted Artist onboarding intentionally when Peer is available, then prioritize actual tester feedback rather than a new large feature.
 - Add an optional, compact `[?]` GUIDE / HELP layer. It should be system-oriented and context-aware (for example Work publication, Archive privacy/projects/tags, or Profile draft/published state), with a possible central GUIDE entry from Settings/navigation. No mandatory onboarding or tutorial.
@@ -72,6 +71,7 @@ Implementation should verify the largest real preview display and HiDPI needs be
 
 ## COMPLETED / LIVE
 
+- Dashboard derives `WORK READY TO PUBLISH — <TITLE>` from an unacknowledged, manageable draft media-ready generation completed after the lifecycle activation boundary, in one self-scoped projection; intentionally pre-existing READY drafts remain silent. `[ NOT NOW ]` explicitly acknowledges that Work/account generation; rendering alone does not. It remains a narrow Work lifecycle, with no generic notification table, inbox, counter, badge, pop-up or read/unread framework.
 - Circular compact multi-image Work browsing is live on Discover, Following and Public Profile. Each uses the UI-only `< current/total >` navigation while preserving swipe/drag, keyboard browsing, current geometry, natural ratios, containment and lazy secondary-image loading; no carousel state enters exports. Public Work Detail intentionally remains a vertically stacked, contained all-image view for close comparison, without carousel controls.
 - Phase 4 public image derivatives are live: verified new and backfilled active Works publish exact WebP SMALL (960px maximum long edge) and LARGE (3200px maximum long edge) renditions. SMALL serves public grid/feed contexts, LARGE serves strict Work detail paths, originals remain private, and legacy public paths remain compatible. The active legacy migration is complete.
 - The one-time legacy public-media promotion is complete: all 9 target Works / 29 images use canonical SMALL + LARGE publication derivatives, retain historic objects solely for cleanup compatibility, and are idempotently promotable no-ops thereafter.

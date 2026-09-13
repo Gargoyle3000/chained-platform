@@ -86,6 +86,19 @@ export function createSupabaseWorkRepository(client, config, mediaDependencies) 
       if (!Array.isArray(rows) || rows.length !== 1) throw new WorkError(WORK_ERROR_CODES.UNAVAILABLE, "PUBLICATION READINESS IS UNAVAILABLE");
       return mapManagedPublicationReadiness(rows[0]);
     },
+    async listPublishReadyWorkActions() {
+      const { data, error } = await client.rpc("list_my_work_publish_ready_actions");
+      return requireResult(error, data, "WORK READY ACTIONS ARE UNAVAILABLE").map((row) => Object.freeze({
+        workId: requireId(row?.work_id),
+        workTitle: typeof row?.work_title === "string" ? row.work_title : ""
+      }));
+    },
+    async acknowledgePublishReadyWorkAction(id) {
+      const { error } = await client.rpc("acknowledge_my_work_publish_ready_action", {
+        target_work_id: requireId(id)
+      });
+      if (error) throw sanitizeWorkError(error, "WORK READY STATE COULD NOT BE UPDATED");
+    },
     async reorderArtistProfileWorks(profileId, yearSort, workIds) {
       requireId(profileId);
       const validYear = yearSort == null || (Number.isInteger(yearSort) && yearSort >= -10000 && yearSort <= 10000);

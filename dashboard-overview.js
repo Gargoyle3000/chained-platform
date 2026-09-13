@@ -5,7 +5,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     await import("./data/work-repository.mjs");
   const { getPresentationRepository } =
     await import("./data/presentation-repository.mjs");
-  const { decideDashboardRequest, loadDashboardRequests } =
+  const {
+    acknowledgeDashboardPublishReadyWork,
+    decideDashboardRequest,
+    loadDashboardPublishReadyWorks,
+    loadDashboardRequests
+  } =
     await import("./data/dashboard-requests.mjs");
   const { renderDashboardAccountIdentity } =
     await import("./data/dashboard-context.mjs");
@@ -82,8 +87,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     return action;
   }
 
-  function createRequestRow(request, onDecision) {
+  function createRequestRow(request, onDecision, onAcknowledge) {
     const row = document.createElement("article");
+
+    if (request.kind === "work_ready_to_publish") {
+      const link = document.createElement("a");
+
+      row.className = "dashboard-request-row";
+      link.className = "dashboard-request-link";
+      link.href = request.href;
+      link.textContent = `WORK READY TO PUBLISH — ${request.workTitle}`;
+      link.setAttribute(
+        "aria-label",
+        `Open ${request.workTitle} to publish`
+      );
+      const actions = document.createElement("div");
+
+      actions.className = "dashboard-request-actions";
+      actions.append(
+        createRequestAction("NOT NOW", (action) => onAcknowledge(request, action))
+      );
+      row.append(link, actions);
+
+      return row;
+    }
+
     const summary = document.createElement("p");
     const actions = document.createElement("div");
 
@@ -113,7 +141,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return row;
   }
 
-  function renderRequests(requests, onDecision) {
+  function renderRequests(requests, onDecision, onAcknowledge) {
     if (!requestsSection || !requestsList) return;
 
     const empty = document.createElement("p");
@@ -123,30 +151,37 @@ document.addEventListener("DOMContentLoaded", async () => {
     requestsSection.hidden = false;
     requestsList.replaceChildren(
       ...(requests.length
-        ? requests.map((request) => createRequestRow(request, onDecision))
+        ? requests.map((request) => createRequestRow(request, onDecision, onAcknowledge))
         : [empty])
     );
   }
 
   async function loadRequests() {
+    const publishReadyWorksPromise =
+      loadDashboardPublishReadyWorks(repository).catch((error) => {
+        console.error("Could not load Dashboard Work-ready actions.", error);
+        return [];
+      });
+
     try {
       const selected = await getPresentationRepository();
       const presentationRepository = selected.repository;
 
       await presentationRepository.initialise();
-      const requests =
+      const [requests, publishReadyWorks] = await Promise.all([
         presentationRepository.mode === "supabase"
-          ? await loadDashboardRequests(presentationRepository)
-          : [];
+          ? loadDashboardRequests(presentationRepository)
+          : Promise.resolve([]),
+        publishReadyWorksPromise
+      ]);
 
       setRequestsError();
-      renderRequests(requests, decideRequest);
+      renderRequests([...publishReadyWorks, ...requests], decideRequest, acknowledgePublishReady);
     } catch (error) {
       console.error("Could not load Dashboard requests.", error);
       setRequestsError("REQUESTS ARE CURRENTLY UNAVAILABLE");
       if (requestsSection && requestsList) {
-        requestsSection.hidden = false;
-        requestsList.replaceChildren();
+        renderRequests(await publishReadyWorksPromise, decideRequest, acknowledgePublishReady);
       }
     }
   }
@@ -174,18 +209,41 @@ document.addEventListener("DOMContentLoaded", async () => {
       const presentationRepository = selected.repository;
 
       await presentationRepository.initialise();
-      const requests = await decideDashboardRequest(
+      await decideDashboardRequest(
         presentationRepository,
         request,
         decision
       );
-      renderRequests(requests, decideRequest);
+      await loadRequests();
     } catch (error) {
       console.error("Could not decide Dashboard request.", error);
       setRequestsError("REQUEST COULD NOT BE UPDATED");
       actions.forEach((button) => {
         button.disabled = false;
       });
+    } finally {
+      requestActionInFlight.delete(requestKey);
+    }
+  }
+
+  async function acknowledgePublishReady(request, action) {
+    const requestKey = request?.workId
+      ? `${request.kind}:${request.workId}`
+      : "";
+
+    if (!requestKey || requestActionInFlight.has(requestKey)) return;
+
+    requestActionInFlight.add(requestKey);
+    action.disabled = true;
+    setRequestsError();
+
+    try {
+      await acknowledgeDashboardPublishReadyWork(repository, request);
+      await loadRequests();
+    } catch (error) {
+      console.error("Could not acknowledge Dashboard Work readiness.", error);
+      setRequestsError("WORK READY STATE COULD NOT BE UPDATED");
+      action.disabled = false;
     } finally {
       requestActionInFlight.delete(requestKey);
     }
