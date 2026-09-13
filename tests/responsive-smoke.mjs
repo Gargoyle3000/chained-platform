@@ -118,6 +118,9 @@ try {
             headerBottom: header?.bottom || 0,
             mainTop: Number.isFinite(contentTop) ? contentTop : main?.top || 0,
             hasMain: Boolean(main),
+            rootFitsDesktop: !document.body.classList.contains("about-page")
+              || document.documentElement.clientWidth < 721
+              || document.documentElement.scrollHeight <= document.documentElement.clientHeight + 1,
             text: document.body.innerText.slice(0, 200)
           };
         })()`,
@@ -125,6 +128,7 @@ try {
       });
       const value = evaluation.result.value;
       assert.equal(value.hasMain, true, `${page} has main content at ${width}px`);
+      assert.equal(value.rootFitsDesktop, true, `${page} fits a normal desktop viewport without vertical scrolling`);
       assert.equal(value.protected, false, `${page} prototype content is revealed at ${width}px`);
       assert.equal(value.overflow, false, `${page} has no horizontal overflow at ${width}px`);
       assert.equal(value.portfolioLibraries, true, `${page} PDF libraries load at ${width}px`);

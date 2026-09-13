@@ -7,14 +7,11 @@
   <title>CHAINED</title>
 
   <link rel="stylesheet" href="styles.css">
+  <script src="scroll-indicators.js" defer></script>
   <link rel="stylesheet" href="about.css">
 </head>
 
 <body class="about-page">
-  <header class="site-header" data-public-header>
-    <a class="wordmark" href="./">&lt;CHAINED&gt;</a>
-  </header>
-
   <main class="about-main">
     <section class="about-intro" aria-labelledby="about-title">
       <h1 id="about-title">&lt;CHAINED&gt;</h1>
@@ -25,20 +22,30 @@
       </p>
     </section>
 
-    <section class="about-section" aria-labelledby="about-portfolio">
-      <h2 id="about-portfolio">PORTFOLIO</h2>
-      <p>Build and maintain a public professional presence through Works, Presentations and profile.</p>
-    </section>
+    <div class="about-summary">
+      <div class="about-sections">
+        <section class="about-section" aria-labelledby="about-portfolio">
+          <h2 id="about-portfolio">PORTFOLIO</h2>
+          <p>Build and maintain a public professional presence through Works, Presentations and profile.</p>
+        </section>
 
-    <section class="about-section" aria-labelledby="about-network">
-      <h2 id="about-network">NETWORK</h2>
-      <p>Connect artists, curators and institutions through shared professional context rather than engagement metrics.</p>
-    </section>
+        <section class="about-section" aria-labelledby="about-network">
+          <h2 id="about-network">NETWORK</h2>
+          <p>Connect artists, curators and institutions through shared professional context rather than engagement metrics.</p>
+        </section>
 
-    <section class="about-section" aria-labelledby="about-workspace">
-      <h2 id="about-workspace">WORKSPACE</h2>
-      <p>Manage the private side of practice: Archive, Agenda, CVs, visual portfolios and professional records.</p>
-    </section>
+        <section class="about-section" aria-labelledby="about-workspace">
+          <h2 id="about-workspace">WORKSPACE</h2>
+          <p>Manage the private side of practice: Archive, Agenda, CVs, visual portfolios and professional records.</p>
+        </section>
+      </div>
+
+      <nav class="about-actions" aria-label="Explore CHAINED">
+        <a class="text-action" href="discover.html">[ DISCOVER ]</a>
+        <a class="text-action" href="agenda.html">[ AGENDA ]</a>
+        <a class="text-action" href="login.html">[ PRIVATE ACCESS ]</a>
+      </nav>
+    </div>
 
     <section class="about-closing" aria-label="How CHAINED works">
       <p>
@@ -52,10 +59,6 @@
       <p class="about-audience">ARTISTS · CURATORS · INSTITUTIONS · THE CURIOUS</p>
     </section>
 
-    <nav class="about-actions" aria-label="Explore CHAINED">
-      <a class="text-action" href="discover.html">[ DISCOVER ]</a>
-      <a class="text-action" href="login.html">[ PRIVATE ACCESS ]</a>
-    </nav>
   </main>
 
   <script type="module" src="about.mjs"></script>

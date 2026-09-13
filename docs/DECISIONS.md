@@ -158,11 +158,11 @@ Last updated: 2026-09-12
 
 \## Public entry
 
-\- Anonymous visitors enter on Discover with a minimal `<CHAINED>` / `[ LOG IN ]` header.
+\- Anonymous visitors enter through a compact, headerless root landing whose large green `<CHAINED>` is the sole page title. Its only navigation is `[ DISCOVER ]`, `[ AGENDA ]` and `[ PRIVATE ACCESS ]`.
 
 \- Private Access uses `[ DISCOVER ]` as its public return action; authenticated navigation remains separate.
 
-\- Anonymous Discover remains the temporary public entry; About/application/admission information may be added later.
+\- Discover begins after this public entrance and retains its minimal `<CHAINED>` / `[ LOG IN ]` header. The root landing is intentionally compact and reversible; it is not a broader navigation architecture.
 
 \## Management identity
 

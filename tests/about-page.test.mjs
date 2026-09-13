@@ -13,7 +13,7 @@ test("anonymous root is the restrained public CHAINED introduction", async () =>
     read("about.mjs")
   ]);
 
-  assert.match(page, /<header class="site-header" data-public-header>/);
+  assert.doesNotMatch(page, /<header class="site-header" data-public-header>/);
   assert.match(page, /<h1 id="about-title">&lt;CHAINED&gt;<\/h1>/);
   assert.doesNotMatch(page, /class="about-label">ABOUT/);
   assert.match(css, /\.about-intro h1 \{[\s\S]*color: var\(--accent\);/);
@@ -24,7 +24,11 @@ test("anonymous root is the restrained public CHAINED introduction", async () =>
   assert.match(page, /<h2 id="about-workspace">WORKSPACE<\/h2>/);
   assert.match(page, /not a social[\s\S]*?media alternative, but a professional tool\./);
   assert.match(page, /href="discover\.html">\[ DISCOVER \]<\/a>/);
+  assert.match(page, /href="agenda\.html">\[ AGENDA \]<\/a>/);
   assert.match(page, /href="login\.html">\[ PRIVATE ACCESS \]<\/a>/);
+  assert.match(page, /scroll-indicators\.js/);
+  assert.match(css, /\.about-summary \{[\s\S]*grid-template-columns: minmax\(0, 820px\) max-content;/);
+  assert.match(css, /\.about-section h2 \{[\s\S]*font-weight: 700;/);
   assert.doesNotMatch(page, /pricing|testimonial|funding|alpha/i);
   assert.match(css, /@media \(max-width: 720px\)/);
   assert.match(css, /grid-template-columns: 1fr;/);
