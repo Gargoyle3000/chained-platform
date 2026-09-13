@@ -47,7 +47,6 @@
   padding: clamp(34px, 5vw, 64px) 0;
 }
 
-.about-section h2,
 .about-section p,
 .about-closing p {
   margin: 0;
@@ -56,6 +55,7 @@
 
 .about-section h2 {
   font-size: var(--font-label);
+  font-weight: 700;
 }
 
 .about-section p,
