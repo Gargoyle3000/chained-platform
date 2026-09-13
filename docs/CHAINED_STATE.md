@@ -48,6 +48,7 @@ Current focus: complete and polish core product surfaces before broader rollout.
 ### Recently completed interaction and delivery work
 
 - Agenda occurrences now link eligible public parent Presentations through `presentation.html?id=<activity_id>`; standalone or ineligible occurrences remain unlinked and external URLs remain separate.
+- Public Agenda now has `[ ALL ]` and authenticated `[ FOLLOW ]` as the first controls in its navigation column, directly above `FILTER BY CITY`. FOLLOW is a single self-scoped public-visibility projection of actually followed profiles; it is not a separate follow model or notification feed.
 - Presentation Work associations are reversible from Presentation edit through the existing trusted removal contract; removal affects only the association and leaves Work, media, publication, Archive, Portfolio, participants and Agenda/Program state intact.
 - Mobile SELECT and Portfolio PDF delivery is explicit and browser-local: PDF READY precedes user-triggered SAVE / SHARE or DOWNLOAD, with no forced viewer/new-tab behavior.
 - Archive interaction polish is live: SINGLE is centered, active Projects toggle off through the normal cleanup path, Tag toggle behavior is covered, and Work management menus retain explicit event boundaries. No horizontal Archive browsing or scrollbar architecture was introduced.

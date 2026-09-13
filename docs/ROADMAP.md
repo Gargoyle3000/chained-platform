@@ -4,7 +4,6 @@ Last updated: 2026-09-12
 
 ## POLISH
 
-- Add Agenda `[ ALL ]` and `[ FOLLOWING ]` views.
 - Improve stale soft-deleted Work UX: a locally stale save currently collapses `THIS WORK IS NOT AVAILABLE` into generic `WORK COULD NOT BE SAVED`. This does not block private-preview rollout.
 - Polish empty/new-user states and Dashboard / REQUESTS presentation before broader testing.
 - Observe the first real trusted Artist onboarding intentionally when Peer is available, then prioritize actual tester feedback rather than a new large feature.

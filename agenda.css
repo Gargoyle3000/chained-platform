@@ -184,6 +184,16 @@
   padding: 24px 0 30px;
 }
 
+.agenda-view-switch {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.agenda-view-switch .agenda-scope {
+  margin: 0;
+}
+
 .agenda-event[hidden] {
   display: none;
 }

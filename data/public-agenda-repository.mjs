@@ -193,6 +193,55 @@ function mapOccurrence(row, activity, profile, presentation) {
   });
 }
 
+function mapFollowedAgendaOccurrence(row, today) {
+  if (
+    !row ||
+    !UUID_PATTERN.test(String(row.occurrence_id || "")) ||
+    !UUID_PATTERN.test(String(row.owner_profile_id || "")) ||
+    !isCurrentOrFuture(row, today)
+  ) {
+    return null;
+  }
+
+  const profile = Object.freeze({
+    id: row.owner_profile_id,
+    slug: cleanText(row.artist_slug),
+    displayName: cleanText(row.artist_display_name),
+    showPresentations: true
+  });
+
+  const title = cleanText(row.title);
+  const occurrenceType = cleanText(row.occurrence_type);
+
+  if (!profile.slug || !profile.displayName || !title || !occurrenceType) {
+    return null;
+  }
+
+  const presentationId = cleanText(row.presentation_id);
+
+  return Object.freeze({
+    id: row.occurrence_id,
+    ownerProfileId: row.owner_profile_id,
+    activityId: cleanText(row.activity_id) || null,
+    occurrenceType,
+    title,
+    startDate: cleanText(row.start_date),
+    endDate: cleanText(row.end_date),
+    startTime: cleanText(row.start_time),
+    endTime: cleanText(row.end_time),
+    timeZone: cleanText(row.time_zone),
+    venueName: cleanText(row.venue_name),
+    city: cleanText(row.city),
+    country: cleanText(row.country),
+    externalUrl: cleanText(row.external_url),
+    presentationHref: UUID_PATTERN.test(presentationId)
+      ? createPublicPresentationLink(presentationId)
+      : null,
+    artist: profile,
+    activity: null
+  });
+}
+
 async function requestOccurrences(
   config,
   request,
@@ -455,6 +504,31 @@ export function createPublicAgendaRepository(
   });
 }
 
+export function createFollowedAgendaRepository(
+  client,
+  today = localToday()
+) {
+  return Object.freeze({
+    mode: FRONTEND_MODES.SUPABASE,
+
+    async listAgenda() {
+      const { data, error } = await client.rpc(
+        "list_followed_agenda"
+      );
+
+      if (error) throw error;
+
+      return Object.freeze(
+        (Array.isArray(data) ? data : [])
+          .map((row) =>
+            mapFollowedAgendaOccurrence(row, today)
+          )
+          .filter(Boolean)
+      );
+    }
+  });
+}
+
 export async function hasPublicAgendaForProfile(
   config,
   profileId,
@@ -494,6 +568,8 @@ export async function getPublicAgendaRepository() {
     repository:
       createPublicAgendaRepository(
         runtime.config
-      )
+      ),
+    followedRepository:
+      createFollowedAgendaRepository(runtime.client)
   });
 }

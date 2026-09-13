@@ -12,35 +12,31 @@
   <link rel="stylesheet" href="agenda.css">
   <link rel="stylesheet" href="auth/auth.css">
 
-  <script type="module" src="auth/guard.mjs"></script>
 </head>
 
-<body class="agenda-page" data-auth-protected="true">
+<body class="agenda-page">
 
-  <header class="site-header">
+  <header class="site-header" data-public-header>
     <a class="wordmark" href="discover.html">
       &lt;CHAINED&gt;
     </a>
-
-    <nav
-      class="main-nav main-nav-with-dashboard"
-      aria-label="Primary navigation">
-      <a href="discover.html">DISCOVER</a>
-      <a href="following.html">FOLLOW</a>
-      <a href="archive.html">SELECT</a>
-      <a class="is-active" href="agenda.html">AGENDA</a>
-
-      <span class="profile-nav-group">
-        <a data-own-profile-link href="profile.html">PROFILE</a>
-
-        <a
-          class="dashboard-link"
-          href="dashboard.html"
-          aria-label="Open dashboard">
-          +
-        </a>
-      </span>
-    </nav>
+    <div class="auth-session-indicator public-action-slot">
+      <a class="public-header-action" data-anonymous-login href="login.html">[ LOG IN ]</a>
+    </div>
+    <template data-authenticated-navigation>
+      <nav
+        class="main-nav main-nav-with-dashboard"
+        aria-label="Primary navigation">
+        <a href="discover.html">DISCOVER</a>
+        <a href="following.html">FOLLOW</a>
+        <a href="archive.html">SELECT</a>
+        <a class="is-active" href="agenda.html">AGENDA</a>
+        <span class="profile-nav-group">
+          <a data-own-profile-link href="profile.html">PROFILE</a>
+          <a class="dashboard-link" href="dashboard.html" aria-label="Open dashboard">+</a>
+        </span>
+      </nav>
+    </template>
   </header>
 
 
@@ -57,6 +53,24 @@
           </p>
         </section>
 
+        <section class="agenda-sidebar-section" aria-label="Agenda view">
+          <div class="agenda-view-switch">
+            <button
+              class="agenda-scope is-active"
+              type="button"
+              data-agenda-view="all"
+              aria-pressed="true">
+              [ ALL ]
+            </button>
+            <button
+              class="agenda-scope"
+              type="button"
+              data-agenda-view="follow"
+              aria-pressed="false">
+              [ FOLLOW ]
+            </button>
+          </div>
+        </section>
 
         <section
           class="agenda-sidebar-section"
@@ -134,6 +148,7 @@
 
   </main>
 
+  <script type="module" src="auth/public-navigation.mjs"></script>
   <script type="module" src="agenda.js"></script>
 
 </body>
