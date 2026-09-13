@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="scroll-indicators.js" defer></script>
   <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="presentation-agenda-image.css">
   <link rel="stylesheet" href="auth/auth.css">
 
   <script type="module" src="auth/guard.mjs"></script>
@@ -376,6 +377,34 @@
         </section>
 
 
+        <section class="work-form-section presentation-context-section" id="agenda-presentation-image-section" hidden>
+          <header class="work-form-section-header">
+            <p>06</p>
+            <div>
+              <h3>AGENDA IMAGE</h3>
+              <p>ONE OPTIONAL PUBLIC AGENDA CONTEXT IMAGE</p>
+            </div>
+          </header>
+
+          <div class="presentation-context-list" id="agenda-presentation-image-state"></div>
+
+          <div class="presentation-context-add presentation-agenda-image-upload-control">
+            <label class="work-form-field">
+              <span>IMAGE</span>
+              <input id="agenda-presentation-image-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
+            </label>
+            <button class="text-action" id="agenda-presentation-image-upload" type="button">[ UPLOAD ]</button>
+          </div>
+
+          <div class="presentation-context-add">
+            <label class="work-form-field">
+              <span>REPRESENTATIVE WORK</span>
+              <select id="agenda-presentation-representative-work"><option value="">[ NONE ]</option></select>
+            </label>
+          </div>
+        </section>
+
+
         <p
           class="work-form-status"
           id="agenda-form-status"
@@ -416,7 +445,7 @@
   </main>
 
 
-  <script src="dashboard-agenda-form.js?v=1"></script>
+  <script src="dashboard-agenda-form.js?v=2"></script>
 
 </body>
 </html>

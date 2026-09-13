@@ -13,6 +13,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { renderDashboardAccountIdentity } =
     await import("./data/dashboard-context.mjs");
 
+  const { createPresentationAgendaImageController } =
+    await import("./data/presentation-agenda-image-ui.mjs");
+
   const form = document.querySelector("#presentation-form");
   const errorElement =
     document.querySelector("#presentation-form-error");
@@ -77,6 +80,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let selectedWorkProfileId = null;
   let selectedWorkProfile = null;
   let publicProfileRepository = null;
+  let agendaImageController = null;
   const pendingWorkRemovalIds = new Set();
 
   function field(name) {
@@ -538,15 +542,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     worksSection.hidden = false;
     agendaImageSection.hidden = false;
     programSection.hidden = false;
-    agendaImageState.replaceChildren(...(agendaImage.hasDedicatedImage
-      ? [Object.assign(document.createElement("p"), { className: "dashboard-empty-state", textContent: "AGENDA IMAGE READY" }), action("REMOVE", async () => { await repository.removePresentationAgendaImage(currentPresentationId); await refreshContext(); })]
-      : [emptyContext("NO DEDICATED AGENDA IMAGE")]));
-    agendaImageUpload.textContent = agendaImage.hasDedicatedImage ? "[ REPLACE ]" : "[ UPLOAD ]";
-    representativeWorkSelect.replaceChildren(
-      Object.assign(document.createElement("option"), { value: "", textContent: "[ NONE ]" }),
-      ...agendaImage.works.map((work) => Object.assign(document.createElement("option"), { value: work.id, textContent: work.title }))
-    );
-    representativeWorkSelect.value = agendaImage.representativeWorkId || "";
+    agendaImageController?.render(agendaImage);
     participantsList.replaceChildren(...(participants.length ? participants.map((participant, index) => {
       const row = document.createElement("div");
       const name = document.createElement("input");
@@ -613,32 +609,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }) : [emptyContext("NO PROGRAM")]));
     await renderWorksContext(participants, works);
   }
-
-  agendaImageUpload?.addEventListener("click", async () => {
-    const file = agendaImageInput?.files?.[0];
-    if (!file || !currentPresentationId) return;
-    agendaImageUpload.disabled = true;
-    setError(); setStatus("UPLOADING AGENDA IMAGE");
-    try {
-      await repository.uploadPresentationAgendaImage(currentPresentationId, file);
-      agendaImageInput.value = "";
-      setStatus("AGENDA IMAGE READY");
-      await refreshContext();
-    } catch (error) {
-      setStatus(); setError(error?.message || "AGENDA IMAGE COULD NOT BE SAVED");
-    } finally { agendaImageUpload.disabled = false; }
-  });
-
-  representativeWorkSelect?.addEventListener("change", async () => {
-    if (!currentPresentationId) return;
-    representativeWorkSelect.disabled = true;
-    try {
-      await repository.setPresentationRepresentativeWork(currentPresentationId, representativeWorkSelect.value || null);
-      await refreshContext();
-    } catch (error) {
-      setError(error?.message || "REPRESENTATIVE WORK COULD NOT BE SAVED");
-    } finally { representativeWorkSelect.disabled = false; }
-  });
 
   participantAddButton?.addEventListener("click", async () => {
     const name = participantNameInput.value.trim();
@@ -929,6 +899,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     repository = selected.repository;
     await repository.initialise();
+
+    if (agendaImageSection && agendaImageState && agendaImageInput && agendaImageUpload && representativeWorkSelect) {
+      agendaImageController = createPresentationAgendaImageController({
+        repository,
+        getPresentationId: () => currentPresentationId,
+        section: agendaImageSection,
+        state: agendaImageState,
+        input: agendaImageInput,
+        upload: agendaImageUpload,
+        representativeWork: representativeWorkSelect,
+        setError,
+        setStatus
+      });
+    }
 
     if (repository.mode !== "supabase") {
       renderDashboardAccountIdentity([], "prototype");

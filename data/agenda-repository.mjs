@@ -1,5 +1,6 @@
 import { FRONTEND_MODES } from "../auth/config.mjs";
 import { getFrontendRuntime } from "../auth/supabase-client.mjs";
+import { createPresentationAgendaImageService } from "./presentation-agenda-image-service.mjs";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -185,11 +186,29 @@ function createUnavailableRepository() {
 
     async deleteAgendaItem() {
       throw new Error("AGENDA IS CURRENTLY UNAVAILABLE");
+    },
+
+    async getPresentationAgendaImageContext() {
+      throw new Error("AGENDA IMAGE IS CURRENTLY UNAVAILABLE");
+    },
+
+    async uploadPresentationAgendaImage() {
+      throw new Error("AGENDA IMAGE IS CURRENTLY UNAVAILABLE");
+    },
+
+    async removePresentationAgendaImage() {
+      throw new Error("AGENDA IMAGE IS CURRENTLY UNAVAILABLE");
+    },
+
+    async setPresentationRepresentativeWork() {
+      throw new Error("AGENDA IMAGE IS CURRENTLY UNAVAILABLE");
     }
   });
 }
 
 export function createSupabaseAgendaRepository(client) {
+  const agendaImageService = createPresentationAgendaImageService(client);
+
   return Object.freeze({
     mode: "supabase",
 
@@ -418,6 +437,22 @@ export function createSupabaseAgendaRepository(client) {
         data,
         "AGENDA ITEM COULD NOT BE DELETED"
       );
+    },
+
+    async getPresentationAgendaImageContext(presentationId) {
+      return agendaImageService.getContext(presentationId);
+    },
+
+    async uploadPresentationAgendaImage(presentationId, file) {
+      return agendaImageService.upload(presentationId, file);
+    },
+
+    async removePresentationAgendaImage(presentationId) {
+      return agendaImageService.remove(presentationId);
+    },
+
+    async setPresentationRepresentativeWork(presentationId, workId = null) {
+      return agendaImageService.setRepresentativeWork(presentationId, workId);
     }
   });
 }

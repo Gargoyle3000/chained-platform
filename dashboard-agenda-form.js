@@ -7,6 +7,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { renderDashboardAccountIdentity } =
     await import("./data/dashboard-context.mjs");
 
+  const { createPresentationAgendaImageController } =
+    await import("./data/presentation-agenda-image-ui.mjs");
+
   const form =
     document.querySelector("#agenda-form");
 
@@ -43,12 +46,29 @@ document.addEventListener("DOMContentLoaded", async () => {
   const publicationButton =
     document.querySelector("#agenda-publication");
 
+  const agendaImageSection =
+    document.querySelector("#agenda-presentation-image-section");
+
+  const agendaImageState =
+    document.querySelector("#agenda-presentation-image-state");
+
+  const agendaImageInput =
+    document.querySelector("#agenda-presentation-image-input");
+
+  const agendaImageUpload =
+    document.querySelector("#agenda-presentation-image-upload");
+
+  const representativeWorkSelect =
+    document.querySelector("#agenda-presentation-representative-work");
+
   let repository;
   let currentAgendaItemId = null;
   let expectedUpdatedAt = null;
   let currentVisibility = "draft";
   let managedProfiles = [];
   let presentations = [];
+  let currentPresentationId = null;
+  let agendaImageController = null;
 
   function field(name) {
     return form.elements.namedItem(name);
@@ -286,6 +306,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     activitySelect.value = selectedActivityId || "";
   }
 
+  async function refreshAgendaImageControls() {
+    if (!agendaImageController) return;
+    if (!currentAgendaItemId || !currentPresentationId) {
+      agendaImageSection.hidden = true;
+      return;
+    }
+    try {
+      await agendaImageController.refresh();
+    } catch {
+      agendaImageSection.hidden = true;
+    }
+  }
+
   function createDeleteConfirmation() {
     const confirmation = document.createElement("div");
     const prompt = document.createElement("p");
@@ -423,6 +456,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       currentAgendaItemId = saved.id;
       expectedUpdatedAt = saved.updatedAt;
       currentVisibility = saved.visibility;
+      currentPresentationId = saved.activityId || null;
 
       ownerSelect.value = saved.ownerProfileId;
 
@@ -433,6 +467,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       populateForm(saved);
       updateEditorState(saved);
+      await refreshAgendaImageControls();
 
       history.replaceState(
         {},
@@ -512,6 +547,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     repository = selected.repository;
     await repository.initialise();
 
+    if (agendaImageSection && agendaImageState && agendaImageInput && agendaImageUpload && representativeWorkSelect) {
+      agendaImageController = createPresentationAgendaImageController({
+        repository,
+        getPresentationId: () => currentPresentationId,
+        section: agendaImageSection,
+        state: agendaImageState,
+        input: agendaImageInput,
+        upload: agendaImageUpload,
+        representativeWork: representativeWorkSelect,
+        setError,
+        setStatus
+      });
+    }
+
     if (repository.mode !== "supabase") {
       renderDashboardAccountIdentity([], "prototype");
       setFormDisabled(true);
@@ -587,6 +636,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentAgendaItemId = item.id;
     expectedUpdatedAt = item.updatedAt;
     currentVisibility = item.visibility;
+    currentPresentationId = item.activityId || null;
 
     ownerSelect.value = item.ownerProfileId;
 
@@ -597,6 +647,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     populateForm(item);
     updateEditorState(item);
+    await refreshAgendaImageControls();
   } catch (error) {
     renderDashboardAccountIdentity([], "error");
     setFormDisabled(true);

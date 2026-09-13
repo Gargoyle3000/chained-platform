@@ -1,7 +1,7 @@
 import { FRONTEND_MODES } from "../auth/config.mjs";
 import { getFrontendRuntime } from "../auth/supabase-client.mjs";
 import { normalizeHttpUrl } from "./url-normalization.mjs";
-import { createPrivateImagePreview, validateImageFile } from "./work-media-service.mjs";
+import { createPresentationAgendaImageService } from "./presentation-agenda-image-service.mjs";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -437,6 +437,8 @@ function createUnavailableRepository() {
 }
 
 export function createSupabasePresentationRepository(client) {
+  const agendaImageService = createPresentationAgendaImageService(client);
+
   return Object.freeze({
     mode: "supabase",
 
@@ -1008,54 +1010,19 @@ export function createSupabasePresentationRepository(client) {
     },
 
     async getPresentationAgendaImageContext(presentationId) {
-      const rows = await callRpc(client, "get_managed_presentation_agenda_image_context", {
-        target_presentation_id: requireId(presentationId)
-      }, "AGENDA IMAGE IS CURRENTLY UNAVAILABLE");
-      const values = Array.isArray(rows) ? rows : [];
-      return Object.freeze({
-        hasDedicatedImage: values.some((row) => row.has_dedicated_image === true),
-        representativeWorkId: optionalId(values[0]?.representative_work_id),
-        works: Object.freeze(values
-          .filter((row) => optionalId(row.work_id))
-          .map((row) => Object.freeze({ id: row.work_id, title: String(row.work_title || "UNTITLED WORK").trim() || "UNTITLED WORK" })))
-      });
+      return agendaImageService.getContext(presentationId);
     },
 
     async setPresentationRepresentativeWork(presentationId, workId = null) {
-      return callRpc(client, "set_presentation_representative_work", {
-        target_presentation_id: requireId(presentationId),
-        target_work_id: workId ? requireId(workId, "REPRESENTATIVE WORK COULD NOT BE SAVED") : null
-      }, "REPRESENTATIVE WORK COULD NOT BE SAVED");
+      return agendaImageService.setRepresentativeWork(presentationId, workId);
     },
 
     async uploadPresentationAgendaImage(presentationId, file) {
-      validateImageFile(file);
-      const preview = await createPrivateImagePreview(file);
-      const { data, error } = await client.rpc("reserve_presentation_agenda_image_upload", {
-        target_presentation_id: requireId(presentationId), original_filename: file.name,
-        mime_type: file.type.toLowerCase(), file_size: file.size,
-        preview_file_size: preview.size
-      });
-      const reservation = Array.isArray(data) ? data[0] : null;
-      if (error || !reservation?.image_id || !reservation?.object_path || !reservation?.preview_object_path) {
-        throw new Error("AGENDA IMAGE COULD NOT BE RESERVED");
-      }
-      const bucket = String(reservation.bucket_id || "");
-      const original = await client.storage.from(bucket).upload(reservation.object_path, file, { contentType: file.type.toLowerCase(), upsert: false });
-      if (original.error) throw new Error("AGENDA IMAGE COULD NOT BE UPLOADED");
-      const previewUpload = await client.storage.from(bucket).upload(reservation.preview_object_path, preview, { contentType: "image/webp", upsert: false });
-      if (previewUpload.error) throw new Error("AGENDA IMAGE COULD NOT BE UPLOADED");
-      const finalized = await client.functions.invoke("finalize-presentation-agenda-image", { body: { image_id: reservation.image_id } });
-      if (finalized.error || finalized.data?.ok !== true) throw new Error("AGENDA IMAGE COULD NOT BE VERIFIED");
-      return true;
+      return agendaImageService.upload(presentationId, file);
     },
 
     async removePresentationAgendaImage(presentationId) {
-      const { data, error } = await client.functions.invoke("delete-presentation-agenda-image", {
-        body: { presentation_id: requireId(presentationId) }
-      });
-      if (error || data?.ok !== true) throw new Error("AGENDA IMAGE COULD NOT BE REMOVED");
-      return true;
+      return agendaImageService.remove(presentationId);
     }
   });
 }
