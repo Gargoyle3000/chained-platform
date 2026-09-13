@@ -4,7 +4,6 @@ Last updated: 2026-09-12
 
 ## POLISH
 
-- Improve stale soft-deleted Work UX: a locally stale save currently collapses `THIS WORK IS NOT AVAILABLE` into generic `WORK COULD NOT BE SAVED`. This does not block private-preview rollout.
 - Polish empty/new-user states and Dashboard / REQUESTS presentation before broader testing.
 - Observe the first real trusted Artist onboarding intentionally when Peer is available, then prioritize actual tester feedback rather than a new large feature.
 - Add an optional, compact `[?]` GUIDE / HELP layer. It should be system-oriented and context-aware (for example Work publication, Archive privacy/projects/tags, or Profile draft/published state), with a possible central GUIDE entry from Settings/navigation. No mandatory onboarding or tutorial.

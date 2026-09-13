@@ -26,11 +26,13 @@ export function publicationReadinessUiState(readiness, prerequisiteMessage = "WO
 
 export function workOperationFailureUiState({ phase, metadataPersisted, error }) {
   if (!metadataPersisted || phase === "saving") {
-    const message = error?.code === WORK_ERROR_CODES.CONFLICT
-      ? "THIS WORK CHANGED ELSEWHERE · RELOAD BEFORE SAVING"
-      : error?.message === "YEAR MUST BE BETWEEN 1900 AND 2100"
-        ? error.message
-        : "WORK COULD NOT BE SAVED";
+    const message = error?.code === WORK_ERROR_CODES.NOT_FOUND
+      ? "THIS WORK IS NOT AVAILABLE"
+      : error?.code === WORK_ERROR_CODES.CONFLICT
+        ? "THIS WORK CHANGED ELSEWHERE · RELOAD BEFORE SAVING"
+        : error?.message === "YEAR MUST BE BETWEEN 1900 AND 2100"
+          ? error.message
+          : "WORK COULD NOT BE SAVED";
     return Object.freeze({ message, isError: true, restartReadiness: false });
   }
   if (phase === "publishing" && error?.code === WORK_ERROR_CODES.MEDIA_PROCESSING) {

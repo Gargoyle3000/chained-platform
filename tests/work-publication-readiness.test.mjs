@@ -204,7 +204,10 @@ test("reopening a saved draft presents every authoritative readiness outcome", a
 });
 
 test("save and Publish failures remain semantically separate", () => {
+  assert.equal(workOperationFailureUiState({ phase: "saving", metadataPersisted: false, error: { code: "not_found" } }).message, "THIS WORK IS NOT AVAILABLE");
+  assert.equal(workOperationFailureUiState({ phase: "saving", metadataPersisted: false, error: { code: "conflict" } }).message, "THIS WORK CHANGED ELSEWHERE · RELOAD BEFORE SAVING");
   assert.equal(workOperationFailureUiState({ phase: "saving", metadataPersisted: false, error: new Error("raw") }).message, "WORK COULD NOT BE SAVED");
+  assert.equal(workOperationFailureUiState({ phase: "saving", metadataPersisted: false, error: { code: "unauthorized" } }).message, "WORK COULD NOT BE SAVED");
   assert.deepEqual(workOperationFailureUiState({ phase: "publishing", metadataPersisted: true, error: { code: "media_processing" } }), {
     message: "WORK SAVED\nPREPARING IMAGES FOR PUBLISH\nYOU CAN LEAVE THIS PAGE — PROCESSING WILL CONTINUE",
     isError: false,
