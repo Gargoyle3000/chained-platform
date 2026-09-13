@@ -151,7 +151,22 @@ function isPublicPresentation(row, activity, profile) {
   );
 }
 
-function mapOccurrence(row, activity, profile, presentation) {
+function mapAgendaThumbnail(config, row) {
+  if (row?.thumbnail_kind === "dedicated" && UUID_PATTERN.test(String(row?.dedicated_image_id || ""))) {
+    return Object.freeze({
+      kind: "dedicated",
+      src: `${config.supabaseUrl}/functions/v1/public-presentation-agenda-image?presentation_id=${encodeURIComponent(row.presentation_id)}&v=${encodeURIComponent(row.dedicated_updated_at || row.dedicated_image_id)}`
+    });
+  }
+  if (row?.thumbnail_kind === "work") {
+    const path = String(row.work_public_object_path || "");
+    if (!/^[0-9a-f-]+\/[0-9a-f-]+\/[0-9a-f-]+\/small\.webp$/.test(path)) return null;
+    return Object.freeze({ kind: "work", src: `${config.supabaseUrl}/storage/v1/object/public/work-public/${path}` });
+  }
+  return null;
+}
+
+function mapOccurrence(row, activity, profile, presentation, thumbnail) {
   const title =
     cleanText(row.title_override) ||
     cleanText(activity?.title);
@@ -189,11 +204,12 @@ function mapOccurrence(row, activity, profile, presentation) {
       ? createPublicPresentationLink(activity.id)
       : null,
     artist: profile,
-    activity
+    activity,
+    thumbnail
   });
 }
 
-function mapFollowedAgendaOccurrence(row, today) {
+function mapFollowedAgendaOccurrence(config, row, today) {
   if (
     !row ||
     !UUID_PATTERN.test(String(row.occurrence_id || "")) ||
@@ -238,7 +254,8 @@ function mapFollowedAgendaOccurrence(row, today) {
       ? createPublicPresentationLink(presentationId)
       : null,
     artist: profile,
-    activity: null
+    activity: null,
+    thumbnail: mapAgendaThumbnail(config, row)
   });
 }
 
@@ -374,6 +391,14 @@ async function resolvePublicPresentations(
   );
 }
 
+async function resolveAgendaThumbnails(config, request, rows) {
+  const ids = [...new Set(rows.map((row) => row.activity_id).filter((id) => UUID_PATTERN.test(String(id || ""))))];
+  if (!ids.length) return new Map();
+  const query = new URLSearchParams({ target_presentation_ids: uuidArrayParameter(ids) });
+  const thumbnailRows = await request(config, "rpc/get_public_agenda_thumbnail_contexts", query);
+  return new Map(thumbnailRows.map((row) => [row.presentation_id, row]));
+}
+
 async function mapPublicAgendaRows(
   config,
   request,
@@ -385,7 +410,7 @@ async function mapPublicAgendaRows(
       isPublicOccurrence(row, today)
     );
 
-  const [activities, profiles, presentations] =
+  const [activities, profiles, presentations, thumbnails] =
     await Promise.all([
       resolveActivities(
         config,
@@ -398,6 +423,11 @@ async function mapPublicAgendaRows(
         publicRows
       ),
       resolvePublicPresentations(
+        config,
+        request,
+        publicRows
+      ),
+      resolveAgendaThumbnails(
         config,
         request,
         publicRows
@@ -436,7 +466,8 @@ async function mapPublicAgendaRows(
           row,
           activity,
           profile,
-          presentations.get(row.activity_id)
+        presentations.get(row.activity_id),
+        mapAgendaThumbnail(config, thumbnails.get(row.activity_id))
         );
 
       if (
@@ -521,7 +552,7 @@ export function createFollowedAgendaRepository(
       return Object.freeze(
         (Array.isArray(data) ? data : [])
           .map((row) =>
-            mapFollowedAgendaOccurrence(row, today)
+          mapFollowedAgendaOccurrence({ supabaseUrl: String(client.supabaseUrl || "") }, row, today)
           )
           .filter(Boolean)
       );

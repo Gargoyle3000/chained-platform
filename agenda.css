@@ -184,6 +184,17 @@
   padding: 24px 0 30px;
 }
 
+.agenda-event-thumbnail {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  align-self: start;
+  width: min(100%, 150px);
+  max-height: 112px;
+  object-fit: contain;
+  object-position: center;
+}
+
 .agenda-view-switch {
   display: flex;
   align-items: baseline;
@@ -304,6 +315,10 @@
     padding-bottom: 0;
   }
 
+  .agenda-event-thumbnail {
+    width: min(100%, 130px);
+  }
+
   .agenda-sidebar-section {
     margin-bottom: 30px;
   }
@@ -328,6 +343,14 @@
     gap: 18px;
 
     padding: 22px 0 32px;
+  }
+
+  .agenda-event-thumbnail {
+    grid-column: auto;
+    grid-row: auto;
+    justify-self: start;
+    width: min(44vw, 150px);
+    max-height: 112px;
   }
 
   .agenda-date {

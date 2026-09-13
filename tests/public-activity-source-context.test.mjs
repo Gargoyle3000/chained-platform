@@ -89,6 +89,8 @@ test("Agenda resolves a public occurrence through the safe source projection", a
       }];
     }
 
+    if (resource === "rpc/get_public_agenda_thumbnail_contexts") return [];
+
     throw new Error(`Unexpected public Agenda resource: ${resource}`);
   }, "2026-09-04");
 
@@ -138,6 +140,7 @@ test("Agenda leaves standalone or ineligible activity parents without a Presenta
     if (resource === "rpc/get_public_activity_source_contexts") return [sourceContext()];
     if (resource === "public_profiles") return [publicProfile({ show_presentations: false })];
     if (resource === "profile_activities") return [];
+    if (resource === "rpc/get_public_agenda_thumbnail_contexts") return [];
     throw new Error(`Unexpected public Agenda resource: ${resource}`);
   }, "2026-09-04");
 

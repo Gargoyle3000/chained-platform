@@ -13,6 +13,7 @@ const OCCURRENCE_ID = "73333333-3333-4333-8333-333333333333";
 test("FOLLOW uses one self-scoped Agenda RPC and accepts only its minimal public projection", async () => {
   const calls = [];
   const repository = createFollowedAgendaRepository({
+    supabaseUrl: "https://project.supabase.co",
     async rpc(name) {
       calls.push(name);
 
@@ -34,7 +35,10 @@ test("FOLLOW uses one self-scoped Agenda RPC and accepts only its minimal public
           external_url: "https://example.test/presentation",
           artist_slug: "followed-artist",
           artist_display_name: "FOLLOWED ARTIST",
-          presentation_id: ACTIVITY_ID
+          presentation_id: ACTIVITY_ID,
+          thumbnail_kind: "dedicated",
+          dedicated_image_id: "74444444-4444-4444-8444-444444444444",
+          dedicated_updated_at: "2026-09-13T12:00:00Z"
         }],
         error: null
       };
@@ -48,12 +52,24 @@ test("FOLLOW uses one self-scoped Agenda RPC and accepts only its minimal public
   assert.equal(items[0].id, OCCURRENCE_ID);
   assert.equal(items[0].artist.slug, "followed-artist");
   assert.equal(items[0].presentationHref, `presentation.html?id=${ACTIVITY_ID}`);
+  assert.equal(items[0].thumbnail?.kind, "dedicated");
+  assert.match(items[0].thumbnail?.src || "", /public-presentation-agenda-image\?presentation_id=/);
   assert.equal(items[0].accountId, undefined);
   assert.equal(items[0].privateObjectPath, undefined);
 });
 
+test("Agenda thumbnail contract is one public projection and never exposes private paths", async () => {
+  const source = await readFile(new URL("../data/public-agenda-repository.mjs", import.meta.url), "utf8");
+  assert.match(source, /rpc\/get_public_agenda_thumbnail_contexts/);
+  assert.match(source, /public-presentation-agenda-image/);
+  assert.match(source, /work_public_object_path/);
+  assert.doesNotMatch(source, /preview_object_path/);
+  assert.doesNotMatch(source, /private_object_path/);
+});
+
 test("FOLLOW drops stale or malformed rows returned by the server", async () => {
   const repository = createFollowedAgendaRepository({
+    supabaseUrl: "https://project.supabase.co",
     async rpc() {
       return {
         data: [{

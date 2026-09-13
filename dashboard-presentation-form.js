@@ -52,6 +52,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const workProfileSearchForm = document.querySelector("#presentation-work-profile-search");
   const workProfileSearchInput = workProfileSearchForm?.querySelector('[name="work-profile-search"]');
   const workProfileSearchResults = document.querySelector("#presentation-work-profile-results");
+  const agendaImageSection = document.querySelector("#presentation-agenda-image-section");
+  const agendaImageState = document.querySelector("#presentation-agenda-image-state");
+  const agendaImageInput = document.querySelector("#presentation-agenda-image-input");
+  const agendaImageUpload = document.querySelector("#presentation-agenda-image-upload");
+  const representativeWorkSelect = document.querySelector("#presentation-representative-work");
   const programSection = document.querySelector("#presentation-program-section");
   const programList = document.querySelector("#presentation-program-list");
   const programAddForm = document.querySelector("#presentation-program-add");
@@ -513,11 +518,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function refreshContext() {
     if (!currentPresentationId) return;
-    const [participants, cooperators, program, works] = await Promise.all([
+    const [participants, cooperators, program, works, agendaImage] = await Promise.all([
       repository.listManagedParticipants(currentPresentationId),
       repository.listManagedPresentationCooperatorSummaries(currentPresentationId),
       repository.listPresentationProgramOccurrences(currentPresentationId),
-      repository.listManagedPresentationWorks(currentPresentationId)
+      repository.listManagedPresentationWorks(currentPresentationId),
+      repository.getPresentationAgendaImageContext(currentPresentationId)
     ]);
     const activeAssociationIds = new Set(
       works.map((association) => association.id)
@@ -530,7 +536,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     participantsSection.hidden = false;
     cooperatorsSection.hidden = false;
     worksSection.hidden = false;
+    agendaImageSection.hidden = false;
     programSection.hidden = false;
+    agendaImageState.replaceChildren(...(agendaImage.hasDedicatedImage
+      ? [Object.assign(document.createElement("p"), { className: "dashboard-empty-state", textContent: "AGENDA IMAGE READY" }), action("REMOVE", async () => { await repository.removePresentationAgendaImage(currentPresentationId); await refreshContext(); })]
+      : [emptyContext("NO DEDICATED AGENDA IMAGE")]));
+    agendaImageUpload.textContent = agendaImage.hasDedicatedImage ? "[ REPLACE ]" : "[ UPLOAD ]";
+    representativeWorkSelect.replaceChildren(
+      Object.assign(document.createElement("option"), { value: "", textContent: "[ NONE ]" }),
+      ...agendaImage.works.map((work) => Object.assign(document.createElement("option"), { value: work.id, textContent: work.title }))
+    );
+    representativeWorkSelect.value = agendaImage.representativeWorkId || "";
     participantsList.replaceChildren(...(participants.length ? participants.map((participant, index) => {
       const row = document.createElement("div");
       const name = document.createElement("input");
@@ -597,6 +613,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     }) : [emptyContext("NO PROGRAM")]));
     await renderWorksContext(participants, works);
   }
+
+  agendaImageUpload?.addEventListener("click", async () => {
+    const file = agendaImageInput?.files?.[0];
+    if (!file || !currentPresentationId) return;
+    agendaImageUpload.disabled = true;
+    setError(); setStatus("UPLOADING AGENDA IMAGE");
+    try {
+      await repository.uploadPresentationAgendaImage(currentPresentationId, file);
+      agendaImageInput.value = "";
+      setStatus("AGENDA IMAGE READY");
+      await refreshContext();
+    } catch (error) {
+      setStatus(); setError(error?.message || "AGENDA IMAGE COULD NOT BE SAVED");
+    } finally { agendaImageUpload.disabled = false; }
+  });
+
+  representativeWorkSelect?.addEventListener("change", async () => {
+    if (!currentPresentationId) return;
+    representativeWorkSelect.disabled = true;
+    try {
+      await repository.setPresentationRepresentativeWork(currentPresentationId, representativeWorkSelect.value || null);
+      await refreshContext();
+    } catch (error) {
+      setError(error?.message || "REPRESENTATIVE WORK COULD NOT BE SAVED");
+    } finally { representativeWorkSelect.disabled = false; }
+  });
 
   participantAddButton?.addEventListener("click", async () => {
     const name = participantNameInput.value.trim();

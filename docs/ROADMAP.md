@@ -17,7 +17,7 @@ Last updated: 2026-09-12
 - Agenda occurrence publication is live with explicit PUBLISH / UNPUBLISH and independent `show_in_agenda` / `show_in_presentation` behavior.
 - Presentation Work association, participant history and co-operator/manager access are independent; public role semantics distinguish contextual HOST/PRESENTED BY from PARTICIPANTS and technical management roles.
 - Public Presentation detail order is TITLE / CONTEXT → PARTICIPANTS → WORKS → PROGRAM, with the broader responsive Works grid live.
-- Complete remaining Presentation ↔ Agenda ↔ Works crosslinks and attachments; standalone Agenda entries remain supported.
+- Complete remaining Presentation ↔ Agenda ↔ Works crosslinks and attachments beyond the implemented single Agenda-context image / explicit representative Work fallback; standalone Agenda entries remain supported and text-only for now.
 
 ## PRIVATE PREVIEW DERIVATIVES — DEPLOYED
 

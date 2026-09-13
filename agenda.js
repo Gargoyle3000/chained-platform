@@ -198,12 +198,20 @@ function createEvent(item) {
   const day = document.createElement("span");
   const weekday = document.createElement("span");
   const main = document.createElement("div");
+  const media = item.thumbnail?.src ? document.createElement("img") : null;
   const type = document.createElement("p");
   const title = document.createElement("h3");
   const artist = document.createElement("a");
   const details = document.createElement("div");
 
   article.className = "agenda-event";
+  if (media) {
+    media.className = "agenda-event-thumbnail";
+    media.src = item.thumbnail.src;
+    media.alt = "";
+    media.loading = "lazy";
+    media.decoding = "async";
+  }
   date.className = "agenda-date";
   day.textContent = formatDay(item.startDate);
   weekday.textContent = formatWeekday(item.startDate);
@@ -258,6 +266,7 @@ function createEvent(item) {
   }
 
   article.append(date, main, details);
+  if (media) article.append(media);
   return article;
 }
 

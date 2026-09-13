@@ -318,6 +318,21 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/finalize-work-image-upload/index.ts"
 
+[functions.finalize-presentation-agenda-image]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/finalize-presentation-agenda-image/index.ts"
+
+[functions.delete-presentation-agenda-image]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/delete-presentation-agenda-image/index.ts"
+
+[functions.public-presentation-agenda-image]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/public-presentation-agenda-image/index.ts"
+
 [functions.publish-work]
 enabled = true
 verify_jwt = true
