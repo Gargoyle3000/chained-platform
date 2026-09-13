@@ -121,6 +121,10 @@ try {
             rootFitsDesktop: !document.body.classList.contains("about-page")
               || document.documentElement.clientWidth < 721
               || document.documentElement.scrollHeight <= document.documentElement.clientHeight + 1,
+            rootActionsSingleRow: !document.body.classList.contains("about-page")
+              || document.documentElement.clientWidth < 361
+              || new Set([...document.querySelectorAll(".about-actions a")]
+                .map((element) => Math.round(element.getBoundingClientRect().top))).size === 1,
             text: document.body.innerText.slice(0, 200)
           };
         })()`,
@@ -129,6 +133,7 @@ try {
       const value = evaluation.result.value;
       assert.equal(value.hasMain, true, `${page} has main content at ${width}px`);
       assert.equal(value.rootFitsDesktop, true, `${page} fits a normal desktop viewport without vertical scrolling`);
+      assert.equal(value.rootActionsSingleRow, true, `${page} keeps landing actions in one row where space allows`);
       assert.equal(value.protected, false, `${page} prototype content is revealed at ${width}px`);
       assert.equal(value.overflow, false, `${page} has no horizontal overflow at ${width}px`);
       assert.equal(value.portfolioLibraries, true, `${page} PDF libraries load at ${width}px`);

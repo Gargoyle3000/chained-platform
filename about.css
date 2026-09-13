@@ -88,11 +88,10 @@
 
 .about-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: baseline;
   justify-content: flex-end;
-  gap: 12px 24px;
-  max-width: 280px;
+  gap: 12px 20px;
 }
 
 .about-actions a {
@@ -130,6 +129,12 @@
 
   .about-actions {
     justify-content: flex-start;
-    max-width: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .about-actions {
+    flex-direction: column;
+    gap: 10px;
   }
 }

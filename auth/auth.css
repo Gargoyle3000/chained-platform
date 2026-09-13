@@ -88,7 +88,6 @@ body[data-auth-protected="true"] > main {
 
 .auth-panel {
   padding-top: 20px;
-  border-top: var(--border);
 }
 
 .auth-panel h2 {

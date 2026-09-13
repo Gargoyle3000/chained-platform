@@ -29,6 +29,8 @@ test("anonymous root is the restrained public CHAINED introduction", async () =>
   assert.match(page, /scroll-indicators\.js/);
   assert.match(css, /\.about-summary \{[\s\S]*grid-template-columns: minmax\(0, 820px\) max-content;/);
   assert.match(css, /\.about-section h2 \{[\s\S]*font-weight: 700;/);
+  assert.match(css, /\.about-actions \{[\s\S]*flex-wrap: nowrap;/);
+  assert.match(css, /@media \(max-width: 360px\)[\s\S]*\.about-actions \{[\s\S]*flex-direction: column;/);
   assert.doesNotMatch(page, /pricing|testimonial|funding|alpha/i);
   assert.match(css, /@media \(max-width: 720px\)/);
   assert.match(css, /grid-template-columns: 1fr;/);
@@ -36,6 +38,13 @@ test("anonymous root is the restrained public CHAINED introduction", async () =>
   assert.match(script, /readApplicationSession/);
   assert.match(script, /applicationSession\?\.kind === "active"/);
   assert.match(script, /window\.location\.replace\(destination\)/);
+});
+
+test("Private Access keeps functional field borders without decorative panel dividers", async () => {
+  const css = await read("auth/auth.css");
+
+  assert.doesNotMatch(css, /\.auth-panel\s*\{[\s\S]*border-top/);
+  assert.match(css, /\.auth-field input\s*\{[\s\S]*border-bottom: var\(--border\);/);
 });
 
 test("Discover retains its canonical anonymous header and legacy About forwards to root", async () => {
