@@ -285,84 +285,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  function initialiseRecentScrollIndicators() {
+  function initialiseRecentScrollBehavior() {
     const desktopQuery =
       window.matchMedia("(min-width: 1101px)");
 
-    const bindings = [
-      ...document.querySelectorAll(
-        ".dashboard-latest-column"
-      )
-    ].map((column) => {
+    document.querySelectorAll(
+      ".dashboard-latest-column"
+    ).forEach((column) => {
       const list = column.querySelector(
         ".dashboard-work-list, " +
         ".dashboard-recent-presentation-list"
       );
 
-      const indicator = column.querySelector(
-        ".dashboard-scroll-indicator"
-      );
-
-      const thumb = indicator?.querySelector(
-        ".dashboard-scroll-indicator-thumb"
-      );
-
-      if (!list || !indicator || !thumb) {
-        return null;
-      }
-
-      function update() {
-        const scrollable =
-          desktopQuery.matches &&
-          list.scrollHeight >
-            list.clientHeight + 1;
-
-        indicator.hidden = !scrollable;
-
-        if (!scrollable) {
-          thumb.style.transform =
-            "translateY(0)";
-          return;
-        }
-
-        indicator.style.top =
-          `${list.offsetTop}px`;
-
-        indicator.style.height =
-          `${list.clientHeight}px`;
-
-        const thumbHeight = 18;
-
-        const maximumScroll =
-          list.scrollHeight -
-          list.clientHeight;
-
-        const availableTravel =
-          Math.max(
-            0,
-            list.clientHeight -
-            thumbHeight
-          );
-
-        const progress =
-          maximumScroll > 0
-            ? list.scrollTop /
-              maximumScroll
-            : 0;
-
-        thumb.style.transform =
-          `translateY(${
-            Math.round(
-              availableTravel * progress
-            )
-          }px)`;
-      }
-
-      list.addEventListener(
-        "scroll",
-        update,
-        { passive: true }
-      );
+      if (!list) return;
 
       column.addEventListener(
         "wheel",
@@ -388,45 +323,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         },
         { passive: false }
       );
-
-      const resizeObserver =
-        new ResizeObserver(update);
-
-      resizeObserver.observe(column);
-      resizeObserver.observe(list);
-
-      const mutationObserver =
-        new MutationObserver(update);
-
-      mutationObserver.observe(list, {
-        childList: true,
-        subtree: true
-      });
-
-      return {
-        update,
-        resizeObserver,
-        mutationObserver
-      };
-    }).filter(Boolean);
-
-    function updateAll() {
-      bindings.forEach(
-        (binding) => binding.update()
-      );
-    }
-
-    desktopQuery.addEventListener(
-      "change",
-      updateAll
-    );
-
-    window.addEventListener(
-      "resize",
-      updateAll
-    );
-
-    updateAll();
+    });
   }
 
   function getCoverImage(work) {
@@ -943,7 +840,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  initialiseRecentScrollIndicators();
+  initialiseRecentScrollBehavior();
 
   mobileRecentQuery.addEventListener("change", () => {
     if (recentWorks.length) void renderRecentWorks(recentWorks);

@@ -8,16 +8,6 @@
   if (!root) return;
 
   root.ChainedScrollIndicators = api;
-
-  const installPageIndicator = () => api.attachPageIndicator(root.document);
-
-  if (root.document.readyState === "loading") {
-    root.document.addEventListener("DOMContentLoaded", installPageIndicator, {
-      once: true
-    });
-  } else {
-    installPageIndicator();
-  }
 }(typeof window === "undefined" ? null : window, function (root) {
   "use strict";
 
@@ -149,69 +139,7 @@
     };
   }
 
-  function documentMetrics(document) {
-    const rootElement = document.documentElement;
-    const body = document.body;
-
-    return {
-      clientSize: rootElement.clientHeight,
-      scrollSize: Math.max(
-        rootElement.scrollHeight,
-        body?.scrollHeight || 0
-      ),
-      scrollPosition: root?.scrollY || rootElement.scrollTop || 0
-    };
-  }
-
-  function attachPageIndicator(document) {
-    if (!document?.body || document.documentElement.dataset.chainedPageIndicator) {
-      return null;
-    }
-
-    const visual = createIndicator(document, "chained-page-scroll-indicator");
-    const rootElement = document.documentElement;
-
-    rootElement.dataset.chainedPageIndicator = "true";
-    rootElement.classList.add("chained-page-scrollbar");
-    document.body.append(visual.indicator);
-
-    function update() {
-      const metrics = documentMetrics(document);
-      const geometry = calculateIndicatorGeometry(metrics);
-
-      visual.indicator.hidden = !geometry.scrollable;
-      if (!geometry.scrollable) return;
-
-      visual.indicator.style.height = `${metrics.clientSize}px`;
-      visual.thumb.style.height = `${geometry.thumbSize}px`;
-      visual.thumb.style.transform = `translateY(${geometry.offset}px)`;
-    }
-
-    const cleanupObservers = observeUpdates(
-      [document.body, rootElement],
-      update
-    );
-    const onResize = () => update();
-
-    root?.addEventListener("scroll", update, { passive: true });
-    root?.addEventListener("resize", onResize, { passive: true });
-    update();
-
-    return {
-      update,
-      destroy() {
-        root?.removeEventListener("scroll", update);
-        root?.removeEventListener("resize", onResize);
-        cleanupObservers();
-        visual.indicator.remove();
-        delete rootElement.dataset.chainedPageIndicator;
-        rootElement.classList.remove("chained-page-scrollbar");
-      }
-    };
-  }
-
   return Object.freeze({
-    attachPageIndicator,
     attachScrollIndicator,
     calculateIndicatorGeometry
   });

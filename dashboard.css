@@ -1288,44 +1288,32 @@
 
     overflow-y: auto;
     overscroll-behavior: contain;
-    scrollbar-gutter: auto;
-    scrollbar-width: none;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--black) var(--white);
   }
 
   .dashboard-overview-page
   .dashboard-work-list::-webkit-scrollbar,
   .dashboard-overview-page
   .dashboard-recent-presentation-list::-webkit-scrollbar {
-    width: 0;
-    height: 0;
+    width: 9px;
+    height: 9px;
   }
 
-  .dashboard-scroll-indicator {
-    position: absolute;
-    right: 0;
-
-    display: block;
-    width: 3px;
-
-    pointer-events: none;
+  .dashboard-overview-page
+  .dashboard-work-list::-webkit-scrollbar-track,
+  .dashboard-overview-page
+  .dashboard-recent-presentation-list::-webkit-scrollbar-track {
+    background: var(--white);
   }
 
-  .dashboard-scroll-indicator[hidden] {
-    display: none;
-  }
-
-  .dashboard-scroll-indicator-thumb {
-    position: absolute;
-    top: 0;
-    left: 0;
-
-    display: block;
-    width: 3px;
-    height: 18px;
-
-    background: var(--accent);
-
-    will-change: transform;
+  .dashboard-overview-page
+  .dashboard-work-list::-webkit-scrollbar-thumb,
+  .dashboard-overview-page
+  .dashboard-recent-presentation-list::-webkit-scrollbar-thumb {
+    border-radius: 0;
+    background: var(--black);
   }
 }
 /* DASHBOARD AGENDA */
