@@ -1033,6 +1033,17 @@ footer {
 /* DESKTOP SINGLE IMAGE SYSTEM */
 
 @media (min-width: 701px) {
+  /* A single Work occupies the viewport below the persistent navigation. */
+  .discover-page:is(.following-page, [data-discover-channel="nosy"])[data-view="single"] .discover-stream {
+    padding-top: var(--header-height);
+  }
+
+  .discover-page[data-view="single"] .discover-work {
+    min-height: calc(100svh - var(--header-height));
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
   .discover-page[data-view="single"] .discover-image-link {
     position: relative;
     z-index: 1;

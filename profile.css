@@ -248,6 +248,17 @@
 
 /* RESPONSIVE */
 
+@media (min-width: 701px) {
+  /* A Profile Work occupies the viewport below the persistent navigation. */
+  .profile-works-page .artist-profile {
+    padding-top: var(--header-height);
+  }
+
+  .profile-works-page .profile-work {
+    min-height: calc(100svh - var(--header-height));
+  }
+}
+
 @media (max-width: 900px) {
   .artist-profile {
     --sidebar-width: 200px;
