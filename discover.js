@@ -244,7 +244,7 @@ function createDiscoverWork(
   return article;
 }
 
-function createLoadMoreButton(onLoadMore) {
+function createLoadFallback(onLoadMore) {
   const region = document.createElement("div");
   const button = document.createElement("button");
   region.className = "discover-load-more";
@@ -335,6 +335,7 @@ async function initialiseLocalDiscover() {
   const [
     { getDiscoverRepository, DISCOVER_INITIAL_BATCH },
     { createDiscoverBatchState },
+    { createAutoFeedLoader },
     { createDiscoverFilterState, createDiscoverRequestGate },
     { createDiscoverChannelState },
     { FORMAT_DISCIPLINES },
@@ -344,6 +345,7 @@ async function initialiseLocalDiscover() {
   ] = await Promise.all([
     import("./data/discover-repository.mjs"),
     import("./data/discover-ordering.mjs"),
+    import("./data/auto-feed-loader.mjs"),
     import("./data/discover-filter-state.mjs"),
     import("./data/discover-channel-state.mjs"),
     import("./data/work-format-disciplines.mjs"),
@@ -366,7 +368,9 @@ async function initialiseLocalDiscover() {
   });
   let archiveState = null;
   let archiveStatus = null;
-  let loadMoreRegion = null;
+  let continuation = null;
+  let continuationSentinel = null;
+  let loadFallback = null;
   const requestGate = createDiscoverRequestGate();
   let curatedRepositoryPromise = null;
 
@@ -374,15 +378,25 @@ async function initialiseLocalDiscover() {
     if (archiveStatus) archiveStatus.textContent = message;
   }
 
-  function removeLoadMore() {
-    loadMoreRegion?.remove();
-    loadMoreRegion = null;
+  function removeContinuation() {
+    continuation?.stop();
+    continuation = null;
+    continuationSentinel?.remove();
+    continuationSentinel = null;
+    loadFallback?.remove();
+    loadFallback = null;
+  }
+
+  function showLoadFallback(onLoadMore) {
+    loadFallback?.remove();
+    loadFallback = createLoadFallback(onLoadMore);
+    stream.after(loadFallback);
   }
 
   async function renderWorks(formatDisciplines = []) {
     const version = requestGate.next();
     const hasFilter = formatDisciplines.length > 0;
-    removeLoadMore();
+    removeContinuation();
     stream.setAttribute("aria-busy", "true");
     stream.replaceChildren(createState("LOADING PUBLISHED WORKS"));
 
@@ -411,17 +425,43 @@ async function initialiseLocalDiscover() {
 
       const batches = createDiscoverBatchState(works, DISCOVER_INITIAL_BATCH);
       const appendBatch = () => {
+        if (!requestGate.isCurrent(version)) return false;
         const batch = batches.next();
         stream.append(...batch.appended.map((work) => (
           createDiscoverWork(work, archiveState, createArchiveWorkAction, announceArchiveStatus, carousel)
         )));
-        if (!batch.hasMore) removeLoadMore();
+        if (!batch.hasMore) sentinel?.remove();
+        return batch.hasMore;
       };
 
       stream.replaceChildren();
-      loadMoreRegion = createLoadMoreButton(appendBatch);
-      stream.after(loadMoreRegion);
-      appendBatch();
+      const sentinel = document.createElement("div");
+      sentinel.className = "discover-feed-sentinel";
+      sentinel.setAttribute("aria-hidden", "true");
+      stream.after(sentinel);
+      continuationSentinel = sentinel;
+      let hasMore = appendBatch();
+      if (hasMore) {
+        function showManualFallback() {
+          showLoadFallback(async () => {
+            await continuation?.retry();
+            if (hasMore && !continuation?.isSupported()) showManualFallback();
+          });
+        }
+        continuation = createAutoFeedLoader({
+          sentinel,
+          hasMore: () => requestGate.isCurrent(version) && hasMore,
+          loadNext: () => {
+            loadFallback?.remove();
+            loadFallback = null;
+            hasMore = appendBatch();
+          },
+          onError: () => {
+            if (requestGate.isCurrent(version)) showManualFallback();
+          }
+        });
+        if (!continuation.start()) showManualFallback();
+      }
       restoreFeedPosition();
     } catch {
       if (!requestGate.isCurrent(version)) return;
@@ -442,7 +482,7 @@ async function initialiseLocalDiscover() {
 
   async function renderCuratedCollections() {
     const version = requestGate.next();
-    removeLoadMore();
+    removeContinuation();
     stream.setAttribute("aria-busy", "true");
     stream.replaceChildren(createState("LOADING CURATED COLLECTIONS"));
     try {

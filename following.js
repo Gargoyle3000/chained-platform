@@ -211,12 +211,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const [
         { getFollowingRepository },
         { appendFollowingPage },
+        { createAutoFeedLoader },
         { createArchiveWorkAction, loadArchiveWorkState },
         { createPublicWorkImageLoader },
         { attachPublicWorkCarousel, createPublicWorkCarouselControls }
       ] = await Promise.all([
         import("./data/following-repository.mjs"),
         import("./data/following-mapping.mjs"),
+        import("./data/auto-feed-loader.mjs"),
         import("./data/archive-work-action.mjs"),
         import("./data/public-work-images.mjs"),
         import("./public-work-carousel.mjs")
@@ -260,47 +262,76 @@ document.addEventListener("DOMContentLoaded", () => {
       let visible = appendFollowingPage([], firstPage.items);
       let cursor = firstPage.nextCursor;
       let hasMore = firstPage.hasMore;
-      const loadMoreRegion = document.createElement("div");
-      const loadMore = document.createElement("button");
-      loadMoreRegion.className = "discover-load-more";
-      loadMore.className = "text-action";
-      loadMore.type = "button";
-      loadMore.textContent = "[ LOAD MORE ]";
-      loadMore.setAttribute("aria-label", "Load more Works from followed profiles");
-      loadMoreRegion.append(loadMore);
+      let active = true;
+      let loadFallback = null;
+
+      function removeLoadFallback() {
+        loadFallback?.remove();
+        loadFallback = null;
+      }
+
+      function showLoadFallback(retry) {
+        removeLoadFallback();
+        const button = document.createElement("button");
+        loadFallback = document.createElement("div");
+        loadFallback.className = "discover-load-more";
+        button.className = "text-action";
+        button.type = "button";
+        button.textContent = "[ TRY AGAIN ]";
+        button.setAttribute("aria-label", "Retry loading Works from followed profiles");
+        button.addEventListener("click", retry, { once: true });
+        loadFallback.append(button);
+        stream.after(loadFallback);
+      }
 
       stream.replaceChildren(...visible.map((work) => (
         createFollowingWork(work, archiveState, createArchiveWorkAction, announceArchiveStatus, carousel)
       )));
       emptyRegion.hidden = true;
       stream.hidden = false;
-      stream.after(loadMoreRegion);
-      loadMoreRegion.hidden = !hasMore;
+      const sentinel = document.createElement("div");
+      sentinel.className = "discover-feed-sentinel";
+      sentinel.setAttribute("aria-hidden", "true");
+      stream.after(sentinel);
       restoreFeedPosition();
 
-      loadMore.addEventListener("click", async () => {
-        if (loadMore.disabled || !hasMore || !cursor) return;
-        loadMore.disabled = true;
-        loadMore.setAttribute("aria-busy", "true");
-        stream.setAttribute("aria-busy", "true");
-        try {
-          const pageResult = await repository.loadFollowingFeed(cursor);
-          const nextVisible = appendFollowingPage(visible, pageResult.items);
-          stream.append(...nextVisible.slice(visible.length).map((work) => (
-            createFollowingWork(work, archiveState, createArchiveWorkAction, announceArchiveStatus, carousel)
-          )));
-          visible = nextVisible;
-          cursor = pageResult.nextCursor;
-          hasMore = pageResult.hasMore;
-          loadMoreRegion.hidden = !hasMore;
-        } catch {
-          loadMore.textContent = "[ TRY AGAIN ]";
-        } finally {
-          loadMore.disabled = false;
-          loadMore.removeAttribute("aria-busy");
-          stream.setAttribute("aria-busy", "false");
+      const continuation = createAutoFeedLoader({
+        sentinel,
+        hasMore: () => active && hasMore && Boolean(cursor),
+        loadNext: async () => {
+          if (!active || !hasMore || !cursor) return;
+          removeLoadFallback();
+          stream.setAttribute("aria-busy", "true");
+          try {
+            const pageResult = await repository.loadFollowingFeed(cursor);
+            if (!active) return;
+            const nextVisible = appendFollowingPage(visible, pageResult.items);
+            stream.append(...nextVisible.slice(visible.length).map((work) => (
+              createFollowingWork(work, archiveState, createArchiveWorkAction, announceArchiveStatus, carousel)
+            )));
+            visible = nextVisible;
+            cursor = pageResult.nextCursor;
+            hasMore = pageResult.hasMore;
+            if (!hasMore) sentinel.remove();
+          } finally {
+            stream.setAttribute("aria-busy", "false");
+          }
+        },
+        onError: (_error, retry) => {
+          if (active) showLoadFallback(retry);
         }
       });
+      if (hasMore && !continuation.start()) {
+        const retryFallback = async () => {
+          await continuation.retry();
+          if (hasMore && !continuation.isSupported()) showLoadFallback(retryFallback);
+        };
+        showLoadFallback(retryFallback);
+      }
+      window.addEventListener("pagehide", () => {
+        active = false;
+        continuation.stop();
+      }, { once: true });
     } catch {
       stream.setAttribute("aria-busy", "false");
       localInitialised = false;
