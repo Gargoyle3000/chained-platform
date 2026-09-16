@@ -206,6 +206,7 @@ function createEvent(item) {
 
   article.className = "agenda-event";
   if (media) {
+    article.classList.add("has-thumbnail");
     media.className = "agenda-event-thumbnail";
     media.src = item.thumbnail.src;
     media.alt = "";
