@@ -5,7 +5,6 @@ Last updated: 2026-09-16
 ## POLISH
 
 - Observe the first real trusted Artist onboarding intentionally when Peer is available, then prioritize actual tester feedback rather than a new large feature.
-- Add an optional, compact `[?]` GUIDE / HELP layer. It should be system-oriented and context-aware (for example Work publication, Archive privacy/projects/tags, or Profile draft/published state), with a possible central GUIDE entry from Settings/navigation. No mandatory onboarding or tutorial.
 - Clarify the valid state where a Work is published while its owner profile remains draft/private, for example `WORK PUBLISHED · PROFILE STILL PRIVATE [?]`, optionally linking to Settings. Never auto-publish the profile as a Work-publication side effect.
 
 - Video support direction: support video and video documentation without changing the still, image-led feed. Every video Work requires a cover still for Discover, Following, GRID, Archive overviews and relevant exports; no autoplay or moving thumbnails. Playback belongs on Work detail, with mixed media (for example `IMAGE · IMAGE · VIDEO · IMAGE`) supported later. Prefer external hosting/embed for v1; managed video infrastructure can follow if scale warrants it.
@@ -72,7 +71,7 @@ Implementation should verify the largest real preview display and HiDPI needs be
 
 ## PRODUCT DIRECTIONS TO IMPLEMENT
 
-- Build the optional page GUIDE overlay and one-time first-login introduction; finalize copy in the sitewide copy audit.
+- Consider a broader optional GUIDE overlay and one-time first-login introduction beyond the implemented contextual `[ ? ]` reference; finalize any future copy in the sitewide copy audit.
 - Add persistent Profile publication status and the one-time Work-published/Profile-private explanation without changing visibility rules.
 - Implement external Vimeo-first video on Work detail: still selection, duration, mixed media, playback lifecycle and still-based PDF representation.
 - Implement CHAINED/CHAINED+ limits, upgrade handling and technical abuse ceilings while preserving existing content at limits.

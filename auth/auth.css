@@ -42,23 +42,105 @@ body[data-auth-protected="true"] > main {
   font: inherit;
 }
 
-.site-header .auth-logout-button {
+.contextual-help-trigger {
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--black);
+  cursor: pointer;
+  font: inherit;
+}
+
+.site-header .auth-logout-button,
+.site-header .contextual-help-trigger {
   pointer-events: auto;
 }
 
 .auth-logout-button:hover,
-.auth-logout-button:focus-visible {
+.auth-logout-button:focus-visible,
+.contextual-help-trigger:hover,
+.contextual-help-trigger:focus-visible {
   color: var(--green);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 .auth-logout-button:focus-visible,
+.contextual-help-trigger:focus-visible,
 .auth-form input:focus-visible,
 .auth-submit:focus-visible,
 .auth-text-action:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
+}
+
+.contextual-help-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 60;
+
+  width: min(420px, calc(100vw - 32px));
+  height: 100svh;
+  overflow-y: auto;
+  padding: 24px var(--page-gutter) 48px;
+
+  border-left: var(--border);
+  background: var(--white);
+  color: var(--black);
+}
+
+.contextual-help-panel[hidden] {
+  display: none;
+}
+
+.contextual-help-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.contextual-help-header h2,
+.contextual-help-content h3,
+.contextual-help-content p {
+  margin: 0;
+}
+
+.contextual-help-header h2 {
+  font-size: clamp(24px, 2.5vw, 38px);
+  line-height: 0.95;
+  font-weight: 400;
+  letter-spacing: -0.05em;
+}
+
+.contextual-help-close {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.contextual-help-content {
+  display: grid;
+  gap: 34px;
+
+  margin-top: 70px;
+}
+
+.contextual-help-content section {
+  display: grid;
+  gap: 10px;
+}
+
+.contextual-help-content h3,
+.contextual-help-content p {
+  font-size: var(--font-meta);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.contextual-help-content h3 {
+  color: var(--accent);
 }
 
 .auth-main {
@@ -225,6 +307,15 @@ body[data-auth-protected="true"] > main {
 @media (max-width: 720px) {
   .auth-session-indicator {
     min-height: 24px;
+  }
+
+  .contextual-help-panel {
+    width: 100vw;
+    padding: 24px var(--page-gutter) 40px;
+  }
+
+  .contextual-help-content {
+    margin-top: 54px;
   }
 
   .auth-main,

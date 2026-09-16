@@ -1,0 +1,91 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import {
+  HELP_CONTEXTS,
+  contextualHelpContext,
+  contextualHelpKey
+} from "../data/contextual-help.mjs";
+
+const routes = Object.freeze({
+  "dashboard.html": "dashboard",
+  "dashboard-works.html": "works",
+  "dashboard-work-edit.html": "work-editor",
+  "dashboard-presentations.html": "presentations",
+  "dashboard-presentation-edit.html": "presentation-editor",
+  "dashboard-agenda.html": "agenda",
+  "dashboard-agenda-edit.html": "agenda-editor",
+  "dashboard-settings.html": "profile",
+  "dashboard-cv.html": "cv",
+  "dashboard-press.html": "press",
+  "archive.html": "archive"
+});
+
+test("contextual help resolves every supported authenticated workspace view", () => {
+  for (const [route, key] of Object.entries(routes)) {
+    assert.equal(contextualHelpKey(`/${route}`), key);
+    const context = contextualHelpContext(`/${route}`);
+    assert.equal(context, HELP_CONTEXTS[key]);
+    assert.equal(context.sections.length, 3);
+    assert.deepEqual(context.sections.map(([heading]) => heading), [
+      "THIS PAGE",
+      "EDIT HERE",
+      "CONNECTED TO"
+    ]);
+  }
+  assert.equal(contextualHelpKey("/agenda.html"), null);
+  assert.equal(contextualHelpContext("/unknown.html"), null);
+});
+
+test("Agenda and Work help preserve the explicit image source-of-truth", () => {
+  const work = HELP_CONTEXTS["work-editor"].sections.at(-1)[1];
+  const agenda = HELP_CONTEXTS["agenda-editor"].sections.at(-1)[1];
+  const presentation = HELP_CONTEXTS["presentation-editor"].sections.at(-1)[1];
+  assert.match(work, /explicitly selected through Agenda Edit/);
+  assert.match(agenda, /dedicated verified Agenda image/);
+  assert.match(agenda, /no first Work is selected automatically/);
+  assert.match(presentation, /primarily in Agenda Edit/);
+});
+
+test("authenticated navigation places contextual help after logout and excludes public pages", async () => {
+  const [navigation, help, dashboard, publicAgenda] = await Promise.all([
+    readFile(new URL("../auth/navigation.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../data/contextual-help.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../dashboard.html", import.meta.url), "utf8"),
+    readFile(new URL("../agenda.html", import.meta.url), "utf8")
+  ]);
+  assert.match(navigation, /indicator\.append\(logout\);/);
+  assert.match(navigation, /mountContextualHelp\(actions\);/);
+  assert.match(help, /indicator\.append\(trigger\);/);
+  assert.match(help, /document\.body\.dataset\.authProtected !== "true"/);
+  assert.match(dashboard, /data-auth-protected="true"/);
+  assert.doesNotMatch(publicAgenda, /data-auth-protected="true"/);
+});
+
+test("contextual help is user-invoked, closable, keyboard-safe, and preserves page state", async () => {
+  const source = await readFile(
+    new URL("../data/contextual-help.mjs", import.meta.url),
+    "utf8"
+  );
+  assert.match(source, /trigger\.addEventListener\("click"/);
+  assert.match(source, /close\?\.addEventListener\("click", closePanel\)/);
+  assert.match(source, /event\.key === "Escape"/);
+  assert.match(source, /trigger\.focus\(\)/);
+  assert.match(source, /trigger\.type = "button"/);
+  assert.match(source, /close\.type = "button"/);
+  assert.doesNotMatch(source, /window\.location\s*=/);
+  assert.doesNotMatch(source, /history\./);
+  assert.doesNotMatch(source, /form\.reset|FormData|\.value\s*=/);
+});
+
+test("contextual help uses one responsive drawer without changing primary navigation", async () => {
+  const [css, navigation] = await Promise.all([
+    readFile(new URL("../auth/auth.css", import.meta.url), "utf8"),
+    readFile(new URL("../auth/navigation.mjs", import.meta.url), "utf8")
+  ]);
+  assert.match(css, /\.contextual-help-panel \{[\s\S]*?width: min\(420px/);
+  assert.match(css, /@media \(max-width: 720px\) \{[\s\S]*?\.contextual-help-panel \{[\s\S]*?width: 100vw/);
+  assert.match(css, /border-left: var\(--border\)/);
+  assert.doesNotMatch(css, /contextual-help[^\n]*box-shadow|contextual-help[^\n]*border-radius/);
+  assert.match(navigation, /navigation\.classList\.add\("main-nav-with-dashboard"\)/);
+});

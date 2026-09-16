@@ -1,6 +1,7 @@
 import { resolveManagedProfileState } from "../data/work-mapping.mjs";
 import { createPublicProfileLink } from "../data/public-work-mapping.mjs";
 import { readAdminAccess } from "./admin-access.mjs";
+import { mountContextualHelp } from "../data/contextual-help.mjs";
 
 const DASHBOARD_HREF = "dashboard.html";
 
@@ -200,6 +201,7 @@ export async function applyAuthenticatedNavigation(client) {
   const actions = ensureHeaderActions(header, navigation);
   ensureProfileGroup(navigation);
   ensureSessionIndicator(actions, client);
+  mountContextualHelp(actions);
   await ensureAdminInvitationNavigation(client);
 
   header.dataset.authNavigationReady = "true";
