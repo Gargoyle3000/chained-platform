@@ -13,6 +13,8 @@ const ACTIVITY_ID = "22222222-2222-4222-8222-222222222222";
 const OCCURRENCE_ID = "33333333-3333-4333-8333-333333333333";
 const CATEGORY_ID = "44444444-4444-4444-8444-444444444444";
 const ENTRY_ID = "55555555-5555-4555-8555-555555555555";
+const WORK_ID = "66666666-6666-4666-8666-666666666666";
+const IMAGE_ID = "77777777-7777-4777-8777-777777777777";
 
 function publicProfile() {
   return {
@@ -146,6 +148,50 @@ test("Agenda leaves standalone or ineligible activity parents without a Presenta
 
   const [item] = await repository.listAgenda();
   assert.equal(item.presentationHref, null);
+});
+
+test("ALL renders an explicit representative Work through its canonical SMALL derivative", async () => {
+  const repository = createPublicAgendaRepository({
+    supabaseUrl: "https://project.supabase.co"
+  }, async (_config, resource) => {
+    if (resource === "activity_occurrences") {
+      return [{
+        id: OCCURRENCE_ID,
+        owner_profile_id: PROFILE_ID,
+        activity_id: ACTIVITY_ID,
+        occurrence_type: "opening",
+        start_date: "2027-01-02",
+        show_in_agenda: true,
+        visibility: "published",
+        published_at: "2026-12-01T00:00:00Z"
+      }];
+    }
+    if (resource === "rpc/get_public_activity_source_contexts") return [sourceContext()];
+    if (resource === "public_profiles") return [publicProfile()];
+    if (resource === "profile_activities") return [{
+      id: ACTIVITY_ID,
+      owner_profile_id: PROFILE_ID,
+      show_in_presentations: true,
+      visibility: "published",
+      published_at: "2026-12-01T00:00:00Z"
+    }];
+    if (resource === "rpc/get_public_agenda_thumbnail_contexts") {
+      return [{
+        presentation_id: ACTIVITY_ID,
+        thumbnail_kind: "work",
+        work_public_object_path: `${PROFILE_ID}/${WORK_ID}/${ACTIVITY_ID}/${IMAGE_ID}/small.webp`
+      }];
+    }
+    throw new Error(`Unexpected public Agenda resource: ${resource}`);
+  }, "2026-09-04");
+
+  const [item] = await repository.listAgenda();
+
+  assert.equal(item.thumbnail?.kind, "work");
+  assert.equal(
+    item.thumbnail?.src,
+    `https://project.supabase.co/storage/v1/object/public/work-public/${PROFILE_ID}/${WORK_ID}/${ACTIVITY_ID}/${IMAGE_ID}/small.webp`
+  );
 });
 
 test("automatic CV entries resolve through the safe source projection", async () => {

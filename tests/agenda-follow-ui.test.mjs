@@ -9,6 +9,8 @@ import {
 const PROFILE_ID = "71111111-1111-4111-8111-111111111111";
 const ACTIVITY_ID = "72222222-2222-4222-8222-222222222222";
 const OCCURRENCE_ID = "73333333-3333-4333-8333-333333333333";
+const WORK_ID = "74444444-4444-4444-8444-444444444444";
+const IMAGE_ID = "75555555-5555-4555-8555-555555555555";
 
 test("FOLLOW uses one self-scoped Agenda RPC and accepts only its minimal public projection", async () => {
   const calls = [];
@@ -65,6 +67,38 @@ test("Agenda thumbnail contract is one public projection and never exposes priva
   assert.match(source, /work_public_object_path/);
   assert.doesNotMatch(source, /preview_object_path/);
   assert.doesNotMatch(source, /private_object_path/);
+});
+
+test("FOLLOW renders an explicit representative Work through its canonical SMALL derivative", async () => {
+  const repository = createFollowedAgendaRepository({
+    supabaseUrl: "https://project.supabase.co",
+    async rpc() {
+      return {
+        data: [{
+          occurrence_id: OCCURRENCE_ID,
+          owner_profile_id: PROFILE_ID,
+          activity_id: ACTIVITY_ID,
+          occurrence_type: "opening",
+          title: "FOLLOWED OPENING",
+          start_date: "2027-01-02",
+          artist_slug: "followed-artist",
+          artist_display_name: "FOLLOWED ARTIST",
+          presentation_id: ACTIVITY_ID,
+          thumbnail_kind: "work",
+          work_public_object_path: `${PROFILE_ID}/${WORK_ID}/${ACTIVITY_ID}/${IMAGE_ID}/small.webp`
+        }],
+        error: null
+      };
+    }
+  }, "2026-09-13");
+
+  const [item] = await repository.listAgenda();
+
+  assert.equal(item.thumbnail?.kind, "work");
+  assert.equal(
+    item.thumbnail?.src,
+    `https://project.supabase.co/storage/v1/object/public/work-public/${PROFILE_ID}/${WORK_ID}/${ACTIVITY_ID}/${IMAGE_ID}/small.webp`
+  );
 });
 
 test("FOLLOW drops stale or malformed rows returned by the server", async () => {

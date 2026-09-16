@@ -4,6 +4,7 @@ import { createPresentationAgendaImageService } from "../data/presentation-agend
 
 const PRESENTATION_ID = "11111111-1111-4111-8111-111111111111";
 const IMAGE_ID = "22222222-2222-4222-8222-222222222222";
+const WORK_ID = "33333333-3333-4333-8333-333333333333";
 
 function createClient(finalize = { ok: true, status: "ready" }) {
   const calls = [];
@@ -14,8 +15,11 @@ function createClient(finalize = { ok: true, status: "ready" }) {
         return { data: { session: { access_token: "session-token" } }, error: null };
       }
     },
-    async rpc(name) {
-      calls.push({ kind: "rpc", name });
+    async rpc(name, args) {
+      calls.push({ kind: "rpc", name, args });
+      if (name === "set_presentation_representative_work") {
+        return { data: true, error: null };
+      }
       return {
         data: [{
           image_id: IMAGE_ID,
@@ -61,6 +65,22 @@ test("Agenda image upload finalizes the reserved image with the active session",
     options: {
       body: { image_id: IMAGE_ID },
       headers: { Authorization: "Bearer session-token" }
+    }
+  });
+});
+
+test("Representative Work selection persists immediately through its dedicated RPC", async () => {
+  const client = createClient();
+  const service = createPresentationAgendaImageService(client);
+
+  await service.setRepresentativeWork(PRESENTATION_ID, WORK_ID);
+
+  assert.deepEqual(client.calls[0], {
+    kind: "rpc",
+    name: "set_presentation_representative_work",
+    args: {
+      target_presentation_id: PRESENTATION_ID,
+      target_work_id: WORK_ID
     }
   });
 });

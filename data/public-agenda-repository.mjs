@@ -160,7 +160,11 @@ function mapAgendaThumbnail(config, row) {
   }
   if (row?.thumbnail_kind === "work") {
     const path = String(row.work_public_object_path || "");
-    if (!/^[0-9a-f-]+\/[0-9a-f-]+\/[0-9a-f-]+\/small\.webp$/.test(path)) return null;
+    // A canonical public Work SMALL derivative is scoped by profile, Work,
+    // publication revision and image. Do not turn a valid four-UUID path
+    // into a missing Agenda thumbnail by accepting the obsolete three-part
+    // shape here.
+    if (!/^[0-9a-f-]+\/[0-9a-f-]+\/[0-9a-f-]+\/[0-9a-f-]+\/small\.webp$/.test(path)) return null;
     return Object.freeze({ kind: "work", src: `${config.supabaseUrl}/storage/v1/object/public/work-public/${path}` });
   }
   return null;

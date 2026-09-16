@@ -314,8 +314,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     try {
       await agendaImageController.refresh();
-    } catch {
+    } catch (error) {
       agendaImageSection.hidden = true;
+      setError(
+        error?.message ||
+        "AGENDA IMAGE IS CURRENTLY UNAVAILABLE"
+      );
     }
   }
 

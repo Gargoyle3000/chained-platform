@@ -16,6 +16,9 @@ test("Presentation editor keeps one dedicated Agenda image and explicit represen
   assert.match(repository, /presentation-agenda-image-service/);
   assert.match(controller, /VERIFYING AGENDA IMAGE/);
   assert.match(controller, /context\?\.hasDedicatedImage/);
+  assert.match(controller, /SAVING REPRESENTATIVE WORK/);
+  assert.match(controller, /REPRESENTATIVE WORK SET/);
+  assert.match(controller, /REPRESENTATIVE WORK COULD NOT BE SAVED/);
 });
 
 test("Agenda editor exposes the same image controls only for a saved linked Presentation", async () => {
@@ -34,6 +37,7 @@ test("Agenda editor exposes the same image controls only for a saved linked Pres
   assert.match(form, /refreshAgendaImageControls/);
   assert.match(repository, /presentation-agenda-image-service/);
   assert.match(controller, /section\.hidden = true/);
+  assert.match(form, /AGENDA IMAGE IS CURRENTLY UNAVAILABLE/);
   assert.match(page, /presentation-agenda-image\.css/);
   assert.match(css, /minmax\(0, 420px\) max-content/);
   assert.match(css, /@media \(max-width: 700px\)/);

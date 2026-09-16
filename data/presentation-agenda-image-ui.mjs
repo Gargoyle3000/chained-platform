@@ -109,15 +109,24 @@ export function createPresentationAgendaImageController({
   representativeWork.addEventListener("change", async () => {
     const presentationId = getPresentationId();
     if (!presentationId) return;
+    const representativeWorkId = representativeWork.value || null;
     representativeWork.disabled = true;
     setError();
+    setStatus("SAVING REPRESENTATIVE WORK");
     try {
       await repository.setPresentationRepresentativeWork(
         presentationId,
-        representativeWork.value || null
+        representativeWorkId
       );
-      await refresh();
+      const context = await refresh();
+      if ((context?.representativeWorkId || null) !== representativeWorkId) {
+        throw new Error("REPRESENTATIVE WORK COULD NOT BE SAVED");
+      }
+      setStatus(representativeWorkId
+        ? "REPRESENTATIVE WORK SET"
+        : "REPRESENTATIVE WORK REMOVED");
     } catch (error) {
+      setStatus();
       setError(error?.message || "REPRESENTATIVE WORK COULD NOT BE SAVED");
     } finally {
       representativeWork.disabled = false;
