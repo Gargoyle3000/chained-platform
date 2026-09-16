@@ -1290,7 +1290,7 @@
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
-    scrollbar-color: var(--black) var(--white);
+    scrollbar-color: var(--accent) var(--white);
   }
 
   .dashboard-overview-page
@@ -1313,7 +1313,7 @@
   .dashboard-overview-page
   .dashboard-recent-presentation-list::-webkit-scrollbar-thumb {
     border-radius: 0;
-    background: var(--black);
+    background: var(--accent);
   }
 }
 /* DASHBOARD AGENDA */

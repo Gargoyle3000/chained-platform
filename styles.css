@@ -57,7 +57,7 @@ html {
   html {
     scrollbar-gutter: stable;
     scrollbar-width: thin;
-    scrollbar-color: var(--black) var(--white);
+    scrollbar-color: var(--accent) var(--white);
   }
 
   html::-webkit-scrollbar {
@@ -71,7 +71,7 @@ html {
 
   html::-webkit-scrollbar-thumb {
     border-radius: 0;
-    background: var(--black);
+    background: var(--accent);
   }
 }
 
