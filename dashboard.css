@@ -247,13 +247,6 @@
   line-height: 1.45;
 }
 
-.dashboard-request-empty {
-  margin: 0;
-  padding: 0;
-  font-size: var(--font-meta);
-  line-height: 1.45;
-}
-
 .dashboard-request-actions {
   display: flex;
   flex-wrap: wrap;

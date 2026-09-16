@@ -32,6 +32,7 @@ Current focus: complete and polish core product surfaces before broader rollout.
 - Management language uses concise `WORKS`, `PRESENTATIONS`, and `AGENDA` headings.
 - Compact multi-image browsing is live on Discover, Follow, Public Profile and Archive: these viewers use the same circular current-image state and compact green accessible `< current/total >` navigation (hidden for one-image Works), while preserving swipe/drag and keyboard browsing. Archive secondary images remain lazily resolved through its existing strict public projection; its Project, Tag, SELECT and export state is unaffected. Public Work Detail intentionally renders all ordered images vertically for close viewing/comparison and has no carousel. The control is UI-only and never enters exports.
 - Dashboard mobile initially shows 10 recent Works and 10 recent Presentations per independent list; `[ LOAD MORE ]` reveals 10 at a time. Desktop retains its internal-scroll overview behavior.
+- New-Artist empty states are quiet and functional: Works, Presentations and Agenda retain direct add actions; CV and Press retain their inline add forms; Archive stays a neutral empty private workspace; and Dashboard hides REQUESTS until an action or a real failure needs attention. Draft profiles remain outside public visibility.
 - Published Works can be removed directly from WORKS through `[ DELETE ]` → `[ CONFIRM DELETE ]`; the backend unpublishes, recalls exact public derivatives, and soft-deletes only after cleanup succeeds. A cleanup-pending retry resumes the same lifecycle.
 - Public Presentation v1 is live: profile lists use canonical Presentation detail links, and public detail pages show core metadata with optional description and validated external URL. Presentation media and Work links are not yet modeled.
 - Presentation v2 trust layer, management context, participation consent, and Dashboard REQUESTS are live. Public Presentation pages can render their safe context projection, including participants, accepted visible Works and Program; authorized recipients can decide co-operator invitations, Work proposals and participation requests from Dashboard.
@@ -82,7 +83,6 @@ Current focus: complete and polish core product surfaces before broader rollout.
 
 ## NEXT
 
-- Polish empty/new-user states and Dashboard / REQUESTS presentation.
 - Observe the first real Artist onboarding intentionally when Peer is available, then prioritize actual tester feedback rather than a new large feature.
 
 ## LATER

@@ -172,18 +172,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     return row;
   }
 
-  function renderRequests(requests, onDecision, onAcknowledge) {
+  function renderRequests(requests, onDecision, onAcknowledge, hasError = false) {
     if (!requestsSection || !requestsList) return;
 
-    const empty = document.createElement("p");
-    empty.className = "dashboard-request-empty";
-    empty.textContent = "NO REQUESTS";
-
-    requestsSection.hidden = false;
+    requestsSection.hidden = requests.length === 0 && !hasError;
     requestsList.replaceChildren(
-      ...(requests.length
-        ? requests.map((request) => createRequestRow(request, onDecision, onAcknowledge))
-        : [empty])
+      ...requests.map((request) =>
+        createRequestRow(request, onDecision, onAcknowledge)
+      )
     );
   }
 
@@ -207,12 +203,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       ]);
 
       setRequestsError();
-      renderRequests([...publishReadyWorks, ...requests], decideRequest, acknowledgePublishReady);
+      renderRequests(
+        [...publishReadyWorks, ...requests],
+        decideRequest,
+        acknowledgePublishReady
+      );
     } catch (error) {
       console.error("Could not load Dashboard requests.", error);
       setRequestsError("REQUESTS ARE CURRENTLY UNAVAILABLE");
       if (requestsSection && requestsList) {
-        renderRequests(await publishReadyWorksPromise, decideRequest, acknowledgePublishReady);
+        renderRequests(
+          await publishReadyWorksPromise,
+          decideRequest,
+          acknowledgePublishReady,
+          true
+        );
       }
     }
   }

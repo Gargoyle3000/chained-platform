@@ -83,7 +83,7 @@ test("prototype fallback copy stays product-facing", async () => {
   assert.doesNotMatch(copy, /CLEANUP PENDING/);
 });
 
-test("Dashboard requests use only safe server summaries and preserve both action types", async () => {
+test("Dashboard requests use only safe server summaries and stay absent when no action needs attention", async () => {
   const [page, script] = await Promise.all([
     readFile(new URL("../dashboard.html", import.meta.url), "utf8"),
     readFile(new URL("../dashboard-overview.js", import.meta.url), "utf8")
@@ -102,7 +102,10 @@ test("Dashboard requests use only safe server summaries and preserve both action
   assert.match(script, /createRequestAction\("NOT NOW"/);
   assert.match(script, /link\.href = request\.href/);
   assert.match(script, /requestActionInFlight/);
-  assert.match(script, /NO REQUESTS/);
+  assert.match(script, /function renderRequests\(requests, onDecision, onAcknowledge, hasError = false\)/);
+  assert.match(script, /requestsSection\.hidden = requests\.length === 0 && !hasError;/);
+  assert.match(script, /acknowledgePublishReady,\s*true/);
+  assert.doesNotMatch(script, /NO REQUESTS/);
   assert.doesNotMatch(script, /listWorkPresentationRequestSummaries\(/);
   assert.doesNotMatch(script, /get_work_presentation_request_summaries/);
   assert.doesNotMatch(script, /get_work_presentation_requests/);
