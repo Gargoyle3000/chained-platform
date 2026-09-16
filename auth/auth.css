@@ -81,16 +81,15 @@ body[data-auth-protected="true"] > main {
 
 .contextual-help-panel {
   position: fixed;
-  top: 0;
-  right: 0;
   z-index: 60;
 
-  width: min(420px, calc(100vw - 32px));
-  height: 100svh;
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - (var(--page-gutter) * 2)));
+  max-height: min(480px, calc(100svh - (var(--page-gutter) * 2)));
   overflow-y: auto;
-  padding: 24px var(--page-gutter) 48px;
+  padding: 14px;
 
-  border-left: var(--border);
+  border: var(--border);
   background: var(--white);
   color: var(--black);
 }
@@ -99,41 +98,19 @@ body[data-auth-protected="true"] > main {
   display: none;
 }
 
-.contextual-help-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-}
-
-.contextual-help-header h2,
 .contextual-help-content h3,
 .contextual-help-content p {
   margin: 0;
 }
 
-.contextual-help-header h2 {
-  font-size: clamp(24px, 2.5vw, 38px);
-  line-height: 0.95;
-  font-weight: 400;
-  letter-spacing: -0.05em;
-}
-
-.contextual-help-close {
-  flex: 0 0 auto;
-  color: var(--accent);
-}
-
 .contextual-help-content {
   display: grid;
-  gap: 34px;
-
-  margin-top: 70px;
+  gap: 20px;
 }
 
 .contextual-help-content section {
   display: grid;
-  gap: 10px;
+  gap: 6px;
 }
 
 .contextual-help-content h3,
@@ -314,16 +291,12 @@ body[data-auth-protected="true"] > main {
   }
 
   .contextual-help-panel {
-    width: 100vw;
-    padding: 24px var(--page-gutter) 40px;
+    width: min(360px, calc(100vw - (var(--page-gutter) * 2)));
+    max-height: min(440px, calc(100svh - (var(--page-gutter) * 2)));
   }
 
   .contextual-help-trigger {
     bottom: calc(16px + env(safe-area-inset-bottom));
-  }
-
-  .contextual-help-content {
-    margin-top: 54px;
   }
 
   .auth-main,

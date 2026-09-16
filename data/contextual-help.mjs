@@ -1,3 +1,5 @@
+import { calculateAnchoredPopoverPosition } from "./anchored-popover.mjs";
+
 const HELP_CONTEXTS = Object.freeze({
   dashboard: {
     title: "DASHBOARD",
@@ -87,33 +89,22 @@ export function contextualHelpContext(pathname) {
 
 function createPanel(document) {
   const panel = document.createElement("aside");
-  const header = document.createElement("header");
-  const title = document.createElement("h2");
-  const close = document.createElement("button");
   const content = document.createElement("div");
   panel.className = "contextual-help-panel";
   panel.id = "contextual-help-panel";
   panel.hidden = true;
-  panel.setAttribute("role", "dialog");
-  panel.setAttribute("aria-modal", "false");
-  panel.setAttribute("aria-labelledby", "contextual-help-title");
-  header.className = "contextual-help-header";
-  title.id = "contextual-help-title";
-  close.className = "contextual-help-close text-action";
-  close.type = "button";
-  close.textContent = "[ CLOSE ]";
+  panel.tabIndex = -1;
+  panel.setAttribute("role", "region");
   content.className = "contextual-help-content";
-  header.append(title, close);
-  panel.append(header, content);
+  panel.append(content);
   document.body.append(panel);
   return panel;
 }
 
 function renderContext(panel, context, key) {
-  const title = panel.querySelector("#contextual-help-title");
   const content = panel.querySelector(".contextual-help-content");
-  if (!title || !content || !context) return;
-  title.textContent = context.title;
+  if (!content || !context) return;
+  panel.setAttribute("aria-label", `Contextual help: ${context.title}`);
   panel.dataset.contextualHelpKey = key;
   content.replaceChildren(...context.sections.map(([heading, copy]) => {
     const section = document.createElement("section");
@@ -147,21 +138,43 @@ export function mountContextualHelp(pathname = window.location.pathname) {
   }
   if (trigger.dataset.contextualHelpReady === "true") return trigger;
   trigger.dataset.contextualHelpReady = "true";
-  const close = panel.querySelector(".contextual-help-close");
-  const closePanel = () => {
+  let reposition = null;
+  const closePanel = ({ returnFocus = false } = {}) => {
     if (panel.hidden) return;
     panel.hidden = true;
+    window.removeEventListener("scroll", reposition, true);
+    window.removeEventListener("resize", reposition);
+    reposition = null;
     trigger.setAttribute("aria-expanded", "false");
-    trigger.focus();
+    if (returnFocus) trigger.focus();
+  };
+  const openPanel = () => {
+    panel.hidden = false;
+    reposition = () => {
+      const placement = calculateAnchoredPopoverPosition({
+        trigger: trigger.getBoundingClientRect(),
+        popover: panel.getBoundingClientRect(),
+        viewport: { width: window.innerWidth, height: window.innerHeight }
+      });
+      panel.style.left = `${placement.left}px`;
+      panel.style.top = `${placement.top}px`;
+    };
+    reposition();
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    trigger.setAttribute("aria-expanded", "true");
+    panel.focus();
   };
   trigger.addEventListener("click", () => {
-    panel.hidden = false;
-    trigger.setAttribute("aria-expanded", "true");
-    close?.focus();
+    if (panel.hidden) openPanel();
+    else closePanel();
   });
-  close?.addEventListener("click", closePanel);
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closePanel();
+    if (event.key === "Escape") closePanel({ returnFocus: true });
+  });
+  document.addEventListener("click", (event) => {
+    if (panel.hidden || panel.contains(event.target) || trigger.contains(event.target)) return;
+    closePanel();
   });
   return trigger;
 }

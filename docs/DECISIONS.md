@@ -105,6 +105,7 @@ Last updated: 2026-09-16
 \- Do not hide major view controls inside a dropdown when they benefit from being directly visible.
 
 \- Contextual `[ ? ]` help is permanent, user-invoked and page/view-specific within the authenticated workspace. It intentionally sits outside primary navigation as a quiet fixed bottom-left utility on desktop and mobile. It uses THIS PAGE / EDIT HERE / CONNECTED TO to clarify practical source-of-truth and relationships. It is not an onboarding wizard, tutorial or standalone Guide, and v1 provides no navigation shortcuts so unsaved work is never displaced.
+\- Contextual `[ ? ]` help is maintained as part of relevant product changes so that it remains aligned with actual CHAINED behavior and source-of-truth relationships over time.
 
 
 

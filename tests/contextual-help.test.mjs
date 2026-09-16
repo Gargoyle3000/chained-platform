@@ -66,30 +66,35 @@ test("authenticated navigation mounts a fixed help utility outside the header an
   assert.doesNotMatch(publicAgenda, /data-auth-protected="true"/);
 });
 
-test("contextual help is user-invoked, closable, keyboard-safe, and preserves page state", async () => {
+test("contextual help is a user-invoked toggle with outside-click and keyboard dismissal", async () => {
   const source = await readFile(
     new URL("../data/contextual-help.mjs", import.meta.url),
     "utf8"
   );
+  assert.match(source, /import \{ calculateAnchoredPopoverPosition \} from "\.\/anchored-popover\.mjs"/);
   assert.match(source, /trigger\.addEventListener\("click"/);
-  assert.match(source, /close\?\.addEventListener\("click", closePanel\)/);
-  assert.match(source, /event\.key === "Escape"/);
+  assert.match(source, /if \(panel\.hidden\) openPanel\(\);[\s\S]*else closePanel\(\);/);
+  assert.match(source, /event\.key === "Escape"\) closePanel\(\{ returnFocus: true \}\)/);
+  assert.match(source, /panel\.contains\(event\.target\) \|\| trigger\.contains\(event\.target\)/);
+  assert.match(source, /window\.addEventListener\("scroll", reposition, true\)/);
+  assert.match(source, /window\.removeEventListener\("scroll", reposition, true\)/);
   assert.match(source, /trigger\.focus\(\)/);
+  assert.match(source, /panel\.focus\(\)/);
   assert.match(source, /trigger\.type = "button"/);
-  assert.match(source, /close\.type = "button"/);
+  assert.doesNotMatch(source, /contextual-help-close|\[ CLOSE \]/);
   assert.doesNotMatch(source, /window\.location\s*=/);
   assert.doesNotMatch(source, /history\./);
   assert.doesNotMatch(source, /form\.reset|FormData|\.value\s*=/);
 });
 
-test("contextual help uses one responsive drawer without changing primary navigation", async () => {
+test("contextual help uses one compact anchored popup without changing primary navigation", async () => {
   const [css, navigation] = await Promise.all([
     readFile(new URL("../auth/auth.css", import.meta.url), "utf8"),
     readFile(new URL("../auth/navigation.mjs", import.meta.url), "utf8")
   ]);
-  assert.match(css, /\.contextual-help-panel \{[\s\S]*?width: min\(420px/);
-  assert.match(css, /@media \(max-width: 720px\) \{[\s\S]*?\.contextual-help-panel \{[\s\S]*?width: 100vw/);
-  assert.match(css, /border-left: var\(--border\)/);
+  assert.match(css, /\.contextual-help-panel \{[\s\S]*?position: fixed;[\s\S]*?width: min\(360px, calc\(100vw - \(var\(--page-gutter\) \* 2\)\)\);[\s\S]*?max-height: min\(480px/);
+  assert.match(css, /@media \(max-width: 720px\) \{[\s\S]*?\.contextual-help-panel \{[\s\S]*?max-height: min\(440px/);
+  assert.match(css, /border: var\(--border\)/);
   assert.doesNotMatch(css, /contextual-help[^\n]*box-shadow|contextual-help[^\n]*border-radius/);
   assert.match(navigation, /navigation\.classList\.add\("main-nav-with-dashboard"\)/);
 });
