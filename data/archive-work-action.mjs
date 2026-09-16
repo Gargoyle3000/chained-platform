@@ -11,22 +11,26 @@ export async function loadArchiveWorkState() {
     const applicationSession = await readApplicationSession(runtime.client);
     if (applicationSession.kind !== "active") return null;
 
-    return createDiscoverArchiveState(repository, await repository.listArchivedWorkIds());
+    return createDiscoverArchiveState(repository, await repository.listArchiveMemberships());
   } catch {
     return null;
   }
 }
 
-export function updateArchiveWorkAction(button, work, isSaved) {
+export function updateArchiveWorkAction(button, work, isSaved, isManaged = false) {
   button.classList.toggle("is-saved", isSaved);
   button.setAttribute("aria-pressed", String(isSaved));
+  button.disabled = isManaged;
   button.setAttribute(
     "aria-label",
-    `${isSaved ? "Remove" : "Save"} ${work.title} ${isSaved ? "from" : "to"} Select`
+    isManaged
+      ? `${work.title} is automatically available in Select`
+      : `${isSaved ? "Remove" : "Save"} ${work.title} ${isSaved ? "from" : "to"} Select`
   );
 }
 
 export function createArchiveWorkAction(work, archiveState, announce = () => {}, className = "") {
+  if (archiveState.isManaged(work.id)) return null;
   const button = document.createElement("button");
   button.className = ["text-action", "archive-work-action", className]
     .filter(Boolean)
@@ -42,7 +46,7 @@ export function createArchiveWorkAction(work, archiveState, announce = () => {},
 
     try {
       const isSaved = await archiveState.toggle(work.id);
-      updateArchiveWorkAction(button, work, isSaved);
+      updateArchiveWorkAction(button, work, isSaved, false);
     } catch {
       announce("SELECT IS CURRENTLY UNAVAILABLE");
     } finally {

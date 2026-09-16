@@ -52,13 +52,13 @@ export function resolveChainedSelectSelector(project, publisherProfiles = [], ar
 }
 
 /**
- * Fetches the authoritative public projection anew for every attempt. It never
+ * Fetches the authoritative Project export projection anew for every attempt. It never
  * returns a partially changed Project source: callers must ask again.
  */
 export async function revalidateProjectChainedSelect({ repository, workIds = [] } = {}) {
-  if (!repository || typeof repository.listArchivedSelectWorks !== "function") throw new Error("repository unavailable");
+  if (!repository || typeof repository.listProjectSelectWorks !== "function") throw new Error("repository unavailable");
   const ids = [...new Set((workIds || []).filter((id) => typeof id === "string" && id.trim()))];
-  const freshWorks = await repository.listArchivedSelectWorks(ids);
+  const freshWorks = await repository.listProjectSelectWorks(ids);
   const freshIds = new Set((freshWorks || []).map((work) => work?.id).filter(Boolean));
   const unavailableIds = ids.filter((id) => !freshIds.has(id));
   return Object.freeze({

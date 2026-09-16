@@ -491,6 +491,21 @@ test("private previews batch gateway authorization, create revocable blobs, and 
   assert.equal(preview.urls.size(), 0);
 });
 
+test("SELECT previews use their narrower purpose-bound authorization", async () => {
+  const calls = [];
+  const preview = createWorkMediaService(
+    { functions: { invoke: async (name, { body }) => {
+      calls.push({ name, body });
+      return { data: { ok: true, purpose: body.purpose, media: body.imageIds.map((imageId) => ({ imageId, url: `https://signed.example/${imageId}`, mimeType: "image/webp", fileSize: 1 })) }, error: null };
+    } } },
+    {},
+    { fetcher: async () => new Response(new Blob(["image"], { type: "image/webp" }), { status: 200 }) }
+  );
+  const result = await preview.selectPreviewBatchResult([{ id: ID }]);
+  assert.equal(result.previews.get(ID).startsWith("blob:"), true);
+  assert.deepEqual(calls, [{ name: "authorized-private-media", body: { imageIds: [ID], purpose: "select_preview" } }]);
+});
+
 test("private preview results distinguish resolver-unavailable media from gateway request failures", async () => {
   const unavailable = createWorkMediaService(
     { functions: { invoke: async () => ({
@@ -701,6 +716,46 @@ test("Supabase repository reads publication readiness through the managed RPC on
   const readiness = await createSupabaseWorkRepository(client, {}).publicationReadiness(ID);
   assert.deepEqual(calls, [{ name: "get_managed_work_publication_readiness", body: { target_work_id: ID } }]);
   assert.deepEqual(readiness, { state: "ready", totalImages: 2, readyImages: 2, processingImages: 0, failedImages: 0 });
+});
+
+test("Supabase repository batches direct-managed SELECT Work and safe image metadata", async () => {
+  const calls = [];
+  const client = {
+    rpc: async (name) => {
+      calls.push(name);
+      if (name === "list_managed_select_works") return { data: [{
+        id: ID,
+        owner_profile_id: IMAGE_TWO,
+        title: "SELECT DRAFT",
+        year_label: "2026",
+        work_type: "single-work",
+        additional_materials: [],
+        visibility: "draft",
+        created_at: "2026-09-16T00:00:00Z",
+        updated_at: "2026-09-16T00:00:00Z"
+      }], error: null };
+      if (name === "list_managed_select_work_images") return { data: [{
+        id: IMAGE_THREE,
+        work_id: ID,
+        public_object_path: null,
+        original_filename: "draft.webp",
+        mime_type: "image/webp",
+        file_size: 100,
+        pixel_width: 800,
+        pixel_height: 600,
+        sort_order: 0,
+        is_cover: true,
+        upload_status: "ready"
+      }], error: null };
+      throw new Error(`unexpected RPC ${name}`);
+    },
+    storage: { from: () => ({ getPublicUrl: () => ({ data: {} }) }) }
+  };
+  const works = await createSupabaseWorkRepository(client, {}).listManagedSelectWorks();
+  assert.deepEqual(calls, ["list_managed_select_works", "list_managed_select_work_images"]);
+  assert.equal(works[0].id, ID);
+  assert.equal(works[0].images[0].pixelWidth, 800);
+  assert.equal(works[0].images[0].privatePath, null);
 });
 
 test("publish preserves the stable media_processing Edge contract without raw payload leakage", async () => {

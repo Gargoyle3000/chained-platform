@@ -226,15 +226,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       const archiveStatus = document.createElement("p");
       archiveStatus.className = "sr-only";
       archiveStatus.setAttribute("aria-live", "polite");
-      fragment.append(
-        createArchiveAction(
-          work,
-          archiveState,
-          (message) => { archiveStatus.textContent = message; },
-          "artwork-save"
-        ),
-        archiveStatus
+      const archiveAction = createArchiveAction(
+        work,
+        archiveState,
+        (message) => { archiveStatus.textContent = message; },
+        "artwork-save"
       );
+      if (archiveAction) fragment.append(archiveAction, archiveStatus);
     }
 
     fragment.append(createBackLink(work));

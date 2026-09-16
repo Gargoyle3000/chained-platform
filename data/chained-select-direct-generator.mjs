@@ -51,7 +51,7 @@ export async function generateProjectChainedSelect({
   fontUrl = FONT_URL
 } = {}) {
   if (!selectorName) throw new PortfolioExportError("SELECTOR IDENTITY IS CURRENTLY UNAVAILABLE");
-  setStatus("VALIDATING PUBLIC WORKS");
+  setStatus("VALIDATING PROJECT WORKS");
   const revalidated = await revalidateProjectChainedSelect({ repository, workIds });
   if (revalidated.unavailableIds.length) return Object.freeze({ status: "changed", unavailableIds: revalidated.unavailableIds });
   const selectedWorks = imageSelection ? applyExportImageSelection(revalidated.works, imageSelection) : revalidated.works;
@@ -68,6 +68,10 @@ export async function generateProjectChainedSelect({
     return fontBytesPromise;
   };
   const cache = createPortfolioSourceCache(async ([image]) => {
+    if (image.exportSource === "managed-private") {
+      return repository.media.downloadAuthorizedPrivateMedia([image], { purpose: "select_pdf_export", concurrency: 1 });
+    }
+    if (image.exportSource !== "public" || !image.src) throw new Error("select image source unavailable");
     const response = await environment.fetch(image.src, { cache: "no-store" });
     if (!response.ok) throw new Error("public image unavailable");
     const blob = await response.blob();
@@ -75,7 +79,7 @@ export async function generateProjectChainedSelect({
     return [{ imageId: image.id, blob }];
   });
   try {
-    setStatus("FETCHING PUBLIC IMAGES");
+    setStatus("FETCHING SELECT IMAGES");
     await cache.prepare();
     await cache.preload(plan.imagePages.map((entry) => entry.image));
     let renderCount = 0;

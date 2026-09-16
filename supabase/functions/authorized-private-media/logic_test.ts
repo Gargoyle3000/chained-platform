@@ -107,9 +107,9 @@ Deno.test("private-media gateway deduplicates IDs in first-seen order and signs 
 
 Deno.test("private-media gateway requests purpose-bound preview derivatives while PDF keeps originals", async () => {
   const pathsByPurpose: Record<string, string[]> = {};
-  for (const purpose of ["preview", "pdf_export"] as const) {
+  for (const purpose of ["preview", "select_preview", "select_pdf_export", "pdf_export"] as const) {
     const response = await handleAuthorizedPrivateMedia(post({ imageIds: [IMAGE_ID], purpose }), gatewayDependencies({
-      rpc: async (_name, body) => ({ images: body.media_purpose === "preview" ? [previewImage(IMAGE_ID)] : [image(IMAGE_ID)] }),
+      rpc: async (_name, body) => ({ images: ["pdf_export", "select_pdf_export"].includes(String(body.media_purpose)) ? [image(IMAGE_ID)] : [previewImage(IMAGE_ID)] }),
       signPrivateOriginals: async (paths) => {
         pathsByPurpose[purpose] = paths;
         return paths.map((path) => ({ path, url: `https://project.supabase.co/storage/v1/object/sign/work-originals/${path}?token=signed` }));
@@ -118,6 +118,10 @@ Deno.test("private-media gateway requests purpose-bound preview derivatives whil
     assert(response.status === 200);
   }
   assert(pathsByPurpose.preview[0]?.endsWith("/preview.webp"));
+  assert(pathsByPurpose.select_preview[0]?.endsWith("/preview.webp"));
+  assert(PRIVATE_MEDIA_TTLS.select_preview === PRIVATE_MEDIA_TTLS.preview);
+  assert(pathsByPurpose.select_pdf_export[0]?.endsWith("/original.webp"));
+  assert(PRIVATE_MEDIA_TTLS.select_pdf_export === PRIVATE_MEDIA_TTLS.pdf_export);
   assert(pathsByPurpose.pdf_export[0]?.endsWith("/original.webp"));
 });
 

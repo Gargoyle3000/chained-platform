@@ -320,6 +320,14 @@
   height: auto;
 }
 
+.saved-work-image-placeholder {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+  border: 1px solid var(--black);
+  font-size: 11px;
+}
+
 .saved-work-meta {
   padding-top: 12px;
 

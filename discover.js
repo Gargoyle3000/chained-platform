@@ -237,7 +237,8 @@ function createDiscoverWork(
 
   if (carouselControls) metadata.append(carouselControls.root);
   if (archiveState && createArchiveAction) {
-    metadata.append(createArchiveAction(work, archiveState, announceArchiveStatus, "discover-archive-action"));
+    const archiveAction = createArchiveAction(work, archiveState, announceArchiveStatus, "discover-archive-action");
+    if (archiveAction) metadata.append(archiveAction);
   }
   article.append(metadata, imageLink);
   return article;

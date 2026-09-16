@@ -18,6 +18,8 @@ export const PRIVATE_MEDIA_MAX_REQUEST_BYTES = 8 * 1024;
 export const PRIVATE_MEDIA_MAX_IMAGE_IDS = 100;
 export const PRIVATE_MEDIA_TTLS = Object.freeze({
   preview: 300,
+  select_preview: 300,
+  select_pdf_export: 900,
   pdf_export: 900,
 });
 
@@ -42,7 +44,7 @@ export function createAuthorizedPrivateMediaDependencies(
 }
 
 function requirePurpose(value: unknown): PrivateMediaPurpose {
-  if (value !== "preview" && value !== "pdf_export") {
+  if (value !== "preview" && value !== "select_preview" && value !== "select_pdf_export" && value !== "pdf_export") {
     throw new MediaError(400, "invalid_purpose");
   }
   return value;

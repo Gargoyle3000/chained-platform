@@ -6,7 +6,7 @@ export const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
 export const MAX_PRIVATE_PREVIEW_BYTES = 5 * 1024 * 1024;
 export const PRIVATE_PREVIEW_LONGEST_EDGE = 2048;
 export const UPLOAD_STAGES = Object.freeze(["RESERVING", "UPLOADING", "VERIFYING", "READY"]);
-export const PRIVATE_MEDIA_PURPOSES = Object.freeze(new Set(["preview", "pdf_export"]));
+export const PRIVATE_MEDIA_PURPOSES = Object.freeze(new Set(["preview", "select_preview", "select_pdf_export", "pdf_export"]));
 export const PRIVATE_MEDIA_BATCH_SIZE = 100;
 export const PRIVATE_MEDIA_DOWNLOAD_CONCURRENCY = 4;
 
@@ -277,7 +277,7 @@ export function createWorkMediaService(client, config = {}, {
     });
   };
 
-  const resolvePrivatePreviewBatch = async (images) => {
+  const resolvePrivatePreviewBatch = async (images, purpose = "preview") => {
     const requested = normalizePrivateMediaImages(images);
     const previews = new Map();
     const failures = new Map();
@@ -285,7 +285,7 @@ export function createWorkMediaService(client, config = {}, {
 
     let signed;
     try {
-      signed = await authorize(requested.map((item) => item.image), "preview");
+      signed = await authorize(requested.map((item) => item.image), purpose);
     } catch (error) {
       const failure = await previewFailure(error);
       requested.forEach((item) => failures.set(item.id, failure));
@@ -322,7 +322,7 @@ export function createWorkMediaService(client, config = {}, {
     const expired = await collect(requested, await fetchSigned(requested, signed), true);
     if (expired.length) {
       try {
-        const renewed = await authorize(expired.map((item) => item.image), "preview");
+        const renewed = await authorize(expired.map((item) => item.image), purpose);
         await collect(expired, await fetchSigned(expired, renewed), false);
       } catch (error) {
         const failure = await previewFailure(error);
@@ -413,6 +413,9 @@ export function createWorkMediaService(client, config = {}, {
     },
     async privatePreviewBatchResult(images) {
       return await resolvePrivatePreviewBatch(images);
+    },
+    async selectPreviewBatchResult(images) {
+      return await resolvePrivatePreviewBatch(images, "select_preview");
     },
     async privatePreview(image) {
       if (!image?.id) return null;

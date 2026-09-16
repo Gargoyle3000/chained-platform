@@ -70,6 +70,8 @@ let projectImageSelectionId = null;
 let projectSelectWorks = [];
 let projectImageSelectionLoading = false;
 
+window.addEventListener("pagehide", () => repository?.releasePrivatePreviews?.());
+
 function setResultCount(count) {
   resultCount.textContent = `${count} ${count === 1 ? "WORK" : "WORKS"}`;
 }
@@ -446,28 +448,36 @@ function createSavedWork(work) {
   const artworkLink = document.createElement("a");
   artworkLink.className = "saved-work-image-link";
   artworkLink.href = work.artworkHref;
-  const image = document.createElement("img");
-  image.src = work.image.src;
-  image.alt = `${work.title} by ${work.artistName}`;
-  if (work.image.width) image.width = work.image.width;
-  if (work.image.height) image.height = work.image.height;
-  artworkLink.append(image);
-  const carouselControls = createPublicWorkCarouselControls(document);
-  attachPublicWorkCarousel({
-    link: artworkLink,
-    image,
-    article,
-    workId: work.id,
-    coverImage: work.image,
-    loadImages: async (workId) => {
-      const [current] = await repository.listArchivedSelectWorks([workId]);
-      return current?.images || [work.image];
-    },
-    label: `View ${work.title} by ${work.artistName}`,
-    previousButton: carouselControls?.previous,
-    nextButton: carouselControls?.next,
-    counter: carouselControls?.counter
-  });
+  let carouselControls = null;
+  if (work.image) {
+    const image = document.createElement("img");
+    image.src = work.image.src;
+    image.alt = `${work.title} by ${work.artistName}`;
+    if (work.image.width) image.width = work.image.width;
+    if (work.image.height) image.height = work.image.height;
+    artworkLink.append(image);
+    carouselControls = createPublicWorkCarouselControls(document);
+    attachPublicWorkCarousel({
+      link: artworkLink,
+      image,
+      article,
+      workId: work.id,
+      coverImage: work.image,
+      loadImages: async (workId) => {
+        const [current] = await repository.listArchivedSelectWorks([workId]);
+        return current?.images || [work.image];
+      },
+      label: `View ${work.title} by ${work.artistName}`,
+      previousButton: carouselControls?.previous,
+      nextButton: carouselControls?.next,
+      counter: carouselControls?.counter
+    });
+  } else {
+    const placeholder = document.createElement("span");
+    placeholder.className = "saved-work-image-placeholder";
+    placeholder.textContent = "NO IMAGE";
+    artworkLink.append(placeholder);
+  }
   const metadata = document.createElement("div");
   metadata.className = "saved-work-meta";
   const artist = document.createElement("a");
@@ -494,7 +504,7 @@ function createSavedWork(work) {
   const management = createSupergridManagement(work);
   if (tagAssignment) management.menu.append(tagAssignment);
   if (projectAssignment) management.menu.append(projectAssignment);
-  management.menu.append(remove);
+  if (work.origin !== "managed") management.menu.append(remove);
   actions.append(management.toggle, management.menu);
   metadata.append(artist, title, year);
   if (carouselControls) metadata.append(carouselControls.root);
@@ -517,7 +527,7 @@ async function hydrateProjectImageSelection(project) {
   renderProjects();
   try {
     const workIds = projectSelectWorkIds(projectItems, projectId);
-    const hydrated = await repository.listArchivedSelectWorks(workIds);
+    const hydrated = await repository.listProjectSelectWorks(workIds);
     if (selectedProjectId !== projectId) return;
     projectSelectWorks = [...hydrated];
     projectImageSelection = createExportImageSelectionState(projectSelectWorks);
@@ -700,7 +710,9 @@ function renderProjects() {
     projectSelectButton.onclick = () => openExportImageSelection(imageDialog, projectWorks, projectImageSelection, {
       title: "SELECT IMAGES",
       onChange: renderProjects,
-      onConfirm: () => void runProjectChainedSelect(project)
+      onConfirm: () => void runProjectChainedSelect(project),
+      resolveThumbnail: (image) => repository.projectSelectThumbnail(image),
+      disposeThumbnail: (url) => repository.releaseProjectSelectThumbnail(url)
     });
   } else {
     clearProjectExportState();

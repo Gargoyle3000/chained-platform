@@ -47,10 +47,10 @@ test("selector prefers the Project publisher and falls back only to one manageab
   assert.equal(resolveChainedSelectSelector({}, [], [{ id: "a", name: "A" }, { id: "b", name: "B" }]), null);
 });
 
-test("every direct export uses fresh public rows and blocks a changed Project instead of using stale media", async () => {
+test("every direct export uses fresh Project rows and blocks a changed Project instead of using stale media", async () => {
   const calls = [];
   const result = await revalidateProjectChainedSelect({
-    repository: { async listArchivedSelectWorks(ids) { calls.push(ids); return [work("a", "Artist A", "2026", "Alpha")]; } },
+    repository: { async listProjectSelectWorks(ids) { calls.push(ids); return [work("a", "Artist A", "2026", "Alpha")]; } },
     workIds: ["a", "missing"]
   });
   assert.deepEqual(calls, [["a", "missing"]]);

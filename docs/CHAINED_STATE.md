@@ -21,6 +21,7 @@ Current focus: complete and polish core product surfaces before broader rollout.
 - Archive mobile: only SINGLE and GRID; the former SUPERGRID presentation is now the mobile GRID (validated).
 - Mobile-only change; desktop/tablet Archive views must remain unchanged.
 - Archive, Discover NOSY and Following mobile mixed-ratio GRID images are centered and balanced without crop/stretch (validated).
+- SELECT now combines automatic Works from directly managed Artist Profiles with explicitly saved published Works from other Artists. Managed Works remain available across draft/Profile publication states, use management-authorized private previews where public media is ineligible, and support the existing Tags and ordered Projects without duplicating Work records; revocation, Profile deletion or Work deletion removes automatic membership.
 - PROFILE mobile name-to-navigation spacing is compact (validated).
 - Discover SINGLE mobile is good and must not be changed.
 - Dashboard/Works mobile spacing is currently good.
@@ -41,7 +42,8 @@ Current focus: complete and polish core product surfaces before broader rollout.
 
 ### Exports
 
-- DIRECT CHAINED SELECT is live: an active Archive Project opens one export-local image picker and then generates/downloads the PDF directly. It uses only freshly revalidated public Works and strict canonical LARGE derivatives; search, tag and filtered Archive states do not define a Select.
+- DIRECT CHAINED SELECT is live: an active Archive Project opens one export-local image picker and then generates/downloads the PDF directly. It freshly revalidates Project membership; managed own Works use direct-management-authorized private originals, while explicit external saves use strict canonical public LARGE derivatives. Search, tag and filtered Archive states do not define a Select.
+- Automatic managed Works, including drafts and unpublished Works, participate in private Project export without publication. External saved Works remain subject to public Work/Profile/media eligibility.
 - SELECT is limited to 20 Works / 40 selected images, has a 19 MiB target and 20 MiB hard maximum, preserves its deterministic artist/year/title/image ordering, and never falls back to private media or legacy JPGs.
 - SELECT uses CHAINED green only for its cover identity, selector name and artist names. Its index no longer prints raw Work URLs.
 - Portfolio uses the same export-local picker principle while retaining its separate authorized private-original `pdf_export` path and neutral PDF styling. Picker previews use authorized private previews, are cached for the lifetime of the picker, and are revoked when it closes.

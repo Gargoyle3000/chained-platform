@@ -32,6 +32,10 @@ Last updated: 2026-09-16
 
 \- SELECT is the reversible user-facing trial name for the private workspace. Its subtitle is `PRIVATE WORKSPACE / ARCHIVE`; routes, modules, data and storage remain Archive internally. `CHAINED SELECT` remains the contextual PDF export generated from a Project.
 
+\- SELECT contains both automatic Works from directly managed Artist Profiles, independent of Work/Profile publication state, and published external Works explicitly saved or removed with the Work-level `[+]`; managed Works never render that control. Works remains canonical; SELECT stores only private membership and organisation.
+
+\- User Tags remain user-created labels/filters, separate from future derived scopes such as managed/personal or followed; no visible managed/personal or followed filter exists yet. Following never implicitly saves a Work.
+
 
 
 \- Archive is private.
@@ -41,6 +45,8 @@ Last updated: 2026-09-16
 \- CURATED is public output.
 
 \- Presentations and CURATED remain separate concepts.
+
+\- Ordinary Artist Projects remain private and exportable. Project publication to CURATED remains limited to eligible Curator or Institution Profiles; future Curator/Institution discovery should consider Presentations as CURATED content, but that content model is not implemented.
 
 \- Agenda remains a separate time-based section.
 
@@ -244,7 +250,7 @@ Last updated: 2026-09-16
 \- PRESS is external media about the practice: compact title/outlet/date/URL metadata, optional author, no required image, no automatic APPEARS IN and no Following post.
 \- PUBLICATION is a genuine publication object with representative/documentation images and metadata such as title/year/author/editor/publisher/description/ISBN/link. It may connect to Artists, Works and Presentations and meaningfully participate in APPEARS IN and Following. Do not host publication PDFs or build a full book-digitization library; prefer object/cover/spread images plus an external link.
 \- TAGS are freeform Work descriptors and filters, unlimited for all tiers; combinations intersect where applicable and Tags have no manual presentation order. PROJECTS are ordered Work sets/contexts: a Work may belong to multiple Projects, manual Work order matters, removing a Project never removes Works, and Projects support export/select/share workflows.
-\- Projects have only small metadata (title, optional note and date/period), no nesting, tasks, collaborators or project-management system. CHAINED allows 3 Projects and CHAINED+ effectively unlimited. General Archive uses sorting/filtering rather than permanent manual order. Incomplete private Works may be saved; publishing is stricter.
+\- Projects have only small metadata (title, optional note and date/period), no nesting, tasks, collaborators or project-management system. CHAINED allows 3 Projects and CHAINED+ effectively unlimited. General Archive uses sorting/filtering rather than permanent manual order. Incomplete managed Works remain automatically available in SELECT; publishing is stricter.
 
 \## Unclaimed, APPEARS IN and FOLLOW
 
@@ -304,7 +310,7 @@ Last updated: 2026-09-16
 
 \- CHAINED SELECT and Portfolio use one export-local image-selection model. Each included Work starts with its cover image, or the first eligible image by `sort_order` when no valid cover exists. Users may add, replace or deselect images but cannot leave an included Work with zero selected images. Selection is keyed by Work and image ID, preserves media order, is not persisted and never changes Work/media data.
 \- The picker belongs inside the primary export action: Archive Project → `EXPORT CHAINED SELECT` → picker → `EXPORT SELECT`; Works → `EXPORT PORTFOLIO` → picker → `EXPORT PORTFOLIO`. There are no standalone image-selection controls outside those flows.
-\- SELECT is contextual public output: active Project membership only, fresh strict public revalidation at generation, canonical public LARGE only, no private media and no legacy JPG fallback. Portfolio remains the separate formal private-original export through authorized `pdf_export` media.
+\- SELECT is private contextual output: active Project membership is freshly revalidated at generation. Managed own Works, including drafts, use direct-management-authorized private originals; external saved Works remain limited to eligible canonical public LARGE media, with no legacy JPG fallback. PDF export does not publish a Work. Portfolio remains the separate formal private-original export through authorized `pdf_export` media.
 
 \## Presentation role and visibility semantics
 

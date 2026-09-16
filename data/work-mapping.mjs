@@ -114,6 +114,8 @@ export function databaseImageToClient(row) {
     filename: row.original_filename || "IMAGE",
     mimeType: row.mime_type || "",
     size: Number(row.file_size) || 0,
+    pixelWidth: Number(row.pixel_width) || null,
+    pixelHeight: Number(row.pixel_height) || null,
     order: Number(row.sort_order) || 0,
     isCover: row.is_cover === true,
     uploadStatus: row.upload_status || "ready",

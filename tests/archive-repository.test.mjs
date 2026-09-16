@@ -179,6 +179,64 @@ test("Archive Work IDs use one private query and never request public metadata",
   assert.equal(requests, 0);
 });
 
+test("Archive memberships preserve managed versus explicit saved origin", async () => {
+  const client = archiveClient([
+    { work_id: IDS.workA, origin: "managed" },
+    { work_id: IDS.workB, origin: "saved" }
+  ]);
+  const repository = createArchiveRepository(client, config);
+  assert.deepEqual(await repository.listArchiveMemberships(), [
+    { workId: IDS.workA, origin: "managed" },
+    { workId: IDS.workB, origin: "saved" }
+  ]);
+});
+
+test("managed draft Works use purpose-bound private previews and remain normal SELECT cards", async () => {
+  const client = archiveClient([
+    { work_id: IDS.workA, origin: "managed", created_at: "2026-09-16T10:00:00Z" },
+    { work_id: IDS.workB, origin: "managed", created_at: "2026-09-16T09:00:00Z" }
+  ]);
+  const previewCalls = [];
+  const managedRepository = {
+    async listManagedProfiles() {
+      return [{ id: IDS.profile, name: "ARCHIVE ARTIST", slug: "archive-artist", publicationStatus: "draft" }];
+    },
+    async listManagedSelectWorks() {
+      return [
+        {
+          id: IDS.workA, ownerProfileId: IDS.profile, title: "PRIVATE DRAFT", year: "2026",
+          workType: "single-work", format: "painting", materials: "Oil", materialTerms: ["oil"],
+          height: "20", width: "30", depth: "", dimensionUnit: "cm", visibility: "draft",
+          publishedAt: null, images: [{ id: IDS.tagA, workId: IDS.workA, order: 0, isCover: true, uploadStatus: "ready", publicPath: null, pixelWidth: 800, pixelHeight: 600 }]
+        },
+        {
+          id: IDS.workB, ownerProfileId: IDS.profile, title: "EMPTY DRAFT", year: "",
+          workType: "", format: "", materials: "", materialTerms: [], height: "", width: "",
+          depth: "", dimensionUnit: "cm", visibility: "draft", publishedAt: null, images: []
+        }
+      ];
+    },
+    media: {
+      urls: { revokeAll() {} },
+      publicUrl: (path) => publicUrl(path),
+      async selectPreviewBatchResult(images) {
+        previewCalls.push(images.map((image) => image.id));
+        return { previews: new Map([[IDS.tagA, "blob:managed-preview"]]), failures: new Map() };
+      }
+    }
+  };
+  let publicRequests = 0;
+  const repository = createArchiveRepository(client, config, async () => { publicRequests += 1; return []; }, managedRepository);
+  const listed = await repository.listArchivedWorks();
+  assert.deepEqual(listed.map((entry) => entry.id), [IDS.workA, IDS.workB]);
+  assert.equal(listed[0].origin, "managed");
+  assert.equal(listed[0].image.src, "blob:managed-preview");
+  assert.equal(listed[0].artworkHref, `dashboard-work-edit.html?id=${IDS.workA}`);
+  assert.equal(listed[1].image, null);
+  assert.deepEqual(previewCalls, [[IDS.tagA]]);
+  assert.equal(publicRequests, 0);
+});
+
 test("Archive listing preserves private save order and maps only public Work fields", async () => {
   const client = archiveClient([
     { work_id: IDS.workB, created_at: "2026-08-10T12:00:00Z" },
@@ -206,8 +264,8 @@ test("unavailable public mappings are omitted while their private Archive relati
   assert.deepEqual(await repository.listArchivedWorks(), []);
 });
 
-test("CHAINED Select loads only current public LARGE siblings and never carries private media", async () => {
-  const client = archiveClient([{ work_id: IDS.workA }, { work_id: IDS.workB }]);
+test("CHAINED Select loads eligible managed and saved Works only through current public LARGE siblings", async () => {
+  const client = archiveClient([{ work_id: IDS.workA, origin: "managed" }, { work_id: IDS.workB, origin: "saved" }]);
   const imageA = cover(IDS.workA);
   const imageB = cover(IDS.workB);
   const rows = {
@@ -224,6 +282,31 @@ test("CHAINED Select loads only current public LARGE siblings and never carries 
   assert.match(selected[0].images[0].src, /large\.webp$/);
   assert.equal(JSON.stringify(selected).includes("private_object_path"), false);
   assert.equal(JSON.stringify(selected).includes("legacy/public.jpg"), false);
+});
+
+test("Project SELECT keeps managed private originals separate from saved public LARGE media", async () => {
+  const client = archiveClient([{ work_id: IDS.workA, origin: "managed" }, { work_id: IDS.workB, origin: "saved" }]);
+  const imageB = { ...cover(IDS.workB), public_object_path: `${IDS.profile}/${IDS.workB}/${IDS.workB}/${IDS.workB.replace(/.$/, "f")}/small.webp`, sort_order: 0 };
+  const managedRepository = {
+    async listManagedProfiles() { return [{ id: IDS.profile, name: "PRIVATE ARTIST", slug: "private-artist", publicationStatus: "draft" }]; },
+    async listManagedSelectWorks() {
+      return [{
+        id: IDS.workA, ownerProfileId: IDS.profile, title: "PRIVATE DRAFT", year: "2026", workType: "painting", format: "painting",
+        materials: "Oil", materialTerms: ["oil"], height: "20", width: "30", depth: "", dimensionUnit: "cm", visibility: "draft", publishedAt: null,
+        images: [{ id: IDS.tagA, workId: IDS.workA, order: 0, isCover: true, uploadStatus: "ready", publicPath: null, privatePath: null }]
+      }];
+    },
+    media: { urls: { revokeAll() {} }, publicUrl }
+  };
+  const rows = { works: [work(IDS.workB)], public_profiles: [profile()], work_images: [imageB] };
+  const repository = createArchiveRepository(client, config, async (_config, table) => rows[table], managedRepository);
+  const selected = await repository.listProjectSelectWorks([IDS.workA, IDS.workB]);
+  assert.deepEqual(selected.map((entry) => entry.id), [IDS.workA, IDS.workB]);
+  assert.equal(selected[0].visibility, "draft");
+  assert.equal(selected[0].images[0].exportSource, "managed-private");
+  assert.equal(selected[1].images[0].exportSource, "public");
+  assert.match(selected[1].images[0].src, /large\.webp$/);
+  assert.equal(JSON.stringify(selected).includes("private_object_path"), false);
 });
 
 test("Archive cards expose only a cover while the SELECT projection hydrates every eligible public image", async () => {

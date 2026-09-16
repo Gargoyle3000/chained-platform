@@ -5,7 +5,8 @@ import { createDiscoverArchiveState } from "../data/discover-archive-state.mjs";
 
 const IDS = Object.freeze({
   saved: "11111111-1111-4111-8111-111111111111",
-  unsaved: "22222222-2222-4222-8222-222222222222"
+  unsaved: "22222222-2222-4222-8222-222222222222",
+  managed: "33333333-3333-4333-8333-333333333333"
 });
 
 function repository(failures = {}) {
@@ -27,6 +28,18 @@ test("Discover Archive state starts from one loaded ID set", () => {
   const state = createDiscoverArchiveState(repository(), [IDS.saved]);
   assert.equal(state.isSaved(IDS.saved), true);
   assert.equal(state.isSaved(IDS.unsaved), false);
+});
+
+test("managed Works are already selected and cannot be toggled out", async () => {
+  const api = repository();
+  const state = createDiscoverArchiveState(api, [
+    { workId: IDS.saved, origin: "saved" },
+    { workId: IDS.managed, origin: "managed" }
+  ]);
+  assert.equal(state.isSaved(IDS.managed), true);
+  assert.equal(state.isManaged(IDS.managed), true);
+  assert.equal(await state.toggle(IDS.managed), true);
+  assert.deepEqual(api.calls, []);
 });
 
 test("saving updates the local Discover state only after success", async () => {

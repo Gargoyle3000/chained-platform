@@ -8,6 +8,7 @@ import {
   PUBLIC_PROFILE_SELECT,
   PUBLIC_WORK_SELECT
 } from "./public-work-mapping.mjs";
+import { createSupabaseWorkRepository } from "./supabase-work-repository.mjs";
 import { derivativeLargePublicPath } from "./work-mapping.mjs";
 
 export const ARCHIVE_DATA_SOURCE = "supabase-only";
@@ -92,6 +93,93 @@ function mapProjectPublication(row) {
 
 function inFilter(ids) {
   return `in.(${ids.join(",")})`;
+}
+
+function archiveItemOrigin(value) {
+  return value === "managed" ? "managed" : "saved";
+}
+
+function managedCover(work) {
+  return [...(work?.images || [])]
+    .sort((first, second) => first.order - second.order || first.id.localeCompare(second.id, "en"))
+    .find((image) => image.isCover) || work?.images?.[0] || null;
+}
+
+function managedArchiveCard(work, profile, item, previewUrl, publicUrl) {
+  const cover = managedCover(work);
+  const usePublicCover = Boolean(
+    cover?.publicPath
+    && work.visibility === "published"
+    && profile.publicationStatus === "published"
+  );
+  const src = usePublicCover ? publicUrl(cover.publicPath) : previewUrl;
+  const title = String(work.title || "").trim() || "UNTITLED";
+  const image = cover && src ? Object.freeze({
+    id: cover.id,
+    src,
+    width: Number(cover.pixelWidth) > 0 ? Number(cover.pixelWidth) : null,
+    height: Number(cover.pixelHeight) > 0 ? Number(cover.pixelHeight) : null,
+    order: cover.order,
+    isCover: cover.isCover === true,
+    uploadStatus: cover.uploadStatus
+  }) : null;
+
+  return Object.freeze({
+    id: work.id,
+    title,
+    yearLabel: work.year,
+    workType: work.workType,
+    format: work.format,
+    materials: work.materials,
+    materialTerms: work.materialTerms,
+    height: work.height === "" ? null : Number(work.height),
+    width: work.width === "" ? null : Number(work.width),
+    depth: work.depth === "" ? null : Number(work.depth),
+    dimensionUnit: work.dimensionUnit,
+    publishedAt: work.publishedAt,
+    artistKey: profile.slug,
+    artistName: profile.name,
+    artistSlug: profile.slug,
+    artworkHref: `dashboard-work-edit.html?id=${encodeURIComponent(work.id)}`,
+    profileHref: "dashboard-works.html",
+    image,
+    origin: "managed",
+    archivedAt: item.created_at || null
+  });
+}
+
+async function managedArchivedWorks(repository, items) {
+  repository.media.urls.revokeAll();
+  if (!items.length) return [];
+  const managedIds = new Set(items.map((item) => item.work_id));
+  const profiles = await repository.listManagedProfiles();
+  if (!profiles.length) return [];
+  const profilesById = new Map(profiles.map((profile) => [profile.id, profile]));
+  const works = (await repository.listManagedSelectWorks())
+    .filter((work) => managedIds.has(work.id) && profilesById.has(work.ownerProfileId));
+  const privateCovers = works
+    .map((work) => ({ work, profile: profilesById.get(work.ownerProfileId), cover: managedCover(work) }))
+    .filter(({ work, profile, cover }) => (
+      cover
+      && !(cover.publicPath && work.visibility === "published" && profile.publicationStatus === "published")
+    ));
+  const privatePreviews = privateCovers.length
+    ? await repository.media.selectPreviewBatchResult(privateCovers.map(({ cover }) => cover))
+    : { previews: new Map() };
+  const itemById = new Map(items.map((item) => [item.work_id, item]));
+
+  return works.map((work) => {
+    const profile = profilesById.get(work.ownerProfileId);
+    const cover = managedCover(work);
+    const preview = cover ? privatePreviews.previews.get(String(cover.id).toLowerCase()) || "" : "";
+    return managedArchiveCard(
+      work,
+      profile,
+      itemById.get(work.id),
+      preview,
+      (path) => repository.media.publicUrl(path)
+    );
+  });
 }
 
 async function publicArchivedWorks(client, config, workIds, request) {
@@ -193,22 +281,82 @@ async function publicSelectWorks(client, config, workIds, request) {
   return publicWorks
     .map((work) => {
       const images = selectImagesForWork(imageRows, work.id, client);
-      return images ? Object.freeze({ ...work, images }) : null;
+      return images ? Object.freeze({
+        ...work,
+        images: Object.freeze(images.map((image) => Object.freeze({ ...image, exportSource: "public" })))
+      }) : null;
     })
     .filter(Boolean);
 }
 
-export function createArchiveRepository(client, config, request = requestPublicRows) {
+async function managedProjectSelectWorks(repository, workIds) {
+  if (!workIds.length) return [];
+  const [profiles, works] = await Promise.all([
+    repository.listManagedProfiles(),
+    repository.listManagedSelectWorks()
+  ]);
+  const requestedIds = new Set(workIds);
+  const profilesById = new Map(profiles.map((profile) => [profile.id, profile]));
+  return works
+    .filter((work) => requestedIds.has(work.id) && profilesById.has(work.ownerProfileId))
+    .map((work) => {
+      const profile = profilesById.get(work.ownerProfileId);
+      const images = (work.images || [])
+        .filter((image) => image?.uploadStatus === "ready")
+        .map((image) => Object.freeze({ ...image, exportSource: "managed-private" }));
+      return images.length ? Object.freeze({
+        ...work,
+        artistName: profile.name,
+        artistSlug: profile.slug,
+        images: Object.freeze(images)
+      }) : null;
+    })
+    .filter(Boolean);
+}
+
+export function createArchiveRepository(
+  client,
+  config,
+  request = requestPublicRows,
+  managedWorkRepository = createSupabaseWorkRepository(client, config)
+) {
   return Object.freeze({
     mode: FRONTEND_MODES.SUPABASE,
+
+    releasePrivatePreviews() {
+      managedWorkRepository.media.urls.revokeAll();
+    },
+
+    async projectSelectThumbnail(image) {
+      if (image?.exportSource !== "managed-private") return image?.src || null;
+      const result = await managedWorkRepository.media.selectPreviewBatchResult([image]);
+      return result.previews.get(String(image.id).toLowerCase()) || null;
+    },
+
+    releaseProjectSelectThumbnail(url) {
+      managedWorkRepository.media.urls.revoke(url);
+    },
 
     async listArchivedWorkIds() {
       const { data, error } = await client
         .from("archive_items")
-        .select("work_id");
+        .select("work_id,origin");
       if (error) throw archiveError();
 
       return Object.freeze(validWorkIds((data || []).map((item) => item?.work_id)));
+    },
+
+    async listArchiveMemberships() {
+      const { data, error } = await client
+        .from("archive_items")
+        .select("work_id,origin");
+      if (error) throw archiveError();
+      return Object.freeze((Array.isArray(data) ? data : [])
+        .filter((item) => isValidPublicWorkId(item?.work_id))
+        .map((item) => Object.freeze({
+          workId: item.work_id,
+          origin: archiveItemOrigin(item.origin)
+        })));
     },
 
     async listTags() {
@@ -251,21 +399,30 @@ export function createArchiveRepository(client, config, request = requestPublicR
     async listArchivedWorks() {
       const { data, error } = await client
         .from("archive_items")
-        .select("work_id,created_at")
+        .select("work_id,origin,created_at")
         .order("created_at", { ascending: false })
         .order("work_id", { ascending: true });
       if (error) throw archiveError();
 
       const items = Array.isArray(data) ? data : [];
       const workIds = validWorkIds(items.map((item) => item?.work_id));
-      const mapped = await publicArchivedWorks(client, config, workIds, request);
+      const managedItems = items.filter((item) => archiveItemOrigin(item.origin) === "managed");
+      const savedItems = items.filter((item) => archiveItemOrigin(item.origin) === "saved");
+      const [savedWorks, ownWorks] = await Promise.all([
+        publicArchivedWorks(client, config, validWorkIds(savedItems.map((item) => item.work_id)), request),
+        managedArchivedWorks(managedWorkRepository, managedItems)
+      ]);
+      const mapped = [
+        ...savedWorks.map((work) => Object.freeze({ ...work, origin: "saved" })),
+        ...ownWorks
+      ];
       const archiveOrder = new Map(workIds.map((id, index) => [id, index]));
 
       return Object.freeze(
         mapped
           .map((work) => Object.freeze({
             ...work,
-            archivedAt: items.find((item) => item.work_id === work.id)?.created_at || null
+            archivedAt: work.archivedAt || items.find((item) => item.work_id === work.id)?.created_at || null
           }))
           .sort((first, second) => archiveOrder.get(first.id) - archiveOrder.get(second.id))
       );
@@ -291,7 +448,7 @@ export function createArchiveRepository(client, config, request = requestPublicR
     async listArchivedSelectWorks(requestedWorkIds = []) {
       const { data, error } = await client
         .from("archive_items")
-        .select("work_id")
+        .select("work_id,origin")
         .order("created_at", { ascending: false })
         .order("work_id", { ascending: true });
       if (error) throw archiveError();
@@ -303,6 +460,29 @@ export function createArchiveRepository(client, config, request = requestPublicR
       const loaded = await publicSelectWorks(client, config, selected, request);
       const byId = new Map(loaded.map((work) => [work.id, work]));
       return Object.freeze(selected.map((id) => byId.get(id)).filter(Boolean));
+    },
+
+    async listProjectSelectWorks(requestedWorkIds = []) {
+      const { data, error } = await client
+        .from("archive_items")
+        .select("work_id,origin")
+        .order("created_at", { ascending: false })
+        .order("work_id", { ascending: true });
+      if (error) throw archiveError();
+
+      const originsById = new Map((data || [])
+        .filter((item) => isValidPublicWorkId(item?.work_id))
+        .map((item) => [item.work_id, archiveItemOrigin(item.origin)]));
+      const requested = validWorkIds(requestedWorkIds);
+      const selected = (requested.length ? requested : [...originsById.keys()]).filter((id) => originsById.has(id));
+      const managedIds = selected.filter((id) => originsById.get(id) === "managed");
+      const savedIds = selected.filter((id) => originsById.get(id) === "saved");
+      const [managedWorks, savedWorks] = await Promise.all([
+        managedProjectSelectWorks(managedWorkRepository, managedIds),
+        publicSelectWorks(client, config, savedIds, request)
+      ]);
+      const worksById = new Map([...managedWorks, ...savedWorks].map((work) => [work.id, work]));
+      return Object.freeze(selected.map((id) => worksById.get(id)).filter(Boolean));
     },
 
     async listProjects() {

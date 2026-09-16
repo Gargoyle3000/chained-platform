@@ -63,9 +63,9 @@ const HELP_CONTEXTS = Object.freeze({
   archive: {
     title: "SELECT / ARCHIVE",
     sections: [
-      ["THIS PAGE", "Your private workspace and Archive."],
-      ["EDIT HERE", "Manage Projects, Tags, selection and private organisation here. Work details remain managed in the Work editor."],
-      ["CONNECTED TO", "Archive stays private. Organising or selecting content here does not make it public automatically."]
+      ["THIS PAGE", "Your private workspace. Works from Artist Profiles you manage are available automatically, regardless of publication state; published Works you encounter from other artists are added with [+]."],
+      ["EDIT HERE", "Use Tags as private labels and filters, and Projects as deliberate ordered selections. Work details remain managed in the Work editor. A Project can generate a private CHAINED SELECT PDF, including your own draft Works where authorized."],
+      ["CONNECTED TO", "SELECT organisation or PDF export never publishes a Work. Ordinary Artist Projects stay private and exportable; only eligible Curator or Institution Profiles can publish a Project to CURATED."]
     ]
   }
 });

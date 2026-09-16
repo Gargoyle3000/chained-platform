@@ -45,19 +45,43 @@ test("Archive renders direct Project SELECT export only from active Project stat
   assert.match(script, /createPdfDelivery/);
   assert.match(script, /setProjectPdfDelivery\(result\.output\.bytes, result\.filename\)/);
   assert.doesNotMatch(script, /downloadBlob\(/);
-  assert.match(script, /repository\.listArchivedSelectWorks\(workIds\)/);
+  assert.match(script, /repository\.listProjectSelectWorks\(workIds\)/);
+  assert.match(script, /resolveThumbnail: \(image\) => repository\.projectSelectThumbnail\(image\)/);
+  assert.match(script, /disposeThumbnail: \(url\) => repository\.releaseProjectSelectThumbnail\(url\)/);
   assert.match(script, /\[ LOADING IMAGES \]/);
   assert.doesNotMatch(script, /writeChainedSelectSession|archive-select\.html|filterSelectButton/);
 });
 
-test("direct Project Select uses public media only and keeps revalidation before source fetch", async () => {
+test("direct Project Select keeps explicit public and direct-managed private media sources behind revalidation", async () => {
   const [generator, repository] = await Promise.all([read("data/chained-select-direct-generator.mjs"), read("data/archive-repository.mjs")]);
   assert.match(generator, /revalidateProjectChainedSelect/);
   assert.match(generator, /applyExportImageSelection\(revalidated\.works, imageSelection\)/);
   assert.match(generator, /fetch\(image\.src/);
-  assert.doesNotMatch(generator, /authorizedPrivateMedia|downloadAuthorizedPrivateMedia|privatePreview|signed/i);
+  assert.match(generator, /image\.exportSource === "managed-private"/);
+  assert.match(generator, /downloadAuthorizedPrivateMedia\(\[image\], \{ purpose: "select_pdf_export"/);
   assert.match(repository, /derivativeLargePublicPath/);
   assert.doesNotMatch(repository, /private_object_path/);
+});
+
+test("managed Works use normal SELECT organisation without an opt-out control", async () => {
+  const [script, action, repository, discover, following, artwork] = await Promise.all([
+    read("archive.js"),
+    read("data/archive-work-action.mjs"),
+    read("data/archive-repository.mjs"),
+    read("discover.js"),
+    read("following.js"),
+    read("artwork-dynamic.js")
+  ]);
+  assert.match(script, /if \(work\.origin !== "managed"\) management\.menu\.append\(remove\)/);
+  assert.match(action, /if \(archiveState\.isManaged\(work\.id\)\) return null/);
+  assert.match(action, /automatically available in Select/);
+  assert.match(repository, /listManagedSelectWorks/);
+  assert.match(repository, /selectPreviewBatchResult/);
+  assert.match(repository, /origin: "managed"/);
+  assert.match(discover, /const archiveAction = createArchiveAction[\s\S]*?if \(archiveAction\) metadata\.append\(archiveAction\)/);
+  assert.match(following, /const archiveAction = createArchiveAction[\s\S]*?if \(archiveAction\) metadata\.append\(archiveAction\)/);
+  assert.match(artwork, /const archiveAction = createArchiveAction[\s\S]*?if \(archiveAction\) fragment\.append\(archiveAction, archiveStatus\)/);
+  assert.doesNotMatch(script, /PERSONAL|FOLLOW/);
 });
 
 test("old review route, review state, and session navigation are absent", async () => {

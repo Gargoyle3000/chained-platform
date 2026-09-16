@@ -39,6 +39,24 @@ export function createSupabaseWorkRepository(client, config, mediaDependencies) 
     return all;
   }
 
+  async function listManagedSelectWorks() {
+    const [{ data: workRows, error: workError }, { data: imageRows, error: imageError }] = await Promise.all([
+      client.rpc("list_managed_select_works"),
+      client.rpc("list_managed_select_work_images")
+    ]);
+    const works = requireResult(workError, workRows, "SELECT WORKS ARE UNAVAILABLE");
+    const images = requireResult(imageError, imageRows, "SELECT WORK IMAGES ARE UNAVAILABLE")
+      .map(databaseImageToClient);
+    const imagesByWork = new Map();
+    images.forEach((image) => {
+      if (!imagesByWork.has(image.workId)) imagesByWork.set(image.workId, []);
+      imagesByWork.get(image.workId).push(image);
+    });
+    return works
+      .map((row) => databaseToWork(row, imagesByWork.get(row.id) || []))
+      .sort(compareArtistWorkCuration);
+  }
+
   return Object.freeze({
     mode: "supabase",
     media,
@@ -52,6 +70,7 @@ export function createSupabaseWorkRepository(client, config, mediaDependencies) 
       const { data, error } = await client.from("works").select(WORK_SELECT).in("owner_profile_id", profileIds).order("year_sort", { ascending: false, nullsFirst: false }).order("profile_order", { ascending: true }).order("id", { ascending: true });
       return attachImages(requireResult(error, data, "WORKS ARE UNAVAILABLE")).then((works) => works.sort(compareArtistWorkCuration));
     },
+    listManagedSelectWorks,
     async getWork(id) {
       const { data, error } = await client.from("works").select(WORK_SELECT).eq("id", requireId(id)).maybeSingle();
       if (error) throw sanitizeWorkError(error);

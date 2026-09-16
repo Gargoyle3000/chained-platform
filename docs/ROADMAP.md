@@ -41,8 +41,9 @@ Implementation should verify the largest real preview display and HiDPI needs be
 
 ## EXPORTS — LIVE
 
-- DIRECT CHAINED SELECT is active-Project-only: `[ EXPORT CHAINED SELECT ]` opens the shared picker and `[ EXPORT SELECT ]` directly generates/downloads. It uses fresh Project membership, fresh strict public projection and canonical LARGE derivatives only; it has no review page, private-media path or legacy fallback.
+- DIRECT CHAINED SELECT is active-Project-only: `[ EXPORT CHAINED SELECT ]` opens the shared picker and `[ EXPORT SELECT ]` directly generates/downloads. It uses fresh Project membership: managed own Works use direct-management-authorized private originals, while external saved Works retain the strict public canonical LARGE path; it has no review page or legacy fallback.
 - Both SELECT and Portfolio use export-local per-Work image selection: cover first, otherwise first eligible image by `sort_order`; each included Work retains at least one image. Selection is not persisted and never mutates Work/media state.
+- SELECT includes all non-deleted Works from directly managed Artist Profiles automatically, including drafts, alongside explicit external saves. Both use the same private Tags and ordered Projects; private Project PDFs may include managed drafts without publication, while external saves remain freshly public-eligible.
 - Portfolio remains a separate authorized private-original export using `purpose: pdf_export`; its picker uses `purpose: preview` only for temporary thumbnails.
 
 ## PRE-BETA HARDENING
@@ -76,7 +77,7 @@ Implementation should verify the largest real preview display and HiDPI needs be
 - Implement external Vimeo-first video on Work detail: still selection, duration, mixed media, playback lifecycle and still-based PDF representation.
 - Implement CHAINED/CHAINED+ limits, upgrade handling and technical abuse ceilings while preserving existing content at limits.
 - Add account-type support for UNCHAINED, ARTIST, INSTITUTION teams/subtypes and CURATOR access, with invitation/admission and APPLY/FIRST CHAIN flows.
-- Extend CURATED with ordered Works, cover, optional text, privacy-aware unpublishing and Following integration.
+- Extend CURATED with ordered Works, cover, optional text, privacy-aware unpublishing and Following integration; future Curator/Institution discovery should evaluate Presentations as CURATED content without folding that work into ordinary Artist Projects.
 - Add the future system-only notification layer and explicit action-required/informational event handling.
 - Implement shared Presentations with participant Work links, external identities, documentation images, aliases and claim/merge support.
 - Implement Agenda moments, standalone events, cancellation, geography and structured time behavior without RSVP or location permissions.

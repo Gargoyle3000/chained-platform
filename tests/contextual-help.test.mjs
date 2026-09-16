@@ -47,6 +47,18 @@ test("Agenda and Work help preserve the explicit image source-of-truth", () => {
   assert.match(presentation, /primarily in Agenda Edit/);
 });
 
+test("SELECT help explains automatic own Works and private organisation boundaries", () => {
+  const copy = HELP_CONTEXTS.archive.sections.map(([, text]) => text).join(" ");
+  assert.match(copy, /manage are available automatically, regardless of publication state/);
+  assert.match(copy, /published Works you encounter from other artists are added with \[\+\]/);
+  assert.match(copy, /Tags as private labels and filters/);
+  assert.match(copy, /Projects as deliberate ordered selections/);
+  assert.match(copy, /CHAINED SELECT PDF/);
+  assert.match(copy, /PDF export never publishes a Work/);
+  assert.match(copy, /Ordinary Artist Projects stay private and exportable/);
+  assert.match(copy, /Curator or Institution Profiles/);
+});
+
 test("authenticated navigation mounts a fixed help utility outside the header and excludes public pages", async () => {
   const [navigation, help, css, dashboard, publicAgenda] = await Promise.all([
     readFile(new URL("../auth/navigation.mjs", import.meta.url), "utf8"),
