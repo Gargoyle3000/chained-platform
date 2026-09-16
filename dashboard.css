@@ -1289,31 +1289,41 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
-    scrollbar-width: thin;
-    scrollbar-color: var(--accent) var(--white);
   }
 
-  .dashboard-overview-page
-  .dashboard-work-list::-webkit-scrollbar,
-  .dashboard-overview-page
-  .dashboard-recent-presentation-list::-webkit-scrollbar {
-    width: 9px;
-    height: 9px;
+  @supports (-moz-appearance: none) {
+    .dashboard-overview-page
+    .dashboard-work-list,
+    .dashboard-overview-page
+    .dashboard-recent-presentation-list {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    }
   }
 
-  .dashboard-overview-page
-  .dashboard-work-list::-webkit-scrollbar-track,
-  .dashboard-overview-page
-  .dashboard-recent-presentation-list::-webkit-scrollbar-track {
-    background: var(--white);
-  }
+  @supports selector(::-webkit-scrollbar) {
+    .dashboard-overview-page
+    .dashboard-work-list::-webkit-scrollbar,
+    .dashboard-overview-page
+    .dashboard-recent-presentation-list::-webkit-scrollbar {
+      width: var(--scrollbar-size);
+      height: var(--scrollbar-size);
+    }
 
-  .dashboard-overview-page
-  .dashboard-work-list::-webkit-scrollbar-thumb,
-  .dashboard-overview-page
-  .dashboard-recent-presentation-list::-webkit-scrollbar-thumb {
-    border-radius: 0;
-    background: var(--accent);
+    .dashboard-overview-page
+    .dashboard-work-list::-webkit-scrollbar-track,
+    .dashboard-overview-page
+    .dashboard-recent-presentation-list::-webkit-scrollbar-track {
+      background: var(--scrollbar-track);
+    }
+
+    .dashboard-overview-page
+    .dashboard-work-list::-webkit-scrollbar-thumb,
+    .dashboard-overview-page
+    .dashboard-recent-presentation-list::-webkit-scrollbar-thumb {
+      border-radius: 0;
+      background: var(--scrollbar-thumb);
+    }
   }
 }
 /* DASHBOARD AGENDA */

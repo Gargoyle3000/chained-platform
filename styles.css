@@ -28,6 +28,9 @@
   --image-portrait-max: 620px;
 
   --border: 1px solid var(--line);
+  --scrollbar-thumb: var(--accent);
+  --scrollbar-track: var(--white);
+  --scrollbar-size: 7px;
 }
 
 /* =========================================================
@@ -53,25 +56,37 @@ html {
   -ms-overflow-style: none;
 }
 
-@media (min-width: 701px) and (pointer: fine) {
-  html {
+@media (min-width: 701px) and (hover: hover) {
+  html,
+  body {
     scrollbar-gutter: stable;
-    scrollbar-width: thin;
-    scrollbar-color: var(--accent) var(--white);
   }
 
-  html::-webkit-scrollbar {
-    width: 9px;
-    height: 9px;
+  @supports (-moz-appearance: none) {
+    html,
+    body {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    }
   }
 
-  html::-webkit-scrollbar-track {
-    background: var(--white);
-  }
+  @supports selector(::-webkit-scrollbar) {
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar {
+      width: var(--scrollbar-size);
+      height: var(--scrollbar-size);
+    }
 
-  html::-webkit-scrollbar-thumb {
-    border-radius: 0;
-    background: var(--accent);
+    html::-webkit-scrollbar-track,
+    body::-webkit-scrollbar-track {
+      background: var(--scrollbar-track);
+    }
+
+    html::-webkit-scrollbar-thumb,
+    body::-webkit-scrollbar-thumb {
+      border-radius: 0;
+      background: var(--scrollbar-thumb);
+    }
   }
 }
 

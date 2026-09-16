@@ -98,6 +98,10 @@ try {
           const imageDialog = document.querySelector('.export-image-dialog');
           if (imageDialog && !imageDialog.open) imageDialog.showModal();
           const contentTop = Math.min(...[...document.querySelectorAll('main > *')].map((element) => element.getBoundingClientRect().top).filter((value) => Number.isFinite(value)));
+          const rootScroller = document.scrollingElement;
+          const dashboardScroller = document.querySelector(
+            '.dashboard-work-list, .dashboard-recent-presentation-list'
+          );
           return {
             overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
             protected: document.body.hasAttribute('data-auth-protected'),
@@ -125,12 +129,32 @@ try {
               || document.documentElement.clientWidth < 361
               || new Set([...document.querySelectorAll(".about-actions a")]
                 .map((element) => Math.round(element.getBoundingClientRect().top))).size === 1,
+            scrollbar: {
+              rootElement: rootScroller?.tagName || "",
+              rootGutter: rootScroller
+                ? getComputedStyle(rootScroller).scrollbarGutter
+                : "",
+              rootThumb: rootScroller
+                ? getComputedStyle(rootScroller, '::-webkit-scrollbar-thumb').backgroundColor
+                : "",
+              dashboardThumb: dashboardScroller
+                ? getComputedStyle(dashboardScroller, '::-webkit-scrollbar-thumb').backgroundColor
+                : ""
+            },
             text: document.body.innerText.slice(0, 200)
           };
         })()`,
         returnByValue: true
       });
       const value = evaluation.result.value;
+      if (width === 1440) {
+        assert.equal(value.scrollbar.rootElement, "HTML", `${page} scrolls through the document root`);
+        assert.equal(value.scrollbar.rootGutter, "stable", `${page} keeps a stable scrollbar gutter`);
+        assert.equal(value.scrollbar.rootThumb, "rgb(0, 252, 40)", `${page} gives the root scrollbar a CHAINED-green thumb`);
+        if (page === "dashboard.html") {
+          assert.equal(value.scrollbar.dashboardThumb, "rgb(0, 252, 40)", "Dashboard list scrollbar uses the CHAINED-green thumb");
+        }
+      }
       assert.equal(value.hasMain, true, `${page} has main content at ${width}px`);
       assert.equal(value.rootFitsDesktop, true, `${page} fits a normal desktop viewport without vertical scrolling`);
       assert.equal(value.rootActionsSingleRow, true, `${page} keeps landing actions in one row where space allows`);
