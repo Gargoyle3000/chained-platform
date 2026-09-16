@@ -12,6 +12,8 @@ test("Discover and Follow share the auto-feed loader while retaining their exist
     assert.match(source, /import\("\.\/data\/auto-feed-loader\.mjs"\)/);
     assert.match(source, /createAutoFeedLoader\(/);
     assert.match(source, /discover-feed-sentinel/);
+    assert.match(source, /const Observer = typeof IntersectionObserver === "function"[\s\S]*?\? IntersectionObserver[\s\S]*?: null;/);
+    assert.match(source, /createAutoFeedLoader\(\{[\s\S]*?Observer,/);
     assert.match(source, /createArchiveAction\(work, archiveState, announceArchiveStatus, "discover-archive-action"\)/);
   }
   assert.match(discover, /requestGate\.isCurrent\(version\)/);

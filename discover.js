@@ -442,6 +442,9 @@ async function initialiseLocalDiscover() {
       continuationSentinel = sentinel;
       let hasMore = appendBatch();
       if (hasMore) {
+        const Observer = typeof IntersectionObserver === "function"
+          ? IntersectionObserver
+          : null;
         function showManualFallback() {
           showLoadFallback(async () => {
             await continuation?.retry();
@@ -450,6 +453,7 @@ async function initialiseLocalDiscover() {
         }
         continuation = createAutoFeedLoader({
           sentinel,
+          Observer,
           hasMore: () => requestGate.isCurrent(version) && hasMore,
           loadNext: () => {
             loadFallback?.remove();

@@ -295,8 +295,12 @@ document.addEventListener("DOMContentLoaded", () => {
       stream.after(sentinel);
       restoreFeedPosition();
 
+      const Observer = typeof IntersectionObserver === "function"
+        ? IntersectionObserver
+        : null;
       const continuation = createAutoFeedLoader({
         sentinel,
+        Observer,
         hasMore: () => active && hasMore && Boolean(cursor),
         loadNext: async () => {
           if (!active || !hasMore || !cursor) return;
