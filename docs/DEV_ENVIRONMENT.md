@@ -7,7 +7,23 @@
 
 ## Repository
 
+`C:\Dev\CHAINED`
+
+The former OneDrive repository at
 `C:\Users\peerv\OneDrive\Bureaublad\Projecten\computery\WEBSITE\CHAINED`
+is fallback/archive only and is not the active working copy.
+
+`proofs/` exists locally in the active repository and is intentionally excluded
+from Git.
+
+### Current Codex Desktop Git limitation
+
+Due to a current Windows Desktop sandbox regression, Codex can inspect, edit,
+and test repository files, but sandboxed Git writes can fail with
+`.git/index.lock: Permission denied`. Until that upstream issue changes, Codex
+handles inspection, editing, testing, and reporting; use PowerShell for
+`git add`, commit, and push. This is a tooling limitation, not a CHAINED product
+bug. Do not change Git permissions or configuration as a workaround.
 
 ## Known tooling
 

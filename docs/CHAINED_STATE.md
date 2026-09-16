@@ -1,6 +1,6 @@
 # CHAINED — CURRENT STATE
 
-Last updated: 2026-09-12
+Last updated: 2026-09-16
 
 ## NOW
 
@@ -50,7 +50,8 @@ Current focus: complete and polish core product surfaces before broader rollout.
 
 - Agenda occurrences now link eligible public parent Presentations through `presentation.html?id=<activity_id>`; standalone or ineligible occurrences remain unlinked and external URLs remain separate.
 - Public Agenda now has `[ ALL ]` and authenticated `[ FOLLOW ]` as the first controls in its navigation column, directly above `FILTER BY CITY`. FOLLOW is a single self-scoped public-visibility projection of actually followed profiles; it is not a separate follow model or notification feed.
-- Presentation hosts/managers may set one dedicated Agenda-only image or one explicit eligible representative Work cover. The dedicated image wins; no Presentation Work is implicitly selected. Its private source/preview is never projected, and public Agenda uses it only while the existing Agenda occurrence visibility contract permits it. Standalone Agenda entries remain text-only.
+- The deployed Presentation-scoped Agenda image system uses `presentation_agenda_images`, a verified dedicated image flow, and one explicit eligible `representative_work_id`; priority is dedicated image → representative Work → text-only, with no inferred first linked Work. Its service-role-only wrappers and public ALL/FOLLOW thumbnail projection validate canonical published Work SMALL paths. Standalone Agenda items remain text-only.
+- Agenda-image controls live primarily in Dashboard → Agenda → edit; the Presentation editor shares the same controller. Public representative-Work thumbnail rendering is visibly confirmed in production, and the public Agenda row is DATE → THUMBNAIL → EVENT TEXT → TIME / VENUE. Final controlled production smoke verification of the dedicated-image upload/finalize path remains pending.
 - Presentation Work associations are reversible from Presentation edit through the existing trusted removal contract; removal affects only the association and leaves Work, media, publication, Archive, Portfolio, participants and Agenda/Program state intact.
 - Mobile SELECT and Portfolio PDF delivery is explicit and browser-local: PDF READY precedes user-triggered SAVE / SHARE or DOWNLOAD, with no forced viewer/new-tab behavior.
 - Archive interaction polish is live: SINGLE is centered, active Projects toggle off through the normal cleanup path, Tag toggle behavior is covered, and Work management menus retain explicit event boundaries. No horizontal Archive browsing or scrollbar architecture was introduced.

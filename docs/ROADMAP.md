@@ -1,6 +1,6 @@
 # CHAINED — ROADMAP
 
-Last updated: 2026-09-12
+Last updated: 2026-09-16
 
 ## POLISH
 
@@ -16,7 +16,7 @@ Last updated: 2026-09-12
 - Agenda occurrence publication is live with explicit PUBLISH / UNPUBLISH and independent `show_in_agenda` / `show_in_presentation` behavior.
 - Presentation Work association, participant history and co-operator/manager access are independent; public role semantics distinguish contextual HOST/PRESENTED BY from PARTICIPANTS and technical management roles.
 - Public Presentation detail order is TITLE / CONTEXT → PARTICIPANTS → WORKS → PROGRAM, with the broader responsive Works grid live.
-- Complete remaining Presentation ↔ Agenda ↔ Works crosslinks and attachments beyond the implemented single Agenda-context image / explicit representative Work fallback; standalone Agenda entries remain supported and text-only for now.
+- The deployed Agenda image system is dedicated verified image → explicit eligible representative Work → text-only, with public ALL/FOLLOW thumbnail delivery and the Agenda-edit controls as the primary management surface. Representative Work thumbnail rendering is visibly confirmed in production; final controlled production smoke verification of the dedicated-image upload/finalize path remains pending. Complete remaining Presentation ↔ Agenda ↔ Works crosslinks and attachments beyond this implemented scope; standalone Agenda entries remain supported and text-only for now.
 
 ## PRIVATE PREVIEW DERIVATIVES — DEPLOYED
 
