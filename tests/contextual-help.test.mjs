@@ -47,16 +47,20 @@ test("Agenda and Work help preserve the explicit image source-of-truth", () => {
   assert.match(presentation, /primarily in Agenda Edit/);
 });
 
-test("authenticated navigation places contextual help after logout and excludes public pages", async () => {
-  const [navigation, help, dashboard, publicAgenda] = await Promise.all([
+test("authenticated navigation mounts a fixed help utility outside the header and excludes public pages", async () => {
+  const [navigation, help, css, dashboard, publicAgenda] = await Promise.all([
     readFile(new URL("../auth/navigation.mjs", import.meta.url), "utf8"),
     readFile(new URL("../data/contextual-help.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../auth/auth.css", import.meta.url), "utf8"),
     readFile(new URL("../dashboard.html", import.meta.url), "utf8"),
     readFile(new URL("../agenda.html", import.meta.url), "utf8")
   ]);
   assert.match(navigation, /indicator\.append\(logout\);/);
-  assert.match(navigation, /mountContextualHelp\(actions\);/);
-  assert.match(help, /indicator\.append\(trigger\);/);
+  assert.match(navigation, /mountContextualHelp\(\);/);
+  assert.match(help, /document\.body\.append\(trigger\);/);
+  assert.doesNotMatch(help, /indicator\.append\(trigger\);/);
+  assert.match(css, /\.contextual-help-trigger \{[\s\S]*?position: fixed;[\s\S]*?bottom: 20px;[\s\S]*?left: var\(--page-gutter\)/);
+  assert.match(css, /bottom: calc\(16px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(help, /document\.body\.dataset\.authProtected !== "true"/);
   assert.match(dashboard, /data-auth-protected="true"/);
   assert.doesNotMatch(publicAgenda, /data-auth-protected="true"/);

@@ -126,14 +126,12 @@ function renderContext(panel, context, key) {
   }));
 }
 
-export function mountContextualHelp(actions, pathname = window.location.pathname) {
+export function mountContextualHelp(pathname = window.location.pathname) {
   if (document.body.dataset.authProtected !== "true") return null;
   const key = contextualHelpKey(pathname);
   const context = contextualHelpContext(pathname);
-  if (!actions || !key || !context) return null;
-  const indicator = actions.querySelector(".auth-session-indicator");
-  if (!indicator) return null;
-  let trigger = indicator.querySelector(".contextual-help-trigger");
+  if (!key || !context) return null;
+  let trigger = document.querySelector(".contextual-help-trigger");
   let panel = document.querySelector("#contextual-help-panel");
   if (!panel) panel = createPanel(document);
   renderContext(panel, context, key);
@@ -145,7 +143,7 @@ export function mountContextualHelp(actions, pathname = window.location.pathname
     trigger.setAttribute("aria-label", "Open contextual help");
     trigger.setAttribute("aria-controls", panel.id);
     trigger.setAttribute("aria-expanded", "false");
-    indicator.append(trigger);
+    document.body.append(trigger);
   }
   if (trigger.dataset.contextualHelpReady === "true") return trigger;
   trigger.dataset.contextualHelpReady = "true";

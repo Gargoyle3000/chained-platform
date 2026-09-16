@@ -43,6 +43,11 @@ body[data-auth-protected="true"] > main {
 }
 
 .contextual-help-trigger {
+  position: fixed;
+  bottom: 20px;
+  left: var(--page-gutter);
+  z-index: 55;
+
   min-height: 24px;
   padding: 0;
   border: 0;
@@ -52,8 +57,7 @@ body[data-auth-protected="true"] > main {
   font: inherit;
 }
 
-.site-header .auth-logout-button,
-.site-header .contextual-help-trigger {
+.site-header .auth-logout-button {
   pointer-events: auto;
 }
 
@@ -312,6 +316,10 @@ body[data-auth-protected="true"] > main {
   .contextual-help-panel {
     width: 100vw;
     padding: 24px var(--page-gutter) 40px;
+  }
+
+  .contextual-help-trigger {
+    bottom: calc(16px + env(safe-area-inset-bottom));
   }
 
   .contextual-help-content {

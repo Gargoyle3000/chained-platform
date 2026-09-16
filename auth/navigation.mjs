@@ -201,7 +201,7 @@ export async function applyAuthenticatedNavigation(client) {
   const actions = ensureHeaderActions(header, navigation);
   ensureProfileGroup(navigation);
   ensureSessionIndicator(actions, client);
-  mountContextualHelp(actions);
+  mountContextualHelp();
   await ensureAdminInvitationNavigation(client);
 
   header.dataset.authNavigationReady = "true";
