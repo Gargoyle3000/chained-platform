@@ -141,6 +141,33 @@
   margin-top: 16px;
 }
 
+.archive-source-section {
+  margin-top: -12px;
+}
+
+.archive-source-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.archive-source-filter {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--black);
+  font: inherit;
+  font-size: var(--font-meta);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.archive-source-filter:hover,
+.archive-source-filter:focus-visible,
+.archive-source-filter.is-active {
+  color: var(--accent);
+}
+
 .archive-project-list {
   margin-top: 16px;
 }

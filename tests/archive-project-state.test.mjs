@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  ARCHIVE_SOURCE_SCOPES,
   archiveProjectLocation,
   currentProjectChainedSelectSource,
   filterArchiveProjectWorks,
+  normalizeArchiveSourceScope,
   orderedProjectWorks,
   projectChainedSelectSource,
   projectSelectWorkIds,
@@ -13,9 +15,9 @@ import {
 } from "../data/archive-project-state.mjs";
 
 const works = [
-  { id: "work-a", title: "ALPHA", artistName: "ARTIST", yearLabel: "2026", workType: "single-work" },
-  { id: "work-b", title: "BETA", artistName: "ARTIST", yearLabel: "2025", workType: "single-work" },
-  { id: "work-c", title: "GAMMA", artistName: "OTHER", yearLabel: "2024", workType: "single-work", materialTerms: ["rubber", "aluminium"] }
+  { id: "work-a", title: "ALPHA", artistName: "ARTIST", yearLabel: "2026", workType: "single-work", origin: "managed" },
+  { id: "work-b", title: "BETA", artistName: "ARTIST", yearLabel: "2025", workType: "single-work", origin: "saved" },
+  { id: "work-c", title: "GAMMA", artistName: "OTHER", yearLabel: "2024", workType: "single-work", materialTerms: ["rubber", "aluminium"], origin: "managed" }
 ];
 
 const items = [
@@ -67,6 +69,24 @@ test("Archive search and tags only narrow the active Project sequence", () => {
   assert.deepEqual(filterArchiveProjectWorks(projectWorks, "", new Set(["tag-a"]), (id) => tags.get(id) || new Set()).map((work) => work.id), ["work-a", "work-b"]);
   assert.deepEqual(filterArchiveProjectWorks(projectWorks, "beta", new Set(["tag-a"]), (id) => tags.get(id) || new Set()).map((work) => work.id), ["work-b"]);
   assert.equal(items[0].position, 1);
+});
+
+test("Archive source scopes derive from membership origin and compose with search and Tags", () => {
+  const tags = new Map([
+    ["work-a", new Set(["tag-sculpture"])],
+    ["work-b", new Set(["tag-research"])],
+    ["work-c", new Set(["tag-research"])]
+  ]);
+  const tagIdsForWork = (id) => tags.get(id) || new Set();
+
+  assert.deepEqual(ARCHIVE_SOURCE_SCOPES, ["all", "managed", "saved"]);
+  assert.equal(normalizeArchiveSourceScope("unknown"), "all");
+  assert.deepEqual(filterArchiveProjectWorks(works, "", new Set(), tagIdsForWork, "managed").map((work) => work.id), ["work-a", "work-c"]);
+  assert.deepEqual(filterArchiveProjectWorks(works, "", new Set(), tagIdsForWork, "saved").map((work) => work.id), ["work-b"]);
+  assert.deepEqual(filterArchiveProjectWorks(works, "", new Set(["tag-research"]), tagIdsForWork, "all").map((work) => work.id), ["work-b", "work-c"]);
+  assert.deepEqual(filterArchiveProjectWorks(works, "", new Set(["tag-research"]), tagIdsForWork, "managed").map((work) => work.id), ["work-c"]);
+  assert.deepEqual(filterArchiveProjectWorks(works, "beta", new Set(["tag-research"]), tagIdsForWork, "saved").map((work) => work.id), ["work-b"]);
+  assert.deepEqual(works.map((work) => work.origin), ["managed", "saved", "managed"]);
 });
 
 test("Archive text search matches normalized Work material terms", () => {

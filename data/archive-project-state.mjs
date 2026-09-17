@@ -1,6 +1,11 @@
 import { materialSearchTerms } from "./material-terms.mjs";
 
 const ARCHIVE_PROJECT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export const ARCHIVE_SOURCE_SCOPES = Object.freeze(["all", "managed", "saved"]);
+
+export function normalizeArchiveSourceScope(scope) {
+  return ARCHIVE_SOURCE_SCOPES.includes(scope) ? scope : "all";
+}
 
 function isArchiveProjectId(value) {
   return typeof value === "string" && ARCHIVE_PROJECT_ID_PATTERN.test(value);
@@ -79,8 +84,15 @@ export async function currentProjectChainedSelectSource(repository, projectId) {
   return source ? Object.freeze({ project, source }) : null;
 }
 
-export function filterArchiveProjectWorks(works, searchTerm, activeTagIds, tagIdsForWork) {
+export function filterArchiveProjectWorks(
+  works,
+  searchTerm,
+  activeTagIds,
+  tagIdsForWork,
+  sourceScope = "all"
+) {
   const term = String(searchTerm || "").trim().toLocaleLowerCase();
+  const source = normalizeArchiveSourceScope(sourceScope);
   return works.filter((work) => {
     const materials = Array.isArray(work.materialTerms)
       ? work.materialTerms
@@ -93,7 +105,8 @@ export function filterArchiveProjectWorks(works, searchTerm, activeTagIds, tagId
       ...materials
     ]
       .filter(Boolean).join(" ").toLocaleLowerCase();
-    return (!term || searchText.includes(term)) &&
+    return (source === "all" || work.origin === source) &&
+      (!term || searchText.includes(term)) &&
       [...activeTagIds].every((tagId) => tagIdsForWork(work.id).has(tagId));
   });
 }

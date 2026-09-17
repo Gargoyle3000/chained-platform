@@ -4,6 +4,16 @@ import { readFile } from "node:fs/promises";
 
 const read = (file) => readFile(new URL(`../${file}`, import.meta.url), "utf8");
 
+test("Archive source filters sit above Tags and remain system-derived controls", async () => {
+  const [page, script, css] = await Promise.all([read("archive.html"), read("archive.js"), read("archive.css")]);
+  assert.match(page, /archive-source-section[\s\S]*?\[ ALL \][\s\S]*?\[ PERSONAL \][\s\S]*?\[ SAVED \][\s\S]*?archive-tags-section/);
+  assert.match(script, /let activeSourceScope = "all";/);
+  assert.match(script, /selectedProjectId \? "all" : activeSourceScope/);
+  assert.match(script, /sourceFilters\.hidden = projectIsOpen;/);
+  assert.match(script, /activeSourceScope = normalizeArchiveSourceScope\(button\.dataset\.archiveSource\);[\s\S]*renderWorks\(\);/);
+  assert.match(css, /\.archive-source-filters \{[\s\S]*flex-wrap: wrap;/);
+});
+
 test("Archive SINGLE centers its existing content column without changing image containment", async () => {
   const css = await read("archive.css");
   assert.match(css, /\.archive-page\[data-view="single"\] \.saved-grid \{[\s\S]*max-width: 1100px;[\s\S]*margin-inline: auto;/);

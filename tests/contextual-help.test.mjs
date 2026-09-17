@@ -60,10 +60,12 @@ test("Agenda and Work help preserve the explicit image source-of-truth", () => {
   assert.match(presentation, /primarily in Agenda Edit/);
 });
 
-test("SELECT help explains automatic own Works and private organisation boundaries", () => {
+test("Selector help explains automatic own Works and private organisation boundaries", () => {
   const copy = HELP_CONTEXTS.archive.sections.map(([, text]) => text).join(" ");
-  assert.match(copy, /manage are available automatically, including drafts/);
-  assert.match(copy, /published Works from other artists are added with their Work-level \[\+\]/);
+  assert.match(copy, /Selector is your private workspace/);
+  assert.match(copy, /PERSONAL shows Works from Artist Profiles you manage, available automatically including drafts/);
+  assert.match(copy, /published Works from other artists added with their Work-level \[\+\]/);
+  assert.match(copy, /ALL, PERSONAL and SAVED are system filters, not Tags/);
   assert.match(copy, /Tags as private labels for filtering and retrieval/);
   assert.match(copy, /Projects as deliberate ordered selections/);
   assert.match(copy, /CHAINED SELECT PDF/);
@@ -85,10 +87,10 @@ test("public and network help explains source-of-truth and contextual plus actio
   const following = HELP_CONTEXTS.following.sections.map(([, text]) => text).join(" ");
   const work = HELP_CONTEXTS["public-work"].sections.map(([, text]) => text).join(" ");
   const agenda = HELP_CONTEXTS["public-agenda"].sections.map(([, text]) => text).join(" ");
-  assert.match(discover, /Work-level \[\+\] saves another Artist’s Work privately to SELECT/);
+  assert.match(discover, /Work-level \[\+\] saves another Artist’s Work privately to Selector/);
   assert.match(discover, /main-navigation \[\+\] is different/);
   assert.match(following, /does not automatically save their Works/);
-  assert.match(following, /FOLLOW and SELECT are separate private systems/);
+  assert.match(following, /FOLLOW and Selector are separate private systems/);
   assert.match(work, /Work data is edited in WORKS by its manager/);
   assert.match(agenda, /ALL shows eligible Agenda activity/);
   assert.match(agenda, /FOLLOW limits the view/);

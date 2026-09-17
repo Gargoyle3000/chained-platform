@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
 
-  <title>Select — CHAINED</title>
+  <title>Selector — CHAINED</title>
 
   <link rel="stylesheet" href="styles.css">
   <script src="scroll-indicators.js" defer></script>
@@ -26,7 +26,7 @@
     <nav class="main-nav main-nav-with-dashboard" aria-label="Primary navigation">
       <a href="discover.html">DISCOVER</a>
       <a href="following.html">FOLLOW</a>
-      <a class="is-active" href="archive.html">SELECT</a>
+      <a class="is-active" href="archive.html">SELECTOR</a>
       <a href="agenda.html">AGENDA</a>
       <span class="profile-nav-group">
         <a data-own-profile-link href="profile.html">PROFILE</a>
@@ -39,21 +39,29 @@
     <aside class="archive-sidebar">
       <div class="archive-sidebar-inner">
         <section class="archive-sidebar-section">
-          <h1>SELECT</h1>
+          <h1>SELECTOR</h1>
           <p class="archive-status">PRIVATE WORKSPACE / ARCHIVE</p>
+        </section>
+
+        <section class="archive-sidebar-section archive-source-section" aria-label="Filter Selector by source">
+          <div class="archive-source-filters">
+            <button class="archive-source-filter is-active" type="button" data-archive-source="all" aria-pressed="true">[ ALL ]</button>
+            <button class="archive-source-filter" type="button" data-archive-source="managed" aria-pressed="false">[ PERSONAL ]</button>
+            <button class="archive-source-filter" type="button" data-archive-source="saved" aria-pressed="false">[ SAVED ]</button>
+          </div>
         </section>
 
         <section class="archive-sidebar-section archive-tags-section" aria-labelledby="archive-tags-heading">
           <h2 id="archive-tags-heading">TAGS</h2>
           <form class="archive-tag-create">
             <label>
-              <span class="sr-only">New Select tag</span>
+              <span class="sr-only">New Selector tag</span>
               <input type="text" name="archive-tag-name" maxlength="80" autocomplete="off" placeholder="TAG NAME" disabled>
             </label>
             <button class="text-action" type="submit" disabled>[ + NEW TAG ]</button>
           </form>
           <p class="archive-tag-message" role="status" hidden></p>
-          <button class="archive-tag-clear text-action" type="button" aria-label="Clear Select tag filters" hidden>[ CLEAR ]</button>
+          <button class="archive-tag-clear text-action" type="button" aria-label="Clear Selector tag filters" hidden>[ CLEAR ]</button>
           <div class="archive-tag-list" aria-live="polite"></div>
         </section>
 
@@ -81,12 +89,12 @@
             <button class="text-action" id="archive-share-pdf" type="button" hidden>[ SAVE / SHARE PDF ]</button>
             <button class="text-action" id="archive-download-pdf" type="button">[ DOWNLOAD PDF ]</button>
           </div>
-          <p class="archive-current-project archive-all-works-label">SAVED WORKS</p>
+          <p class="archive-current-project archive-all-works-label">ALL SELECTOR WORKS</p>
           <p class="archive-result-count" aria-live="polite">LOADING</p>
         </div>
 
         <div class="archive-header-tools">
-          <div class="archive-view-switch" aria-label="Choose Select view">
+          <div class="archive-view-switch" aria-label="Choose Selector view">
             <span>VIEW:</span>
             <button class="archive-view-button" type="button" data-archive-view="single" aria-pressed="false">SINGLE</button>
             <span>/</span>
@@ -96,8 +104,8 @@
           </div>
 
           <label class="archive-search">
-            <span class="sr-only">Search Select</span>
-            <input type="search" placeholder="SEARCH SELECT" autocomplete="off" disabled>
+            <span class="sr-only">Search Selector</span>
+            <input type="search" placeholder="SEARCH SELECTOR" autocomplete="off" disabled>
           </label>
         </div>
       </header>

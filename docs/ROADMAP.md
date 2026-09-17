@@ -42,8 +42,8 @@ Implementation should verify the largest real preview display and HiDPI needs be
 ## EXPORTS — LIVE
 
 - DIRECT CHAINED SELECT is active-Project-only: `[ EXPORT CHAINED SELECT ]` opens the shared picker and `[ EXPORT SELECT ]` directly generates/downloads. It uses fresh Project membership: managed own Works use direct-management-authorized private originals, while external saved Works retain the strict public canonical LARGE path; it has no review page or legacy fallback.
-- Both SELECT and Portfolio use export-local per-Work image selection: cover first, otherwise first eligible image by `sort_order`; each included Work retains at least one image. Selection is not persisted and never mutates Work/media state.
-- SELECT includes all non-deleted Works from directly managed Artist Profiles automatically, including drafts, alongside explicit external saves. Both use the same private Tags and ordered Projects; private Project PDFs may include managed drafts without publication, while external saves remain freshly public-eligible.
+- SELECTOR and Portfolio use export-local per-Work image selection: cover first, otherwise first eligible image by `sort_order`; each included Work retains at least one image. Selection is not persisted and never mutates Work/media state.
+- SELECTOR includes all non-deleted Works from directly managed Artist Profiles automatically, including drafts, alongside explicit external saves. Both use the same private Tags and ordered Projects; private Project PDFs may include managed drafts without publication, while external saves remain freshly public-eligible.
 - Portfolio remains a separate authorized private-original export using `purpose: pdf_export`; its picker uses `purpose: preview` only for temporary thumbnails.
 
 ## PRE-BETA HARDENING
@@ -72,7 +72,7 @@ Implementation should verify the largest real preview display and HiDPI needs be
 
 ## PRODUCT DIRECTIONS TO IMPLEMENT
 
-- Consider a broader optional GUIDE overlay and one-time first-login introduction beyond the implemented contextual `[ ? ]` reference; finalize any future copy in the sitewide copy audit.
+- Consider a broader optional GUIDE overlay and one-time first-login introduction beyond the implemented contextual `[ ? ]` reference; future onboarding should establish DISCOVER / FOLLOW → `[+]` → SELECTOR → TAGS / PROJECTS → CHAINED SELECT output.
 - Add persistent Profile publication status and the one-time Work-published/Profile-private explanation without changing visibility rules.
 - Implement external Vimeo-first video on Work detail: still selection, duration, mixed media, playback lifecycle and still-based PDF representation.
 - Implement CHAINED/CHAINED+ limits, upgrade handling and technical abuse ceilings while preserving existing content at limits.

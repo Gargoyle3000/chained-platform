@@ -24,8 +24,8 @@ export function updateArchiveWorkAction(button, work, isSaved, isManaged = false
   button.setAttribute(
     "aria-label",
     isManaged
-      ? `${work.title} is automatically available in Select`
-      : `${isSaved ? "Remove" : "Save"} ${work.title} ${isSaved ? "from" : "to"} Select`
+      ? `${work.title} is automatically available in Selector`
+      : `${isSaved ? "Remove" : "Save"} ${work.title} ${isSaved ? "from" : "to"} Selector`
   );
 }
 
@@ -48,7 +48,7 @@ export function createArchiveWorkAction(work, archiveState, announce = () => {},
       const isSaved = await archiveState.toggle(work.id);
       updateArchiveWorkAction(button, work, isSaved, false);
     } catch {
-      announce("SELECT IS CURRENTLY UNAVAILABLE");
+      announce("SELECTOR IS CURRENTLY UNAVAILABLE");
     } finally {
       button.disabled = false;
       button.removeAttribute("aria-busy");

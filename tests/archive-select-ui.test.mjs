@@ -4,7 +4,7 @@ import { access, readFile } from "node:fs/promises";
 
 const read = (file) => readFile(new URL(`../${file}`, import.meta.url), "utf8");
 
-test("SELECT is the user-facing private workspace while Archive stays internal and CHAINED SELECT stays the export", async () => {
+test("SELECTOR is the user-facing private workspace while Archive stays internal and CHAINED SELECT stays the export", async () => {
   const [page, projectPage, action, repository, discover] = await Promise.all([
     read("archive.html"),
     read("archive-project.html"),
@@ -13,17 +13,18 @@ test("SELECT is the user-facing private workspace while Archive stays internal a
     read("discover.html")
   ]);
 
-  assert.match(page, /<title>Select — CHAINED<\/title>/);
-  assert.match(page, /href="archive\.html">SELECT<\/a>/);
-  assert.match(page, /<h1>SELECT<\/h1>[\s\S]*?PRIVATE WORKSPACE \/ ARCHIVE/);
-  assert.match(page, /placeholder="SEARCH SELECT"/);
-  assert.match(page, /aria-label="Choose Select view"/);
-  assert.match(projectPage, /<title>Select Project — CHAINED<\/title>/);
-  assert.match(projectPage, /\[ BACK TO SELECT \]/);
-  assert.match(discover, /<template data-authenticated-navigation>[\s\S]*?href="archive\.html">SELECT<\/a>/);
-  assert.match(action, /\$\{isSaved \? "Remove" : "Save"\}[\s\S]*?Select/);
-  assert.match(action, /SELECT IS CURRENTLY UNAVAILABLE/);
+  assert.match(page, /<title>Selector — CHAINED<\/title>/);
+  assert.match(page, /href="archive\.html">SELECTOR<\/a>/);
+  assert.match(page, /<h1>SELECTOR<\/h1>[\s\S]*?PRIVATE WORKSPACE \/ ARCHIVE/);
+  assert.match(page, /placeholder="SEARCH SELECTOR"/);
+  assert.match(page, /aria-label="Choose Selector view"/);
+  assert.match(projectPage, /<title>Project — CHAINED<\/title>/);
+  assert.match(projectPage, /\[ BACK TO SELECTOR \]/);
+  assert.match(discover, /<template data-authenticated-navigation>[\s\S]*?href="archive\.html">SELECTOR<\/a>/);
+  assert.match(action, /\$\{isSaved \? "Remove" : "Save"\}[\s\S]*?Selector/);
+  assert.match(action, /SELECTOR IS CURRENTLY UNAVAILABLE/);
   assert.match(page, /\[ EXPORT CHAINED SELECT \]/);
+  assert.doesNotMatch(page, /CHAINED SELECTOR/);
   assert.match(repository, /ARCHIVE_DATA_SOURCE = "supabase-only"/);
   assert.match(repository, /\.from\("archive_items"\)/);
 });
@@ -74,14 +75,13 @@ test("managed Works use normal SELECT organisation without an opt-out control", 
   ]);
   assert.match(script, /if \(work\.origin !== "managed"\) management\.menu\.append\(remove\)/);
   assert.match(action, /if \(archiveState\.isManaged\(work\.id\)\) return null/);
-  assert.match(action, /automatically available in Select/);
+  assert.match(action, /automatically available in Selector/);
   assert.match(repository, /listManagedSelectWorks/);
   assert.match(repository, /selectPreviewBatchResult/);
   assert.match(repository, /origin: "managed"/);
   assert.match(discover, /const archiveAction = createArchiveAction[\s\S]*?if \(archiveAction\) metadata\.append\(archiveAction\)/);
   assert.match(following, /const archiveAction = createArchiveAction[\s\S]*?if \(archiveAction\) metadata\.append\(archiveAction\)/);
   assert.match(artwork, /const archiveAction = createArchiveAction[\s\S]*?if \(archiveAction\) fragment\.append\(archiveAction, archiveStatus\)/);
-  assert.doesNotMatch(script, /PERSONAL|FOLLOW/);
 });
 
 test("old review route, review state, and session navigation are absent", async () => {

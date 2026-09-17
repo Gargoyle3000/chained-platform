@@ -5,6 +5,7 @@ import {
   archiveProjectLocation,
   currentProjectChainedSelectSource,
   filterArchiveProjectWorks,
+  normalizeArchiveSourceScope,
   orderedProjectWorks,
   projectSelectWorkIds,
   resolveArchiveProjectId,
@@ -37,6 +38,8 @@ const tagCreateButton = document.querySelector(".archive-tag-create button");
 const tagMessage = document.querySelector(".archive-tag-message");
 const tagClearButton = document.querySelector(".archive-tag-clear");
 const tagList = document.querySelector(".archive-tag-list");
+const sourceFilters = document.querySelector(".archive-source-section");
+const sourceFilterButtons = [...document.querySelectorAll("[data-archive-source]")];
 const projectList = document.querySelector(".archive-project-list");
 const projectContext = document.querySelector(".archive-project-context");
 const projectTitle = document.querySelector("#archive-current-project");
@@ -56,6 +59,7 @@ let works = [];
 let tags = [];
 let tagIdsByWork = new Map();
 let activeTagIds = new Set();
+let activeSourceScope = "all";
 let projects = [];
 let projectItems = [];
 let projectIdsByWork = new Map();
@@ -181,7 +185,7 @@ function createSupergridManagement(work) {
   toggle.textContent = "[ ... ]";
   toggle.setAttribute("aria-haspopup", "menu");
   toggle.setAttribute("aria-expanded", "false");
-  toggle.setAttribute("aria-label", `Manage ${work.title} in Select`);
+  toggle.setAttribute("aria-label", `Manage ${work.title} in Selector`);
 
   const menu = document.createElement("div");
   menu.className = "archive-supergrid-menu";
@@ -492,12 +496,12 @@ function createSavedWork(work) {
   const remove = document.createElement("button");
   remove.className = "text-action archive-remove";
   remove.type = "button";
-  remove.textContent = "[ REMOVE FROM SELECT ]";
-  remove.setAttribute("aria-label", `Remove ${work.title} from Select`);
+  remove.textContent = "[ REMOVE FROM SELECTOR ]";
+  remove.setAttribute("aria-label", `Remove ${work.title} from Selector`);
   remove.addEventListener("click", async () => {
     remove.disabled = true;
     try { await repository.removeWork(work.id); await loadArchive(); }
-    catch { remove.disabled = false; emptyMessage.textContent = "SELECT COULD NOT BE UPDATED"; emptyMessage.hidden = false; }
+    catch { remove.disabled = false; emptyMessage.textContent = "SELECTOR COULD NOT BE UPDATED"; emptyMessage.hidden = false; }
   });
   const tagAssignment = createTagAssignment(work);
   const projectAssignment = createProjectAssignment(work);
@@ -518,6 +522,12 @@ function createSavedWork(work) {
 
 function selectedProjectWorks() {
   return orderedProjectWorks(works, projectItems, selectedProjectId);
+}
+
+function sourceScopeLabel(scope = activeSourceScope) {
+  return ({ all: "ALL SELECTOR WORKS", managed: "PERSONAL WORKS", saved: "SAVED WORKS" })[
+    normalizeArchiveSourceScope(scope)
+  ];
 }
 
 async function hydrateProjectImageSelection(project) {
@@ -586,8 +596,8 @@ function downloadProjectPdf() {
 }
 
 function selectLimitMessage(limit) {
-  if (limit.workCount > CHAINED_SELECT_MAX_WORKS) return `SELECT TOO LARGE · ${limit.workCount} WORKS · MAX ${CHAINED_SELECT_MAX_WORKS}`;
-  return `SELECT TOO LARGE · ${limit.imageCount} IMAGES · MAX ${CHAINED_SELECT_MAX_IMAGES}`;
+  if (limit.workCount > CHAINED_SELECT_MAX_WORKS) return `CHAINED SELECT TOO LARGE · ${limit.workCount} WORKS · MAX ${CHAINED_SELECT_MAX_WORKS}`;
+  return `CHAINED SELECT TOO LARGE · ${limit.imageCount} IMAGES · MAX ${CHAINED_SELECT_MAX_IMAGES}`;
 }
 
 async function runProjectChainedSelect(project) {
@@ -604,7 +614,7 @@ async function runProjectChainedSelect(project) {
     }
     const { project: currentProject, source } = current;
     if (!source.workIds.length) {
-      setProjectSelectStatus("SELECT HAS NO WORKS");
+      setProjectSelectStatus("PROJECT HAS NO WORKS");
       return;
     }
     const [{ repository: workRepository }, publisherProfiles] = await Promise.all([
@@ -628,7 +638,7 @@ async function runProjectChainedSelect(project) {
     });
     if (result.status === "changed") {
       const unavailable = result.unavailableIds.length;
-      setProjectSelectStatus(`SELECT CHANGED · ${unavailable} WORK${unavailable === 1 ? " IS" : "S ARE"} NO LONGER AVAILABLE FOR SELECT`);
+      setProjectSelectStatus(`CHAINED SELECT CHANGED · ${unavailable} WORK${unavailable === 1 ? " IS" : "S ARE"} NO LONGER AVAILABLE FOR EXPORT`);
     } else if (result.status === "limit") {
       setProjectSelectStatus(selectLimitMessage(result.limit));
     } else if (result.status === "ready") {
@@ -647,13 +657,14 @@ function renderWorks() {
   closeWorkManagementMenu();
   closeProjectMenu();
   const searchTerm = searchInput.value.trim().toLocaleLowerCase();
-  const visible = filterArchiveProjectWorks(selectedProjectWorks(), searchTerm, activeTagIds, tagIdsForWork);
+  const sourceScope = selectedProjectId ? "all" : activeSourceScope;
+  const visible = filterArchiveProjectWorks(selectedProjectWorks(), searchTerm, activeTagIds, tagIdsForWork, sourceScope);
   grid.replaceChildren(...visible.map(createSavedWork));
   setResultCount(visible.length);
   emptyMessage.hidden = visible.length !== 0;
   if (!visible.length) emptyMessage.textContent = selectedProjectId
-    ? "NO SAVED WORKS MATCH THIS PROJECT"
-    : "NO SAVED WORKS";
+    ? "NO WORKS MATCH THIS PROJECT"
+    : `NO ${sourceScopeLabel(sourceScope)}`;
   grid.setAttribute("aria-busy", "false");
 }
 
@@ -694,8 +705,19 @@ function renderTags() {
   tagClearButton.hidden = activeTagIds.size === 0;
 }
 
+function renderSourceFilters() {
+  const projectIsOpen = Boolean(selectedProjectId);
+  sourceFilters.hidden = projectIsOpen;
+  sourceFilterButtons.forEach((button) => {
+    const active = button.dataset.archiveSource === activeSourceScope;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
 function renderProjects() {
   const project = selectedProject();
+  renderSourceFilters();
   projectContext.hidden = !project;
   allWorksLabel.hidden = Boolean(project);
   projectSelectButton.hidden = !project;
@@ -715,6 +737,7 @@ function renderProjects() {
       disposeThumbnail: (url) => repository.releaseProjectSelectThumbnail(url)
     });
   } else {
+    allWorksLabel.textContent = sourceScopeLabel();
     clearProjectExportState();
     projectSelectButton.onclick = null;
   }
@@ -763,7 +786,7 @@ async function loadArchive() {
     await hydrateProjectImageSelection(selectedProject());
   } catch {
     setResultCount(0);
-    emptyMessage.textContent = "SELECT IS CURRENTLY UNAVAILABLE";
+    emptyMessage.textContent = "SELECTOR IS CURRENTLY UNAVAILABLE";
     emptyMessage.hidden = false;
     grid.setAttribute("aria-busy", "false");
   }
@@ -840,6 +863,16 @@ function initialiseTags() {
   });
 }
 
+function initialiseSourceFilters() {
+  sourceFilterButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      activeSourceScope = normalizeArchiveSourceScope(button.dataset.archiveSource);
+      renderSourceFilters();
+      renderWorks();
+    });
+  });
+}
+
 async function initialiseArchive() {
   initialiseView();
   const resolved = await getArchiveRepository();
@@ -877,6 +910,7 @@ async function initialiseArchive() {
     if (openProjectMenu && !openProjectMenu.container.contains(event.target)) closeProjectMenu();
   });
   initialiseTags();
+  initialiseSourceFilters();
   await loadArchive();
 }
 
