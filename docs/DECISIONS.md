@@ -2,7 +2,7 @@
 
 
 
-Last updated: 2026-09-16
+Last updated: 2026-09-17
 
 
 
@@ -110,7 +110,7 @@ Last updated: 2026-09-16
 
 \- Do not hide major view controls inside a dropdown when they benefit from being directly visible.
 
-\- Contextual `[ ? ]` help is permanent, user-invoked and page/view-specific within the authenticated workspace. It intentionally sits outside primary navigation as a quiet fixed bottom-left utility on desktop and mobile. It uses THIS PAGE / EDIT HERE / CONNECTED TO to clarify practical source-of-truth and relationships. It is not an onboarding wizard, tutorial or standalone Guide, and v1 provides no navigation shortcuts so unsaved work is never displaced.
+\- Contextual `[ ? ]` help is permanent, user-invoked and page/view-specific throughout the relevant signed-in CHAINED experience, including public/network-facing views. It is authenticated-only for now and intentionally sits outside primary navigation as a quiet fixed bottom-left utility on desktop and mobile. It uses THIS PAGE / EDIT HERE / CONNECTED TO to clarify practical source-of-truth and relationships. It is not an onboarding wizard, tutorial or standalone Guide, and v1 provides no navigation shortcuts so unsaved work is never displaced.
 \- Contextual `[ ? ]` help is maintained as part of relevant product changes so that it remains aligned with actual CHAINED behavior and source-of-truth relationships over time.
 \- DISCOVER and FOLLOW progressively load the next deterministic batch when scrolling approaches the feed end. FOLLOW uses its cursor continuation; DISCOVER retains its bounded artist-spread candidate ordering. This is quiet progressive loading, not immediate full-feed loading, and Dashboard pagination remains manual.
 

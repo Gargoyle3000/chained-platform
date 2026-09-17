@@ -201,7 +201,11 @@ export async function applyAuthenticatedNavigation(client) {
   const actions = ensureHeaderActions(header, navigation);
   ensureProfileGroup(navigation);
   ensureSessionIndicator(actions, client);
-  mountContextualHelp();
+  try {
+    mountContextualHelp(window.location.pathname, { authenticated: true });
+  } catch {
+    // Contextual help is optional; authenticated navigation must remain usable.
+  }
   await ensureAdminInvitationNavigation(client);
 
   header.dataset.authNavigationReady = "true";

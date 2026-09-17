@@ -1,6 +1,6 @@
 # CHAINED — CURRENT STATE
 
-Last updated: 2026-09-16
+Last updated: 2026-09-17
 
 ## NOW
 
@@ -35,7 +35,7 @@ Current focus: complete and polish core product surfaces before broader rollout.
 - Discover NOSY and Follow progressively append their existing deterministic batches as an unobtrusive end sentinel approaches. Follow retains its cursor RPC; Discover retains its bounded, artist-spread candidate ordering. Dashboard mobile `[ LOAD MORE ]` remains unchanged.
 - Dashboard mobile initially shows 10 recent Works and 10 recent Presentations per independent list; `[ LOAD MORE ]` reveals 10 at a time. Desktop retains its internal-scroll overview behavior.
 - New-Artist empty states are quiet and functional: Works, Presentations and Agenda retain direct add actions; CV and Press retain their inline add forms; Archive stays a neutral empty private workspace; and Dashboard hides REQUESTS until an action or a real failure needs attention. Draft profiles remain outside public visibility.
-- Authenticated workspace pages now provide permanent user-invoked contextual `[ ? ]` help as a quiet fixed bottom-left utility outside primary navigation. One compact attached popup uses route-specific THIS PAGE / EDIT HERE / CONNECTED TO copy for Dashboard, Works, Presentations, Agenda, Profile, CV, Press and Archive, including their distinct editors; it is non-navigational, never opens automatically, and `[ ? ]` toggles it open or closed.
+- Signed-in users can access permanent user-invoked contextual `[ ? ]` help throughout relevant CHAINED routes, including Dashboard/Artist workspace and public/network-facing Discover, Follow, Profile, Work, Agenda and Presentation views. The quiet fixed bottom-left utility uses one compact route-specific THIS PAGE / EDIT HERE / CONNECTED TO popup; it is authenticated-only for now, non-navigational, never opens automatically, and `[ ? ]` toggles it open or closed.
 - Published Works can be removed directly from WORKS through `[ DELETE ]` → `[ CONFIRM DELETE ]`; the backend unpublishes, recalls exact public derivatives, and soft-deletes only after cleanup succeeds. A cleanup-pending retry resumes the same lifecycle.
 - Public Presentation v1 is live: profile lists use canonical Presentation detail links, and public detail pages show core metadata with optional description and validated external URL. Presentation media and Work links are not yet modeled.
 - Presentation v2 trust layer, management context, participation consent, and Dashboard REQUESTS are live. Public Presentation pages can render their safe context projection, including participants, accepted visible Works and Program; authorized recipients can decide co-operator invitations, Work proposals and participation requests from Dashboard.
