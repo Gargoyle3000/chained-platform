@@ -55,6 +55,8 @@ body[data-auth-protected="true"] > main {
   color: var(--black);
   cursor: pointer;
   font: inherit;
+  font-size: 75%;
+  line-height: 1;
 }
 
 .site-header .auth-logout-button {

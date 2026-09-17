@@ -18,7 +18,7 @@ test("page scrolling keeps a native desktop scrollbar", async () => {
   assert.match(styles, /html::-webkit-scrollbar,\s+body::-webkit-scrollbar \{\s+width: var\(--scrollbar-size\);/);
   assert.match(styles, /html::-webkit-scrollbar-thumb,\s+body::-webkit-scrollbar-thumb \{\s+border-radius: 0;\s+background: var\(--scrollbar-thumb\);/);
   assert.match(styles, /--scrollbar-thumb: var\(--accent\);/);
-  assert.match(styles, /--scrollbar-size: 7px;/);
+  assert.match(styles, /--scrollbar-size: 6px;/);
   assert.doesNotMatch(styles, /html\.chained-page-scrollbar/);
   assert.doesNotMatch(indicators, /attachPageIndicator\(root\.document\)/);
 });

@@ -122,6 +122,8 @@ test("authenticated navigation mounts a fixed help utility outside the header", 
   assert.match(help, /document\.body\.append\(trigger\);/);
   assert.doesNotMatch(help, /indicator\.append\(trigger\);/);
   assert.match(css, /\.contextual-help-trigger \{[\s\S]*?position: fixed;[\s\S]*?bottom: 20px;[\s\S]*?left: var\(--page-gutter\)/);
+  assert.match(css, /\.contextual-help-trigger \{[\s\S]*?min-height: 24px;[\s\S]*?font-size: 75%;[\s\S]*?line-height: 1;/);
+  assert.doesNotMatch(css, /\.contextual-help-panel \{[^}]*font-size:/);
   assert.match(css, /bottom: calc\(16px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(help, /if \(!canMountContextualHelp\(pathname, \{ authenticated \}\)\) return null;/);
   assert.match(dashboard, /data-auth-protected="true"/);

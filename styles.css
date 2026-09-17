@@ -30,7 +30,7 @@
   --border: 1px solid var(--line);
   --scrollbar-thumb: var(--accent);
   --scrollbar-track: var(--white);
-  --scrollbar-size: 7px;
+  --scrollbar-size: 6px;
 }
 
 /* =========================================================
