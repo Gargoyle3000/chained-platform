@@ -15,10 +15,11 @@ test("page scrolling keeps a native desktop scrollbar", async () => {
 
   assert.match(styles, /@media \(min-width: 701px\) and \(hover: hover\)/);
   assert.match(styles, /html,\s+body \{\s+scrollbar-gutter: stable;/);
-  assert.match(styles, /html::-webkit-scrollbar,\s+body::-webkit-scrollbar \{\s+width: var\(--scrollbar-size\);/);
+  assert.match(styles, /html::-webkit-scrollbar,\s+body::-webkit-scrollbar \{\s+width: var\(--scrollbar-width-page\);/);
   assert.match(styles, /html::-webkit-scrollbar-thumb,\s+body::-webkit-scrollbar-thumb \{\s+border-radius: 0;\s+background: var\(--scrollbar-thumb\);/);
   assert.match(styles, /--scrollbar-thumb: var\(--accent\);/);
-  assert.match(styles, /--scrollbar-size: 6px;/);
+  assert.match(styles, /--scrollbar-width-page: 6px;/);
+  assert.match(styles, /--scrollbar-width-compact: 3px;/);
   assert.doesNotMatch(styles, /html\.chained-page-scrollbar/);
   assert.doesNotMatch(indicators, /attachPageIndicator\(root\.document\)/);
 });
@@ -29,7 +30,7 @@ test("Dashboard Overview uses a native draggable list scrollbar", async () => {
     source("dashboard-overview.js")
   ]);
 
-  assert.match(styles, /dashboard-work-list::-webkit-scrollbar,\s+\.dashboard-overview-page\s+\.dashboard-recent-presentation-list::-webkit-scrollbar \{\s+width: var\(--scrollbar-size\);/);
+  assert.match(styles, /dashboard-work-list::-webkit-scrollbar,\s+\.dashboard-overview-page\s+\.dashboard-recent-presentation-list::-webkit-scrollbar \{\s+width: var\(--scrollbar-width-compact\);/);
   assert.match(styles, /dashboard-work-list::-webkit-scrollbar-thumb/);
   assert.match(styles, /scrollbar-color: var\(--scrollbar-thumb\) var\(--scrollbar-track\)/);
   assert.match(styles, /dashboard-recent-presentation-list::-webkit-scrollbar-thumb \{\s+border-radius: 0;\s+background: var\(--scrollbar-thumb\);/);

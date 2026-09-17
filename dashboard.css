@@ -1306,8 +1306,8 @@
     .dashboard-work-list::-webkit-scrollbar,
     .dashboard-overview-page
     .dashboard-recent-presentation-list::-webkit-scrollbar {
-      width: var(--scrollbar-size);
-      height: var(--scrollbar-size);
+      width: var(--scrollbar-width-compact);
+      height: var(--scrollbar-width-compact);
     }
 
     .dashboard-overview-page

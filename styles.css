@@ -30,7 +30,8 @@
   --border: 1px solid var(--line);
   --scrollbar-thumb: var(--accent);
   --scrollbar-track: var(--white);
-  --scrollbar-size: 6px;
+  --scrollbar-width-page: 6px;
+  --scrollbar-width-compact: 3px;
 }
 
 /* =========================================================
@@ -73,8 +74,8 @@ html {
   @supports selector(::-webkit-scrollbar) {
     html::-webkit-scrollbar,
     body::-webkit-scrollbar {
-      width: var(--scrollbar-size);
-      height: var(--scrollbar-size);
+      width: var(--scrollbar-width-page);
+      height: var(--scrollbar-width-page);
     }
 
     html::-webkit-scrollbar-track,
