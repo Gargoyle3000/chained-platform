@@ -6,6 +6,7 @@ import { createEditState, resetEdits, resetLight } from "./state.mjs";
 import { defaultCorners, homography, mapPoint, validateQuadrilateral, warpImageData, warpToCorners } from "./perspective.mjs";
 import { compositeOpaqueWhite, maskSelected, rotatedDimensions, scaledDimensions } from "./render-helpers.mjs";
 import { canShareImageFile, deliverExport, exportFilename } from "./export-delivery.mjs";
+import { connectedMaskFromPixels } from "./connected-mask.mjs";
 
 test("HTML versions matching assets and contains every direct control binding", async () => {
   const [html, script] = await Promise.all([
@@ -13,7 +14,7 @@ test("HTML versions matching assets and contains every direct control binding", 
     readFile(new URL("./photo-corrector.js", import.meta.url), "utf8")
   ]);
   assert.match(html, /photo-corrector\.css\?v=4/);
-  assert.match(html, /photo-corrector\.js\?v=5/);
+  assert.match(html, /photo-corrector\.js\?v=6/);
   assert.doesNotMatch(script, /data-guides/);
   assert.match(html, /<section class="workspace" data-workspace>/);
   assert.match(html, /<section class="editor">[\s\S]*data-import-panel/);
@@ -41,6 +42,16 @@ test("transparent raster pixels resolve to opaque white", () => {
   const pixels = new Uint8ClampedArray([20, 30, 40, 0, 0, 0, 0, 128]);
   compositeOpaqueWhite(pixels);
   assert.deepEqual([...pixels], [255, 255, 255, 255, 127, 127, 127, 255]);
+});
+
+test("connected wall analysis ignores guide pixels drawn on the display overlay", () => {
+  const width = 5, height = 5, clean = new Uint8ClampedArray(width * height * 4);
+  for (let index = 0; index < clean.length; index += 4) { clean[index] = 200; clean[index + 1] = 200; clean[index + 2] = 200; clean[index + 3] = 255; }
+  const displayed = clean.slice();
+  for (let y = 0; y < height; y++) { const offset = (y * width + 2) * 4; displayed[offset] = 0; displayed[offset + 1] = 252; displayed[offset + 2] = 40; }
+  assert.notDeepEqual(displayed, clean);
+  const mask = connectedMaskFromPixels(clean, width, height, 0, 0, 35);
+  assert.equal(mask.every(Boolean), true);
 });
 
 class TestFile {
