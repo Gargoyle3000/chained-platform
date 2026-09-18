@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Photo Corrector — CHAINED tools</title>
+  <link rel="stylesheet" href="photo-corrector.css?v=4">
+</head>
+<body>
+  <main class="corrector">
+    <header><h1>PHOTO CORRECTOR</h1><p>LOCAL BROWSER UTILITY · NO UPLOAD</p></header>
+    <section class="workspace" data-workspace>
+      <aside class="controls">
+        <section><h2>GEOMETRY</h2>
+          <p><button data-rotate="-90">[ ROTATE LEFT ]</button> <button data-rotate="90">[ ROTATE RIGHT ]</button></p>
+          <label>STRAIGHTEN <input data-straighten type="range" min="-10" max="10" value="0" step="0.1"></label>
+          <p><button data-warp>[ WARP / PERSPECTIVE ]</button><span data-warp-actions hidden> <button data-apply-warp>[ APPLY ]</button> <button data-cancel-warp>[ CANCEL ]</button></span></p>
+          <small>Green guides stay fixed while you move image corners.</small>
+        </section>
+        <section><h2>LIGHT</h2>
+          <label>EXPOSURE <input data-light="exposure" type="range" min="-2" max="2" value="0" step="0.05"></label>
+          <label>CONTRAST <input data-light="contrast" type="range" min="-100" max="100" value="0"></label>
+          <label>HIGHLIGHTS <input data-light="highlights" type="range" min="-100" max="100" value="0"></label>
+          <label>TEMPERATURE <input data-light="temperature" type="range" min="-100" max="100" value="0"></label>
+          <button data-reset-light>[ RESET LIGHT ]</button>
+        </section>
+        <section><h2>WALL</h2>
+          <button data-pick-wall>[ PICK WALL ]</button>
+          <label>TOLERANCE <input data-wall="tolerance" type="range" min="0" max="150" value="35"></label>
+          <label>BRIGHTNESS <input data-wall="brightness" type="range" min="-50" max="50" value="0"></label>
+          <label>NEUTRALIZE <input data-wall="neutralize" type="range" min="0" max="100" value="0"></label>
+          <label>FEATHER <input data-wall="feather" type="range" min="0" max="20" value="0"></label>
+          <small>Connected local selection only. Brush refinement is prepared for a later version.</small>
+        </section>
+        <section><h2>EXPORT</h2><button data-before>[ HOLD BEFORE ]</button><button data-reset>[ RESET ALL ]</button><button data-export="image/jpeg">[ EXPORT JPG ]</button><button data-export="image/png">[ EXPORT PNG ]</button></section>
+      </aside>
+      <section class="editor">
+        <section class="editor-empty" data-import-panel>
+          <input id="image-input" type="file" accept="image/jpeg,image/png" hidden>
+          <button type="button" data-import>[ DROP / UPLOAD IMAGE ]</button>
+          <p data-dropzone>DROP JPG OR PNG HERE · MAX 20 MB / 50 MP</p>
+          <p role="status" data-status></p>
+        </section>
+        <canvas data-canvas hidden></canvas>
+        <p data-file-info hidden></p>
+        <p data-editor-status hidden></p>
+      </section>
+    </section>
+  </main>
+  <script type="module" src="photo-corrector.js?v=4"></script>
+</body>
+</html>
