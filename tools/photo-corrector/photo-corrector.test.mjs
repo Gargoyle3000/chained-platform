@@ -5,6 +5,7 @@ import { MAX_BYTES, validateDimensions, validateFile } from "./validation.mjs";
 import { createEditState, resetEdits, resetLight } from "./state.mjs";
 import { defaultCorners, homography, mapPoint, validateQuadrilateral, warpImageData, warpToCorners } from "./perspective.mjs";
 import { compositeOpaqueWhite, maskSelected, rotatedDimensions, scaledDimensions } from "./render-helpers.mjs";
+import { canShareImageFile, deliverExport, exportFilename } from "./export-delivery.mjs";
 
 test("HTML versions matching assets and contains every direct control binding", async () => {
   const [html, script] = await Promise.all([
@@ -12,7 +13,7 @@ test("HTML versions matching assets and contains every direct control binding", 
     readFile(new URL("./photo-corrector.js", import.meta.url), "utf8")
   ]);
   assert.match(html, /photo-corrector\.css\?v=4/);
-  assert.match(html, /photo-corrector\.js\?v=4/);
+  assert.match(html, /photo-corrector\.js\?v=5/);
   assert.doesNotMatch(script, /data-guides/);
   assert.match(html, /<section class="workspace" data-workspace>/);
   assert.match(html, /<section class="editor">[\s\S]*data-import-panel/);
@@ -40,6 +41,57 @@ test("transparent raster pixels resolve to opaque white", () => {
   const pixels = new Uint8ClampedArray([20, 30, 40, 0, 0, 0, 0, 128]);
   compositeOpaqueWhite(pixels);
   assert.deepEqual([...pixels], [255, 255, 255, 255, 127, 127, 127, 255]);
+});
+
+class TestFile {
+  constructor(parts, name, options) { this.parts = parts; this.name = name; this.type = options.type; }
+}
+
+function deliveryPlatform({ coarse = false, canShare = false, share, createObjectURL } = {}) {
+  const downloads = [], revoked = [];
+  return {
+    File: TestFile,
+    navigator: { canShare: () => canShare, share },
+    matchMedia: () => ({ matches: coarse }),
+    URL: { createObjectURL: createObjectURL || (() => "blob:corrected"), revokeObjectURL: url => revoked.push(url) },
+    document: { createElement: () => ({ click() { downloads.push({ href: this.href, download: this.download }); } }) },
+    setTimeout: callback => callback(),
+    downloads,
+    revoked
+  };
+}
+
+test("mobile file sharing preserves the Blob, MIME type and filename", async () => {
+  const blob = new Blob(["image bytes"], { type: "image/png" }), shared = [];
+  const platform = deliveryPlatform({ coarse: true, canShare: true, share: data => shared.push(data) });
+  assert.equal(exportFilename("image/png", 123), "corrected-123.png");
+  assert.equal(await deliverExport(blob, "corrected-123.png", platform), "shared");
+  assert.equal(shared[0].files[0].parts[0], blob);
+  assert.equal(shared[0].files[0].name, "corrected-123.png");
+  assert.equal(shared[0].files[0].type, "image/png");
+  assert.deepEqual(platform.downloads, []);
+});
+
+test("share cancellation is quiet and genuine share failures remain failures", async () => {
+  const blob = new Blob(["image bytes"], { type: "image/jpeg" });
+  const cancelled = deliveryPlatform({ coarse: true, canShare: true, share: () => Promise.reject(Object.assign(new Error(), { name: "AbortError" })) });
+  assert.equal(await deliverExport(blob, "corrected-123.jpg", cancelled), "cancelled");
+  const failed = deliveryPlatform({ coarse: true, canShare: true, share: () => Promise.reject(new Error("share failed")) });
+  await assert.rejects(() => deliverExport(blob, "corrected-123.jpg", failed), /share failed/);
+});
+
+test("desktop and unsupported sharing use the current download fallback and revoke its URL", async () => {
+  const blob = new Blob(["image bytes"], { type: "image/jpeg" });
+  const desktop = deliveryPlatform({ coarse: false, canShare: true, share: () => assert.fail("desktop must not share") });
+  assert.equal(canShareImageFile(desktop, new TestFile([blob], "corrected-123.jpg", { type: blob.type })), false);
+  assert.equal(await deliverExport(blob, "corrected-123.jpg", desktop), "downloaded");
+  assert.deepEqual(desktop.downloads, [{ href: "blob:corrected", download: "corrected-123.jpg" }]);
+  assert.deepEqual(desktop.revoked, ["blob:corrected"]);
+  const unsupported = deliveryPlatform({ coarse: true, canShare: false });
+  assert.equal(await deliverExport(blob, "corrected-123.jpg", unsupported), "downloaded");
+  const throwing = deliveryPlatform({ coarse: true });
+  throwing.navigator.canShare = () => { throw new TypeError("unsupported files"); };
+  assert.equal(await deliverExport(blob, "corrected-123.jpg", throwing), "downloaded");
 });
 
 test("accepts supported files within the 20 MB limit", () => {
