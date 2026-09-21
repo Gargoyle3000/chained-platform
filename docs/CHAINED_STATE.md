@@ -14,7 +14,7 @@ Current focus: complete and polish core product surfaces before broader rollout.
 - The trusted Artist invitation journey is production-validated end-to-end: Admin Console → transactional invite → password-update → Dashboard → ordinary password login. The disposable production test account and its related Auth, account, profile, membership, invitation and test-audit data were removed after validation; the first real Artist invitation remains intentionally pending Peer's onboarding availability.
 - Trusted account invitations expire after 12 hours in both the database default/approval fallback and Supabase Auth invite/OTP configuration.
 - An invite-only Auth session without a password cannot enter Dashboard: the self-scoped `current_account_has_password()` guard redirects to `password-update.html`, and password creation is rechecked server-side before Dashboard access.
-- Anonymous root currently serves the timeless, headerless public CHAINED landing: digital infrastructure for professional art practice, without launch, funding, regional or invitation context. Its only routes are `[ DISCOVER ]`, `[ AGENDA ]` and `[ PRIVATE ACCESS ]`; Discover retains its minimal `<CHAINED>` / `[ LOG IN ]` header. Active accounts continue directly into the authenticated environment.
+- Root `/` is a quiet session-aware CHAINED splash/router: active sessions continue to Dashboard; anonymous or unavailable sessions continue to the separate timeless, headerless public intro. The intro retains its `[ DISCOVER ]`, `[ AGENDA ]` and `[ PRIVATE ACCESS ]` routes; Discover retains its minimal `<CHAINED>` / `[ LOG IN ]` header. The root router does not intercept direct routes and implements no onboarding.
 
 ### Validated frontend polish
 

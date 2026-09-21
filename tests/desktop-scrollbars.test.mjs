@@ -36,4 +36,7 @@ test("Dashboard Overview uses a native draggable list scrollbar", async () => {
   assert.match(styles, /dashboard-recent-presentation-list::-webkit-scrollbar-thumb \{\s+border-radius: 0;\s+background: var\(--scrollbar-thumb\);/);
   assert.doesNotMatch(styles, /dashboard-work-list[\s\S]{0,400}scrollbar-width: none;/);
   assert.doesNotMatch(script, /dashboard-scroll-indicator/);
+
+  const compactListRules = styles.slice(styles.lastIndexOf("/* MINIMAL RECENT SCROLL INDICATOR */"));
+  assert.match(compactListRules, /dashboard-work-list,[\s\S]*dashboard-recent-presentation-list \{[\s\S]*padding-right: 12px;[\s\S]*scrollbar-gutter: stable;/);
 });
