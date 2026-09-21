@@ -615,6 +615,50 @@ test("private signed downloads re-sign only expired items once with bounded conc
   assert.ok(peak <= 2);
 });
 
+test("direct manager SELECT PDF delivery traverses gateway signing and retrieves image bytes", async () => {
+  const gatewayCalls = [];
+  const signedRequests = [];
+  const expected = new Uint8Array([82, 73, 70, 70]);
+  const media = createWorkMediaService(
+    { functions: { invoke: async (name, { body }) => {
+      gatewayCalls.push({ name, body });
+      return {
+        data: {
+          ok: true,
+          purpose: body.purpose,
+          media: [{ imageId: ID, url: "https://signed.example/delivery", mimeType: "image/webp", fileSize: expected.byteLength }]
+        },
+        error: null
+      };
+    } } },
+    {},
+    { fetcher: async (url) => {
+      signedRequests.push(url);
+      return new Response(expected, { status: 200, headers: { "content-type": "image/webp" } });
+    } }
+  );
+
+  const delivered = await media.downloadAuthorizedPrivateMedia([{ id: ID }], { purpose: "select_pdf_export", concurrency: 1 });
+  assert.deepEqual(gatewayCalls, [{ name: "authorized-private-media", body: { imageIds: [ID], purpose: "select_pdf_export" } }]);
+  assert.equal(signedRequests.length, 1);
+  assert.deepEqual(new Uint8Array(await delivered[0].blob.arrayBuffer()), expected);
+  assert.equal(delivered[0].blob.type, "image/webp");
+});
+
+test("unauthorized SELECT PDF callers never reach signed Storage delivery", async () => {
+  let signedRequests = 0;
+  const media = createWorkMediaService(
+    { functions: { invoke: async () => ({ data: null, error: { status: 403 } }) } },
+    {},
+    { fetcher: async () => { signedRequests += 1; return new Response(); }, wait: async () => {} }
+  );
+  await assert.rejects(
+    () => media.downloadAuthorizedPrivateMedia([{ id: ID }], { purpose: "select_pdf_export" }),
+    (error) => error.code === WORK_ERROR_CODES.UNAUTHORIZED && error.cause?.mediaStage === "authorization_gateway"
+  );
+  assert.equal(signedRequests, 0);
+});
+
 test("private media chunks more than 100 image IDs and retries temporary gateway failures twice", async () => {
   const ids = Array.from({ length: 101 }, (_, index) => `${String(index + 1).padStart(8, "0")}-0000-4000-8000-000000000000`);
   const calls = [];

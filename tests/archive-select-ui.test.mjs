@@ -30,7 +30,7 @@ test("SELECTOR is the user-facing private workspace while Archive stays internal
 });
 
 test("Archive renders direct Project SELECT export only from active Project state", async () => {
-  const [page, script] = await Promise.all([read("archive.html"), read("archive.js")]);
+  const [page, script, styles] = await Promise.all([read("archive.html"), read("archive.js"), read("archive.css")]);
   assert.match(page, /archive-project-context-actions[\s\S]*archive-select-project[^>]*>\[ EXPORT CHAINED SELECT \]/);
   assert.match(page, /archive-select-status/);
   assert.match(page, /id="archive-pdf-delivery"[\s\S]*id="archive-share-pdf"[\s\S]*\[ SAVE \/ SHARE PDF \][\s\S]*id="archive-download-pdf"[\s\S]*\[ DOWNLOAD PDF \]/);
@@ -50,6 +50,7 @@ test("Archive renders direct Project SELECT export only from active Project stat
   assert.match(script, /resolveThumbnail: \(image\) => repository\.projectSelectThumbnail\(image\)/);
   assert.match(script, /disposeThumbnail: \(url\) => repository\.releaseProjectSelectThumbnail\(url\)/);
   assert.match(script, /\[ LOADING IMAGES \]/);
+  assert.match(styles, /\.export-image-thumbnail-fallback\[hidden\]\s*\{\s*display:\s*none;\s*\}/);
   assert.doesNotMatch(script, /writeChainedSelectSession|archive-select\.html|filterSelectButton/);
 });
 
@@ -60,6 +61,7 @@ test("direct Project Select keeps explicit public and direct-managed private med
   assert.match(generator, /fetch\(image\.src/);
   assert.match(generator, /image\.exportSource === "managed-private"/);
   assert.match(generator, /downloadAuthorizedPrivateMedia\(\[image\], \{ purpose: "select_pdf_export"/);
+  assert.match(repository, /media:\s*managedWorkRepository\.media/);
   assert.match(repository, /derivativeLargePublicPath/);
   assert.doesNotMatch(repository, /private_object_path/);
 });

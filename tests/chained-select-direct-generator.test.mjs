@@ -108,6 +108,60 @@ test("direct generator keeps managed private originals separate from public Proj
   assert.deepEqual(cacheLoads, ["https://public.example/external-0.webp", "assets/fonts/CascadiaCode-Regular.ttf"]);
 });
 
+test("managed-only Project reaches PDF generation through the Archive repository media contract", async () => {
+  const stages = [];
+  const privateCalls = [];
+  const managed = {
+    ...work("managed"),
+    images: [{ id: "managed-image", order: 0, exportSource: "managed-private", uploadStatus: "ready" }]
+  };
+  const result = await generateProjectChainedSelect({
+    repository: {
+      media: {
+        async downloadAuthorizedPrivateMedia(images, options) {
+          privateCalls.push({ images: images.map((image) => image.id), options });
+          return images.map((image) => ({ imageId: image.id, blob: new Blob([new Uint8Array([1])], { type: "image/webp" }) }));
+        }
+      },
+      async listProjectSelectWorks() { return [managed]; }
+    },
+    project: { title: "MANAGED PROJECT" },
+    workIds: ["managed"],
+    selectorName: "SELECTOR",
+    setStatus: (stage) => stages.push(stage),
+    environment: pdfEnvironment()
+  });
+  assert.equal(result.status, "ready");
+  assert.deepEqual(privateCalls, [{ images: ["managed-image"], options: { purpose: "select_pdf_export", concurrency: 1 } }]);
+  assert.deepEqual(stages, ["VALIDATING PROJECT WORKS", "PREPARING 1 WORK / 1 IMAGE", "FETCHING SELECT IMAGES", "GENERATING PDF", "PDF READY"]);
+});
+
+test("managed media failures log only a safe delivery stage", async () => {
+  const diagnostics = [];
+  const managed = {
+    ...work("managed"),
+    images: [{ id: "managed-image", order: 0, exportSource: "managed-private", uploadStatus: "ready" }]
+  };
+  await assert.rejects(() => generateProjectChainedSelect({
+    repository: {
+      media: {
+        async downloadAuthorizedPrivateMedia() {
+          throw Object.assign(new Error("https://signed.example/private?token=secret"), { cause: { mediaStage: "signed_fetch" } });
+        }
+      },
+      async listProjectSelectWorks() { return [managed]; }
+    },
+    project: { title: "MANAGED PROJECT" },
+    workIds: ["managed"],
+    selectorName: "SELECTOR",
+    reportDiagnostic: (message) => diagnostics.push(message),
+    environment: pdfEnvironment()
+  }));
+  assert.deepEqual(diagnostics, ["[CHAINED SELECT] signed_fetch failed"]);
+  assert.equal(JSON.stringify(diagnostics).includes("signed.example"), false);
+  assert.equal(JSON.stringify(diagnostics).includes("secret"), false);
+});
+
 function pdfEnvironment(onFetch = () => {}) {
   const page = () => ({ drawText() {}, drawImage() {} });
   const pdf = {

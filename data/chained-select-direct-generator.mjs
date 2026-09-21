@@ -4,6 +4,15 @@ import { chainedSelectLimit, revalidateProjectChainedSelect } from "./chained-se
 import { applyExportImageSelection } from "./export-image-selection-state.mjs";
 
 const FONT_URL = "assets/fonts/CascadiaCode-Regular.ttf";
+const PRIVATE_MEDIA_STAGES = new Set(["authorization_gateway", "signed_fetch"]);
+
+function reportFailure(reportDiagnostic, fallbackStage, error) {
+  if (typeof reportDiagnostic !== "function") return;
+  const mediaStage = error?.cause?.mediaStage || error?.mediaStage;
+  const stage = PRIVATE_MEDIA_STAGES.has(mediaStage) ? mediaStage : fallbackStage;
+  try { reportDiagnostic(`[CHAINED SELECT] ${stage} failed`); }
+  catch { /* Diagnostics must never alter export behavior. */ }
+}
 
 async function imageFromBlob(blob, { URL: URLApi = URL, Image: ImageConstructor = Image } = {}) {
   const url = URLApi.createObjectURL(blob);
@@ -17,7 +26,7 @@ async function imageFromBlob(blob, { URL: URLApi = URL, Image: ImageConstructor 
   }
 }
 
-async function prepareImage(image, tier, cache, environment = globalThis) {
+async function prepareImage(image, tier, cache, environment = globalThis, reportDiagnostic = console.error) {
   let canvas;
   try {
     const decoded = await imageFromBlob(await cache.get(image), environment);
@@ -33,7 +42,8 @@ async function prepareImage(image, tier, cache, environment = globalThis) {
     decoded.src = "";
     const blob = await new Promise((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error("encode failed")), "image/jpeg", tier.jpegQuality));
     return Object.freeze({ mimeType: "image/jpeg", bytes: new Uint8Array(await blob.arrayBuffer()) });
-  } catch {
+  } catch (error) {
+    reportFailure(reportDiagnostic, "image_decode", error);
     throw new PortfolioExportError("ONE OR MORE PUBLIC IMAGES COULD NOT BE PREPARED FOR SELECT");
   } finally {
     if (canvas) { canvas.width = 1; canvas.height = 1; }
@@ -47,12 +57,18 @@ export async function generateProjectChainedSelect({
   selectorName,
   imageSelection = null,
   setStatus = () => {},
+  reportDiagnostic = console.error,
   environment = globalThis,
   fontUrl = FONT_URL
 } = {}) {
   if (!selectorName) throw new PortfolioExportError("SELECTOR IDENTITY IS CURRENTLY UNAVAILABLE");
   setStatus("VALIDATING PROJECT WORKS");
-  const revalidated = await revalidateProjectChainedSelect({ repository, workIds });
+  let revalidated;
+  try { revalidated = await revalidateProjectChainedSelect({ repository, workIds }); }
+  catch (error) {
+    reportFailure(reportDiagnostic, "project_revalidation", error);
+    throw error;
+  }
   if (revalidated.unavailableIds.length) return Object.freeze({ status: "changed", unavailableIds: revalidated.unavailableIds });
   const selectedWorks = imageSelection ? applyExportImageSelection(revalidated.works, imageSelection) : revalidated.works;
   if (selectedWorks.length !== revalidated.works.length) return Object.freeze({ status: "changed", unavailableIds: revalidated.works.filter((work) => !selectedWorks.some((entry) => entry.id === work.id)).map((work) => work.id) });
@@ -69,7 +85,17 @@ export async function generateProjectChainedSelect({
   };
   const cache = createPortfolioSourceCache(async ([image]) => {
     if (image.exportSource === "managed-private") {
-      return repository.media.downloadAuthorizedPrivateMedia([image], { purpose: "select_pdf_export", concurrency: 1 });
+      if (typeof repository?.media?.downloadAuthorizedPrivateMedia !== "function") {
+        const error = new Error("private media contract unavailable");
+        reportFailure(reportDiagnostic, "private_media_contract", error);
+        throw error;
+      }
+      try {
+        return await repository.media.downloadAuthorizedPrivateMedia([image], { purpose: "select_pdf_export", concurrency: 1 });
+      } catch (error) {
+        reportFailure(reportDiagnostic, "private_media_delivery", error);
+        throw error;
+      }
     }
     if (image.exportSource !== "public" || !image.src) throw new Error("select image source unavailable");
     const response = await environment.fetch(image.src, { cache: "no-store" });
@@ -96,7 +122,7 @@ export async function generateProjectChainedSelect({
           title: project?.title,
           selectorName,
           tier,
-          loadPreparedImage: (image, currentTier) => prepareImage(image, currentTier, cache, environment)
+          loadPreparedImage: (image, currentTier) => prepareImage(image, currentTier, cache, environment, reportDiagnostic)
         });
       }
     });

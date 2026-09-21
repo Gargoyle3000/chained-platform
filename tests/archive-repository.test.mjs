@@ -296,7 +296,7 @@ test("Project SELECT keeps managed private originals separate from saved public 
         images: [{ id: IDS.tagA, workId: IDS.workA, order: 0, isCover: true, uploadStatus: "ready", publicPath: null, privatePath: null }]
       }];
     },
-    media: { urls: { revokeAll() {} }, publicUrl }
+    media: { urls: { revokeAll() {} }, publicUrl, downloadAuthorizedPrivateMedia() {} }
   };
   const rows = { works: [work(IDS.workB)], public_profiles: [profile()], work_images: [imageB] };
   const repository = createArchiveRepository(client, config, async (_config, table) => rows[table], managedRepository);
@@ -307,6 +307,7 @@ test("Project SELECT keeps managed private originals separate from saved public 
   assert.equal(selected[1].images[0].exportSource, "public");
   assert.match(selected[1].images[0].src, /large\.webp$/);
   assert.equal(JSON.stringify(selected).includes("private_object_path"), false);
+  assert.equal(repository.media, managedRepository.media);
 });
 
 test("Archive cards expose only a cover while the SELECT projection hydrates every eligible public image", async () => {

@@ -322,6 +322,7 @@ export function createArchiveRepository(
 ) {
   return Object.freeze({
     mode: FRONTEND_MODES.SUPABASE,
+    media: managedWorkRepository.media,
 
     releasePrivatePreviews() {
       managedWorkRepository.media.urls.revokeAll();

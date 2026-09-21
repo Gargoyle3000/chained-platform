@@ -237,14 +237,23 @@ export function createWorkMediaService(client, config = {}, {
     let renewed = false;
 
     while (pending.length) {
-      const signed = await authorize(pending.map((item) => item.image), purpose);
+      let signed;
+      try {
+        signed = await authorize(pending.map((item) => item.image), purpose);
+      } catch (error) {
+        throw { status: statusOf(error), mediaStage: "authorization_gateway" };
+      }
       const signedById = new Map(signed.map((item) => [item.imageId, item]));
       const results = await mapWithConcurrency(pending, concurrency, async (item) => {
         const media = signedById.get(item.id);
-        if (!media) throw { status: 502 };
-        const response = await fetcher(media.url, { cache: "no-store" });
-        if (!response.ok) throw { status: response.status };
-        return Object.freeze({ ...media, blob: await response.blob() });
+        if (!media) throw { status: 502, mediaStage: "authorization_gateway" };
+        let response;
+        try { response = await fetcher(media.url, { cache: "no-store" }); }
+        catch (error) { throw { status: statusOf(error), mediaStage: "signed_fetch" }; }
+        if (!response.ok) throw { status: response.status, mediaStage: "signed_fetch" };
+        const blob = await response.blob();
+        if (!blob.size) throw { status: 502, mediaStage: "signed_fetch" };
+        return Object.freeze({ ...media, blob });
       });
 
       const expired = [];
