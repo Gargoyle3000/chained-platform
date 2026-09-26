@@ -384,6 +384,22 @@
   min-width: 0;
 }
 
+.dashboard-latest-column .dashboard-work-row > .is-published,
+.dashboard-latest-column .dashboard-work-row > .is-draft {
+  white-space: nowrap;
+}
+
+@media (min-width: 701px) {
+  .dashboard-latest-column .dashboard-work-information h3 {
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-latest-column .dashboard-work-row > .is-published,
+  .dashboard-latest-column .dashboard-work-row > .is-draft {
+    justify-self: end;
+  }
+}
+
 .dashboard-work-image-placeholder {
   display: flex;
   align-items: center;
@@ -1060,7 +1076,11 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1880px) {
+  .dashboard-latest-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .dashboard-latest-main {
     grid-template-columns: 1fr;
     gap: 86px;
@@ -1129,7 +1149,7 @@
 
 /* FIXED OVERVIEW WITH INDEPENDENT RECENT SCROLL */
 
-@media (min-width: 1101px) {
+@media (min-width: 1881px) {
   .dashboard-overview-page {
     overflow: hidden;
   }
@@ -1209,7 +1229,7 @@
 
 /* IMPROVED RECENT COLUMN SCROLL */
 
-@media (min-width: 1101px) {
+@media (min-width: 1881px) {
   .dashboard-overview-page
   .dashboard-latest-column {
     display: block;
@@ -1252,7 +1272,11 @@
   display: none;
 }
 
-@media (min-width: 1101px) {
+.dashboard-overview-page {
+  --scrollbar-width-compact: 2px;
+}
+
+@media (min-width: 1881px) {
   .dashboard-overview-page
   .dashboard-latest-column {
     position: relative;

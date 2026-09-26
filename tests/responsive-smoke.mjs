@@ -1,16 +1,19 @@
 import { spawn } from "node:child_process";
-import { mkdtemp, rename, rm } from "node:fs/promises";
+import { mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import assert from "node:assert/strict";
+import { resolveBrowserExecutable } from "./platform-tools.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const config = join(root, "frontend-config.local.mjs");
 const disabledConfig = join(root, "frontend-config.local.mjs.responsive-smoke");
-const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const chromePath = resolveBrowserExecutable();
 const profile = await mkdtemp(join(tmpdir(), "chained-responsive-"));
+const screenshotDirectory = await mkdtemp(join(tmpdir(), "chained-responsive-screenshots-"));
 const results = [];
+const screenshots = [];
 let chrome;
 let socket;
 let sequence = 0;
@@ -46,7 +49,7 @@ function once(method) {
 }
 
 try {
-  if (!existsSync(chromePath)) throw new Error("chrome_unavailable");
+  if (!chromePath) throw new Error("chrome_unavailable");
   if (existsSync(disabledConfig)) throw new Error("stale_disabled_config");
   if (existsSync(config)) await rename(config, disabledConfig);
 
@@ -75,7 +78,10 @@ try {
   });
   await command("Page.enable");
 
-  for (const width of [1440, 390, 320]) {
+  const widths = responsivePages.length === 1 && responsivePages[0] === "dashboard.html"
+    ? [1920, 1881, 1880, 1440, 1101, 1100, 900, 701, 700, 390, 320]
+    : [1440, 390, 320];
+  for (const width of widths) {
     for (const page of responsivePages) {
       await command("Emulation.setDeviceMetricsOverride", { width, height: width === 1440 ? 900 : 844, deviceScaleFactor: 1, mobile: width < 700 });
       const loaded = once("Page.loadEventFired");
@@ -93,8 +99,38 @@ try {
       }
       const evaluation = await command("Runtime.evaluate", {
         expression: `(() => {
+          if (document.body.classList.contains('dashboard-overview-page')) {
+            const title = document.querySelector('#dashboard-recent-work-list .dashboard-work-information h3 a');
+            if (title) title.textContent = 'A LONG WORK TITLE WITH SEVERAL WORDS AND AN EXTENDED UNBROKENREFERENCE';
+            const presentations = document.querySelector('#dashboard-recent-presentation-list');
+            if (presentations) {
+              const row = document.createElement('article');
+              row.className = 'dashboard-recent-presentation-row';
+              const information = document.createElement('div');
+              information.className = 'dashboard-recent-presentation-information';
+              const heading = document.createElement('h3');
+              heading.textContent = 'A LONG PRESENTATION TITLE WITH SEVERAL WORDS';
+              const date = document.createElement('p');
+              date.textContent = '2026';
+              information.append(heading, date);
+              const status = document.createElement('span');
+              status.className = 'is-published';
+              status.textContent = 'PUBLISHED';
+              row.append(information, status);
+              presentations.replaceChildren(row);
+            }
+          }
           const header = document.querySelector('.site-header')?.getBoundingClientRect();
           const main = document.querySelector('main')?.getBoundingClientRect();
+          const latestMain = document.querySelector('.dashboard-latest-main');
+          const recentWorkRow = document.querySelector('#dashboard-recent-work-list .dashboard-work-row');
+          const recentWorkTitle = recentWorkRow?.querySelector('h3')?.getBoundingClientRect();
+          const recentWorkStatus = recentWorkRow?.querySelector(':scope > .is-published, :scope > .is-draft')?.getBoundingClientRect();
+          const recentWorkBox = recentWorkRow?.getBoundingClientRect();
+          const recentWorkList = document.querySelector('#dashboard-recent-work-list');
+          const presentationRow = document.querySelector('#dashboard-recent-presentation-list .dashboard-recent-presentation-row');
+          const presentationTitle = presentationRow?.querySelector('h3')?.getBoundingClientRect();
+          const presentationStatus = presentationRow?.querySelector(':scope > span')?.getBoundingClientRect();
           const imageDialog = document.querySelector('.export-image-dialog');
           if (imageDialog && !imageDialog.open) imageDialog.showModal();
           const contentTop = Math.min(...[...document.querySelectorAll('main > *')].map((element) => element.getBoundingClientRect().top).filter((value) => Number.isFinite(value)));
@@ -122,6 +158,25 @@ try {
             headerBottom: header?.bottom || 0,
             mainTop: Number.isFinite(contentTop) ? contentTop : main?.top || 0,
             hasMain: Boolean(main),
+            dashboardLayout: latestMain ? {
+              columns: getComputedStyle(latestMain).gridTemplateColumns.split(' ').length,
+              titleRight: recentWorkTitle?.right,
+              statusLeft: recentWorkStatus?.left,
+              statusRight: recentWorkStatus?.right,
+              rowRight: recentWorkBox?.right,
+              listRight: recentWorkList?.getBoundingClientRect().right,
+              statusWhiteSpace: recentWorkStatus ? getComputedStyle(recentWorkRow.querySelector(':scope > .is-published, :scope > .is-draft')).whiteSpace : '',
+              compactWidth: getComputedStyle(recentWorkList, '::-webkit-scrollbar').width,
+              pageWidth: getComputedStyle(document.documentElement, '::-webkit-scrollbar').width
+            } : null,
+            presentationLayout: presentationRow ? {
+              titleRight: presentationTitle.right,
+              titleBottom: presentationTitle.bottom,
+              statusLeft: presentationStatus.left,
+              statusTop: presentationStatus.top,
+              statusRight: presentationStatus.right,
+              rowRight: presentationRow.getBoundingClientRect().right
+            } : null,
             rootFitsDesktop: !document.body.classList.contains("about-page")
               || document.documentElement.clientWidth < 721
               || document.documentElement.scrollHeight <= document.documentElement.clientHeight + 1,
@@ -147,11 +202,29 @@ try {
         returnByValue: true
       });
       const value = evaluation.result.value;
-      if (width === 1440) {
+      if (page === "dashboard.html") {
+        assert.equal(value.dashboardLayout.columns, width > 1880 ? 2 : 1, `Dashboard latest columns at ${width}px`);
+        assert.ok(value.dashboardLayout.statusRight <= value.dashboardLayout.rowRight + 1, `Dashboard status remains in its row at ${width}px`);
+        assert.equal(value.dashboardLayout.statusWhiteSpace, "nowrap", `Dashboard status does not wrap at ${width}px`);
+        if (width >= 701) {
+          assert.ok(value.dashboardLayout.titleRight <= value.dashboardLayout.statusLeft + 1, `Dashboard title clears status at ${width}px`);
+          assert.ok(value.dashboardLayout.rowRight - value.dashboardLayout.statusRight <= 1, `Dashboard status aligns right at ${width}px`);
+          assert.ok(value.presentationLayout.titleRight <= value.presentationLayout.statusLeft + 1, `Presentation title clears status at ${width}px`);
+        } else {
+          assert.ok(value.presentationLayout.titleBottom <= value.presentationLayout.statusTop + 1, `Mobile Presentation status follows title at ${width}px`);
+        }
+        assert.ok(value.presentationLayout.statusRight <= value.presentationLayout.rowRight + 1, `Presentation status stays in its row at ${width}px`);
+        if (width >= 1881) {
+          assert.equal(value.dashboardLayout.compactWidth, "2px", `Dashboard compact scrollbar is 2px at ${width}px`);
+          assert.ok(value.dashboardLayout.listRight - value.dashboardLayout.statusRight >= 12, `Dashboard retains right breathing room at ${width}px`);
+        }
+        if (width >= 701) assert.equal(value.dashboardLayout.pageWidth, "6px", `Dashboard page scrollbar remains 6px at ${width}px`);
+      }
+      if (width >= 1440) {
         assert.equal(value.scrollbar.rootElement, "HTML", `${page} scrolls through the document root`);
         assert.equal(value.scrollbar.rootGutter, "stable", `${page} keeps a stable scrollbar gutter`);
         assert.equal(value.scrollbar.rootThumb, "rgb(0, 252, 40)", `${page} gives the root scrollbar a CHAINED-green thumb`);
-        if (page === "dashboard.html") {
+        if (page === "dashboard.html" && width >= 1881) {
           assert.equal(value.scrollbar.dashboardThumb, "rgb(0, 252, 40)", "Dashboard list scrollbar uses the CHAINED-green thumb");
         }
       }
@@ -165,10 +238,14 @@ try {
       assert.equal(value.imagePicker, true, `${page} image picker opens without horizontal overflow at ${width}px`);
       assert.equal(value.cvImportSurface, true, `${page} CV import state renders at ${width}px`);
       assert.ok(value.mainTop >= value.headerBottom - 1, `${page} starts below the full header at ${width}px`);
+      const screenshot = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+      const screenshotPath = join(screenshotDirectory, `${page.replace(/[^a-z0-9]+/gi, "-")}-${width}.png`);
+      await writeFile(screenshotPath, screenshot.data, "base64");
+      screenshots.push(screenshotPath);
       results.push(`${page}:${width}`);
     }
   }
-  process.stdout.write(JSON.stringify({ ok: true, viewports: results.length }));
+  process.stdout.write(JSON.stringify({ ok: true, viewports: results.length, screenshots: screenshots.length, screenshotDirectory }));
 } catch (error) {
   process.stderr.write(`Responsive smoke test failed: ${error.message}`);
   process.exitCode = 1;

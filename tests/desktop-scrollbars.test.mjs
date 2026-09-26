@@ -34,6 +34,7 @@ test("Dashboard Overview uses a native draggable list scrollbar", async () => {
   assert.match(styles, /dashboard-work-list::-webkit-scrollbar-thumb/);
   assert.match(styles, /scrollbar-color: var\(--scrollbar-thumb\) var\(--scrollbar-track\)/);
   assert.match(styles, /dashboard-recent-presentation-list::-webkit-scrollbar-thumb \{\s+border-radius: 0;\s+background: var\(--scrollbar-thumb\);/);
+  assert.match(styles, /\.dashboard-overview-page \{\s+--scrollbar-width-compact: 2px;/);
   assert.doesNotMatch(styles, /dashboard-work-list[\s\S]{0,400}scrollbar-width: none;/);
   assert.doesNotMatch(script, /dashboard-scroll-indicator/);
 
