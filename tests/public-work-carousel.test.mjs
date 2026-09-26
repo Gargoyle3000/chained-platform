@@ -308,26 +308,30 @@ test("every compact Work viewer uses shared circular state, controls, and contai
   assert.equal(profile.includes("createPublicWorkCarouselControls(document)"), true);
   assert.equal(archive.includes("createPublicWorkCarouselControls(document)"), true);
   assert.equal(artwork.includes("public-work-carousel.mjs"), false);
-  assert.equal(artwork.includes("content.replaceChildren(\n      ...images.map"), true);
+  assert.match(artwork, /content\.replaceChildren\(\s*\.\.\.images\.map\(/);
   assert.equal(styles.includes("[data-public-carousel-hit-area]"), true);
   assert.equal(styles.includes("--discover-image-hit-top"), false);
   exports.forEach((source) => assert.equal(source.includes("public-work-carousel"), false));
 });
 
-test("compact carousel counter precedes SELECT action on Discover, Follow, and Archive", async () => {
+test("compact carousel controls precede Selector save and management actions", async () => {
   const [discover, following, archive] = await Promise.all([
     readFile(new URL("../discover.js", import.meta.url), "utf8"),
     readFile(new URL("../following.js", import.meta.url), "utf8"),
     readFile(new URL("../archive.js", import.meta.url), "utf8")
   ]);
-  const controlsAppend = "if (carouselControls) metadata.append(carouselControls.root);";
-  const selectAppend = 'metadata.append(createArchiveAction(work, archiveState, announceArchiveStatus, "discover-archive-action"));';
-  assert.ok(discover.indexOf(controlsAppend) < discover.indexOf(selectAppend));
-  assert.ok(following.indexOf(controlsAppend) < following.indexOf(selectAppend));
-  assert.ok(archive.indexOf("if (carouselControls) metadata.append(carouselControls.root);") < archive.indexOf("metadata.append(actions);"));
+  const renderer = (source, start, end) => {
+    const from = source.indexOf(start);
+    const to = source.indexOf(end, from + start.length);
+    assert.ok(from >= 0 && to > from, `expected renderer between ${start} and ${end}`);
+    return source.slice(from, to);
+  };
+  const controlsBeforeSave = /if\s*\(carouselControls\)\s*metadata\.append\(carouselControls\.root\);[\s\S]*?const archiveAction\s*=\s*createArchiveAction\(work, archiveState, announceArchiveStatus, "discover-archive-action"\);[\s\S]*?if\s*\(archiveAction\)\s*metadata\.append\(archiveAction\);/;
+  assert.match(renderer(discover, "function createDiscoverWork(", "function createLoadFallback("), controlsBeforeSave);
+  assert.match(renderer(following, "function createFollowingWork(", "function showEmpty("), controlsBeforeSave);
   assert.match(
-    archive,
-    /metadata\.append\(artist, title, year\);[\s\S]*?if \(carouselControls\) metadata\.append\(carouselControls\.root\);[\s\S]*?metadata\.append\(createAssignedTags\(work\)\);[\s\S]*?metadata\.append\(actions\);/
+    renderer(archive, "function createSavedWork(", "function selectedProjectWorks("),
+    /metadata\.append\(artist, title, year\);[\s\S]*?if\s*\(carouselControls\)\s*metadata\.append\(carouselControls\.root\);[\s\S]*?metadata\.append\(createAssignedTags\(work\)\);[\s\S]*?metadata\.append\(actions\);/
   );
 });
 
