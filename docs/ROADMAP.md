@@ -1,112 +1,58 @@
 # CHAINED — ROADMAP
 
-Last updated: 2026-09-16
+Last updated: 2026-09-26
 
-## POLISH
+This is a priority map for remaining work, not a deployment record or fixed calendar. Current implementation and deployment status belong in `CHAINED_STATE.md`; established contracts belong in `DECISIONS.md`.
 
-- Observe the first real trusted Artist onboarding intentionally when Peer is available, then prioritize actual tester feedback rather than a new large feature.
-- Clarify the valid state where a Work is published while its owner profile remains draft/private, for example `WORK PUBLISHED · PROFILE STILL PRIVATE [?]`, optionally linking to Settings. Never auto-publish the profile as a Work-publication side effect.
+## NOW
 
-- Video support direction: support video and video documentation without changing the still, image-led feed. Every video Work requires a cover still for Discover, Following, GRID, Archive overviews and relevant exports; no autoplay or moving thumbnails. Playback belongs on Work detail, with mixed media (for example `IMAGE · IMAGE · VIDEO · IMAGE`) supported later. Prefer external hosting/embed for v1; managed video infrastructure can follow if scale warrants it.
+- Finish live checks of the current mobile/responsive polish, including Dashboard intermediate widths and the transient mobile page indicator on real devices. Make a short sitewide visual pass at desktop and narrow mobile widths; retain known good Discover SINGLE and original artwork ratios.
+- Build a compact, approximately seven-step first-login introduction to the public/private model, DISCOVER and FOLLOW, SELECTOR, TAGS and PROJECTS, Artist Workspace, Work → Presentation → Agenda relationships, publication, and the existing contextual `[ ? ]`. The introduction is separate from permanent, user-invoked help; its exact UI remains open.
+- Observe the first real trusted Artist invitation and onboarding when Peer is available, then prioritize actual tester feedback.
+- Clarify in the workspace when a Work is published while its owner Profile remains draft/private. Keep Work and Profile publication independent and do not auto-publish the Profile.
+- Complete the controlled production smoke check of the dedicated Presentation-scoped Agenda image upload/finalize path; representative-Work thumbnail delivery is already visibly confirmed.
 
+## PRE-BETA
 
-## PRESENTATIONS + AGENDA
+- Finish controlled private-preview backfill and coverage verification, then remove any temporary original fallback. Reconcile the editor's approximately 25 MiB/no-AVIF validation with the service/backend's 50 MiB/AVIF contract; check real display and HiDPI needs and a broader browser/device matrix.
+- Measure Work derivative queue wait and processing separately from upload finalization through SMALL/LARGE readiness under representative 20/50/100-image bursts. Calibrate worker capacity, polling and long-processing thresholds from measurements.
+- Complete a focused RLS, Auth, Storage, Data API and privileged-function security review against actual trust boundaries. Security Advisor warnings on intentional service-only tables or `SECURITY DEFINER` functions require inspection, not automatic classification as defects.
+- **Before 2026-10-30:** audit every migration that creates a `public` table for explicit Data API privilege intent. Record required `GRANT`/`REVOKE` access separately for `anon`, `authenticated` and `service_role`; preserve least privilege and RLS, avoid generic CRUD grants, codify this for future migrations, and test clean replay under the new default where practical. Existing tables are not an emergency migration target solely because of the [Supabase default-grant change](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically).
+- Establish dedicated staging/pre-production and operational hardening before wider beta: production capacity, cleanup of temporary smoke credentials/environment, appropriate rate/abuse controls, stronger Admin Console security including 2FA where absent, and a privacy-safe incident/error view. Remove temporary tester analytics when that phase ends.
+- Reconcile shared entity, relationship, permission and approval primitives before broader Gallery/Curator access. Resolve Gallery-created unclaimed Artist capacity, entitlement and anti-abuse boundaries so a Gallery account cannot substitute for many independent Artist accounts; retain Artist control over authoritative Works, images and approved changes.
+- CV Import extraction and same-page review were production-validated; atomic ADD exists locally. Release the authorized ADD path and perform one controlled production persistence check. Before broader rollout, add durable account-scoped idempotency and quota/entitlement accounting; never persist source PDFs or silently create Presentations.
+- Define a reviewed artist-safe recovery contract for terminal Work derivative failures; the current trusted service maintenance path and truthful editor failure state do not provide an Artist retry action.
 
-- Agenda occurrence publication is live with explicit PUBLISH / UNPUBLISH and independent `show_in_agenda` / `show_in_presentation` behavior.
-- Presentation Work association, participant history and co-operator/manager access are independent; public role semantics distinguish contextual HOST/PRESENTED BY from PARTICIPANTS and technical management roles.
-- Public Presentation detail order is TITLE / CONTEXT → PARTICIPANTS → WORKS → PROGRAM, with the broader responsive Works grid live.
-- The deployed Agenda image system is dedicated verified image → explicit eligible representative Work → text-only, with public ALL/FOLLOW thumbnail delivery and the Agenda-edit controls as the primary management surface. Representative Work thumbnail rendering is visibly confirmed in production; final controlled production smoke verification of the dedicated-image upload/finalize path remains pending. Complete remaining Presentation ↔ Agenda ↔ Works crosslinks and attachments beyond this implemented scope; standalone Agenda entries remain supported and text-only for now.
+## LATER
 
-## PRIVATE PREVIEW DERIVATIVES — DEPLOYED
+### Tools, media and content
 
-One lightweight private screen-preview rendition per Work image is deployed. The remaining work is bounded backfill/coverage verification and removal of any temporary fallback.
+- Make CHAINED TOOLS an eligible-account Dashboard feature: Dashboard → TOOLS → dedicated tool view. Photo Corrector is the first concrete tool; possible later tools are PDF Compressor, Image Resizer/Compressor, Contact Sheet and perhaps PDF merge/split. Prefer client-side processing; do not store or upload media unless a specific future tool needs server processing. Tool pricing, quotas and subscriptions are undecided.
+- Add Vimeo-first external video to Work detail with a required still, duration, mixed media, playback lifecycle and still-based PDF representation. Feeds and compact views remain still and image-led, with no autoplay.
+- Add PUBLICATIONS as distinct objects with representative images, metadata and optional external links, connected to relevant Artists, Works and Presentations; do not fold them into Presentations or host publication PDFs.
+- Extend Presentations and Agenda beyond the live association/occurrence system: documentation images, external identities and claim/merge, further Work/Presentation/Agenda crosslinks, multiple structured moments, cancellation, geography and time rules. Preserve standalone Agenda entries and independent Agenda/Presentation visibility.
+- Extend private Projects beyond the existing ordered selection and CHAINED SELECT export with deliberate sharing/publication and tier constraints. Ordinary Artist Projects do not automatically become public CURATED content.
 
-- Originals remain untouched in private `work-originals` and continue serving `pdf_export`; Phase 4 publication copies use verified public derivatives.
-- A deterministic sibling object (likely `preview.webp`) serves editor/Dashboard previews and later visual selectors through the existing authorized gateway.
-- The browser contract remains `imageIds + purpose`; `preview` resolves the derivative and `pdf_export` resolves the original.
-- Prefer client-side generation while the upload File is already present; do not add a second authorization system.
-- New images become `ready` only after trusted validation of both original and preview.
-- Deletion removes original, preview, and any public derivative copies.
-- Existing images require a bounded controlled backfill. A temporary preview-to-original fallback may be used only during that transition and must then be removed.
+### Network and accounts
 
-Preferred sequencing:
+- Keep DISCOVER/NOSY centered on Works and Artist practices. Evolve CURATED around intentionally published curatorial/institutional material; eligible published Projects and Presentations may eventually participate. FOLLOW may later distinguish Artist Work activity from followed Curator/Institution Projects and Presentations. The public model and UX remain to be designed.
+- Add People/Search/CHAINED relationship discovery and human-reviewed Profile claiming, provenance, aliases, delegated capabilities and proposed-change approval. Extend account/profile types to Gallery, Curator and Institution teams/subtypes using shared permissions; do not grant a collaborator control over another Artist's Work.
+- Implement account/product limits, CHAINED/CHAINED+ upgrade handling and technical abuse ceilings without turning plan status into public rank or hiding existing content at a limit. Add a narrow system-only notification layer for action-required and informational events, without social metrics or DMs.
+- Consider a Profile external SHOP link only; CHAINED does not become a commerce platform.
 
-1. Backend/Storage foundation: deterministic path, reservation authorization, finalization, deletion, gateway routing, and security tests.
-2. Browser generation/upload, retry behavior, and validation alignment — implemented, deployed, and production-validated for JPEG and transparent PNG smoke coverage.
-3. Controlled backfill, coverage verification, and fallback removal.
+### Site and interaction polish
 
-The broader browser/device compatibility matrix remains future hardening; production validation does not imply every browser or platform has been tested.
-
-Implementation should verify the largest real preview display and HiDPI needs before freezing dimensions/quality. Reconcile the current editor validation mismatch (approximately 25 MiB and no AVIF versus the service/backend 50 MiB and AVIF support) during that work.
-
-## EXPORTS — LIVE
-
-- DIRECT CHAINED SELECT is active-Project-only: `[ EXPORT CHAINED SELECT ]` opens the shared picker and `[ EXPORT SELECT ]` directly generates/downloads. It uses fresh Project membership: managed own Works use direct-management-authorized private originals, while external saved Works retain the strict public canonical LARGE path; it has no review page or legacy fallback.
-- SELECTOR and Portfolio use export-local per-Work image selection: cover first, otherwise first eligible image by `sort_order`; each included Work retains at least one image. Selection is not persisted and never mutates Work/media state.
-- SELECTOR includes all non-deleted Works from directly managed Artist Profiles automatically, including drafts, alongside explicit external saves. Both use the same private Tags and ordered Projects; private Project PDFs may include managed drafts without publication, while external saves remain freshly public-eligible.
-- Portfolio remains a separate authorized private-original export using `purpose: pdf_export`; its picker uses `purpose: preview` only for temporary thumbnails.
-
-## PRE-BETA HARDENING
-
-- Audit derivative throughput and queue latency before broader beta. Measure `UPLOAD FINALIZED → JOB PENDING → PROCESSING START → SMALL READY → LARGE READY` per image, separating queue wait from processing time and checking worker concurrency, batching, poll cadence, startup and Storage I/O under representative bursts such as 20 / 50 / 100 images. Do not optimize before measuring or assume image transformation is the bottleneck; use the results to calibrate the long-processing threshold and confirm Supabase/infrastructure capacity.
-
-## AFTER FIRST TESTERS
-- CV Import v1: private existing CV/PDF → authenticated transient server-side extraction → same-page textual candidate review is proven in production. The local ADD implementation writes only selected reviewed fields into the existing manual CV model through one authorized atomic operation, skips conservative exact duplicates, and forces `source_activity_id = null`; it must still be deployed and verified with one controlled production write. CV Import never creates or mutates Presentations. CHAINED does not intentionally persist the uploaded PDF, provider credentials and calls remain server-side, and a server-side beta allowlist gates the pre-quota implementation. Keep the importer provider-independent. Unsupported source sections are review information only, never silently forced into another CV category. Free onboarding import should use a configurable server-side quota; failed technical/provider runs do not consume an allowance, manual CV editing remains unlimited, and a future paid allowance may provide a small recurring import count. Overview may surface remaining import allowance; no quota numbers are fixed yet. Add durable account-scoped request idempotency together with quota/entitlement accounting before broader rollout; do not rely on Edge-worker process memory for provider-spend protection.
-- Publications as a separate future profile/content object, not a Presentation: overview of titles, then a dedicated detail page with multiple images, fixed context, and optional publication metadata.
-- Optional external profile `SHOP` link only; no CHAINED commerce, products, prices, carts, checkout or payments.
-- Import.
-- People / Search / CHAINED relationships.
-- Cloudflare Pages + clean routes.
-- Further desktop/tablet polish.
+- Run a sitewide product-language audit, preserving deliberate CHAINED terminology while removing prototype or generic startup copy. Audit URL fields and normalize safe inputs such as `www.example.com` to HTTPS.
+- Continue specific desktop/tablet/mobile geometry work only where live checks show a gap: header/navigation rhythm, Dashboard/Works top spacing, public Profile links, Discover GRID and restrained horizontal sidescroll interaction. Optional carousel drag-follow animation remains polish, not a bug.
+- Consider Cloudflare Pages and clean routes after the current product surfaces and operational work are stable.
 
 ## COMPLETED / LIVE
 
-- Dashboard derives `WORK READY TO PUBLISH — <TITLE>` from an unacknowledged, manageable draft media-ready generation completed after the lifecycle activation boundary, in one self-scoped projection; intentionally pre-existing READY drafts remain silent. `[ NOT NOW ]` explicitly acknowledges that Work/account generation; rendering alone does not. It remains a narrow Work lifecycle, with no generic notification table, inbox, counter, badge, pop-up or read/unread framework.
-- Circular compact multi-image Work browsing is live on Discover, Following and Public Profile. Each uses the UI-only `< current/total >` navigation while preserving swipe/drag, keyboard browsing, current geometry, natural ratios, containment and lazy secondary-image loading; no carousel state enters exports. Public Work Detail intentionally remains a vertically stacked, contained all-image view for close comparison, without carousel controls.
-- Phase 4 public image derivatives are live: verified new and backfilled active Works publish exact WebP SMALL (960px maximum long edge) and LARGE (3200px maximum long edge) renditions. SMALL serves public grid/feed contexts, LARGE serves strict Work detail paths, originals remain private, and legacy public paths remain compatible. The active legacy migration is complete.
-- The one-time legacy public-media promotion is complete: all 9 target Works / 29 images use canonical SMALL + LARGE publication derivatives, retain historic objects solely for cleanup compatibility, and are idempotently promotable no-ops thereafter.
-
-## OPTIONAL LATER POLISH
-
-- Allow the image to visually track a horizontal drag before settling to the next or previous image. This is optional interaction polish, not a bug or a prerequisite for private preview derivatives.
-
-## PRODUCT DIRECTIONS TO IMPLEMENT
-
-- Consider a broader optional GUIDE overlay and one-time first-login introduction beyond the implemented contextual `[ ? ]` reference; future onboarding should establish DISCOVER / FOLLOW → `[+]` → SELECTOR → TAGS / PROJECTS → CHAINED SELECT output.
-- Add persistent Profile publication status and the one-time Work-published/Profile-private explanation without changing visibility rules.
-- Implement external Vimeo-first video on Work detail: still selection, duration, mixed media, playback lifecycle and still-based PDF representation.
-- Implement CHAINED/CHAINED+ limits, upgrade handling and technical abuse ceilings while preserving existing content at limits.
-- Add account-type support for UNCHAINED, ARTIST, INSTITUTION teams/subtypes and CURATOR access, with invitation/admission and APPLY/FIRST CHAIN flows.
-- Extend CURATED with ordered Works, cover, optional text, privacy-aware unpublishing and Following integration; future Curator/Institution discovery should evaluate Presentations as CURATED content without folding that work into ordinary Artist Projects.
-- Add the future system-only notification layer and explicit action-required/informational event handling.
-- Implement shared Presentations with participant Work links, external identities, documentation images, aliases and claim/merge support.
-- Implement Agenda moments, standalone events, cancellation, geography and structured time behavior without RSVP or location permissions.
-- Add Publications as a separate documented object with representative images and external links, not hosted PDFs.
-- Extend Projects with ordered Work sets and export/select/share workflows, plus tier limits; keep Tags freeform and filter-oriented.
-- Add human-reviewed profile claim flows and Artist-controlled APPEARS IN visibility controls.
-
-## NETWORK / ACCOUNT ARCHITECTURE
-
-- Trusted Artist alpha admission now has server-derived, invitation-immutable `CHAINED` plan intent and an audited service-only complimentary upgrade path for existing active accounts. It is not billing, a public tier or publishing approval; commercial quotas/limits remain undecided.
-- Near-term sequence: trusted Artist alpha with a small number of known Artists; shared multi-entity relationship/permission primitives; unclaimed Artist profiles and claiming; Gallery profile/account; delegated access with proposed-change approval; claim-transfer/provenance validation; Curator profile/account reusing the same primitives; dedicated staging/pre-production; paid Supabase production setup when operationally appropriate; focused RLS/Auth/Storage/security audit; then broader beta.
-- GALLERY-CREATED UNCLAIMED ARTIST CAPACITY remains open before Gallery beta: decide how many unclaimed Artist profiles a Gallery may create/manage, whether limits depend on plan/tier/verification, entitlement boundaries versus a paid Artist account, anti-spam/abuse/rate limits, what happens to capacity after claiming, and whether larger Galleries need higher limits. Prevent a low-cost Gallery subscription from effectively providing many full Artist subscriptions. No exact numeric limit or price is decided yet; unclaimed profiles do not receive the full entitlements/value of independent Artist accounts.
-
-## ADMIN / SECURITY / OPERATIONS
-
-- Add an admin surface with 2FA for administrative access.
-- Provide a permanent privacy-friendly error/incident view without sensitive content, secrets or tokens.
-- Remove temporary early-tester analytics when that phase ends.
-- Complete final RLS, Storage, Auth and security audit before broader rollout, including appropriate rate-limit and abuse-protection review.
-- After the primary SOL HIGH pre-beta security audit is fixed and validated, consider a separate independent ASTRA adversarial audit once ASTRA is sufficiently mature, stable and cost-effective for CHAINED; ASTRA is not yet a standard coding model or a replacement for SOL.
-
-## PRODUCT LANGUAGE
-
-- Run a sitewide product-language audit: inventory live copy page by page, distinguish functional system language from public/artist-facing language, remove prototype/deployment/make-it-work wording and generic startup/community phrasing, and preserve deliberate CHAINED terminology.
-
-## URL HANDLING
-
-- Normalize URL fields safely so inputs such as `www.example.com` become `https://www.example.com`; audit URL fields sitewide.
-
-## MOBILE / RESPONSIVE POLISH
-
-- Preserve existing mobile/tablet/browser work and refine Dashboard/Works top spacing, public-profile WEBSITE/SOCIAL/EMAIL spacing, Discover GRID, header/logo/navigation/session-action rhythm and known responsive geometry without changing image aspect ratios. Discover SINGLE remains the reference layout.
+- Root `/` is a session-aware centered `<CHAINED>` splash/router: active session → Dashboard, anonymous/unavailable session → public intro. Direct routes remain independent; this is not onboarding.
+- Password-first invitation-only Auth, Admin Console trusted Artist invitation, password-creation guard and immutable complimentary `CHAINED` plan intent are implemented; the controlled invitation journey was production-validated. First real Artist onboarding is still pending.
+- SELECTOR is the private collection workspace: managed own Works, including drafts, appear automatically; external published Works are explicitly saved. ALL/PERSONAL/SAVED, Tags, mixed-source ordered Projects and direct CHAINED SELECT PDF export are implemented. Portfolio remains a separate authorized private-original export.
+- Public Work SMALL/LARGE derivatives, strict publication, private preview generation/gateway and Work publish/unpublish/delete lifecycles are implemented. Public legacy derivative promotion is complete; private-preview backfill is a separate remaining task.
+- Presentation management and public detail, Work associations, participants, host/presented-by semantics, manager/co-operator access, requests and independent Agenda occurrence visibility are implemented. Agenda supports standalone entries, ALL/FOLLOW, dedicated image or explicit eligible representative Work fallback, then text-only.
+- Contextual `[ ? ]` is permanent, signed-in and user-invoked across relevant routes. Discover and Follow progressively append deterministic batches while scrolling; Dashboard mobile retains separate manual LOAD MORE lists.
+- The repository includes Dashboard intermediate-width Latest Updates stacking and collision-safe Work rows, a native 6px desktop page scrollbar, native 2px Dashboard compact scrollbar, and a transient 3px CHAINED-green mobile page indicator. Live device checks remain in NOW.
+- Compact multi-image browsing is shared across Discover, Follow, Public Profile and Selector; public Work Detail intentionally retains its vertical all-image view. Dashboard's narrow Work-ready-to-publish action is implemented without a generic notification system.

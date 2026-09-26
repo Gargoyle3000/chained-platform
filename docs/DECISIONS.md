@@ -2,7 +2,7 @@
 
 
 
-Last updated: 2026-09-17
+Last updated: 2026-09-26
 
 
 
@@ -14,7 +14,7 @@ Last updated: 2026-09-17
 
 \- No likes, public view counts, follower counts or popularity ranking.
 
-\- Return value should come from usefulness: Archive, organization, Agenda, profile and network.
+\- Return value should come from usefulness: Selector, organization, Agenda, profile and network.
 
 \- Keep the interface calm and avoid feature overload.
 
@@ -28,7 +28,7 @@ Last updated: 2026-09-17
 
 \- NETWORK = Discover + Following.
 
-\- WORKSPACE = private Archive.
+\- WORKSPACE = private SELECTOR (`archive_*` route/data names remain internal).
 
 \- The private workspace is SELECTOR: the tool/environment for collecting, organizing, filtering and composing Works. A PROJECT is an ordered deliberate selection within Selector. `CHAINED SELECT` remains the branded PDF output generated from a Project. Routes, modules, data and storage remain Archive internally.
 
@@ -38,9 +38,7 @@ Last updated: 2026-09-17
 
 
 
-\- Archive is private.
-
-\- Projects organize/select work.
+\- Selector is private; internal Archive naming does not make it a public Archive.
 
 \- CURATED is public output.
 
@@ -52,7 +50,7 @@ Last updated: 2026-09-17
 
 
 
-\## Export
+\## Portfolio export
 
 
 
@@ -62,7 +60,7 @@ Last updated: 2026-09-17
 
 \- Cascadia Code is the fixed PDF font for v1.
 
-\- No CHAINED branding inside exported PDFs.
+\- Portfolio PDFs carry no CHAINED branding; CHAINED SELECT has a restrained green cover identity.
 
 \- Optional opening page: artist name + free title/subtitle.
 
@@ -80,7 +78,7 @@ Last updated: 2026-09-17
 
 \- Dashboard Works uses temporary export selection.
 
-\- Archive/Projects must later reuse the SAME PDF renderer, not create a second export system.
+\- Portfolio and CHAINED SELECT have separate authorized export paths and share export-local image-selection principles.
 
 
 
@@ -90,11 +88,11 @@ Last updated: 2026-09-17
 
 \- Discover SINGLE mobile is a reference layout and should not be changed casually.
 
-\- Archive mobile should expose only SINGLE and GRID.
+\- Selector mobile exposes only SINGLE and GRID.
 
-\- Current mobile SUPERGRID becomes the mobile GRID.
+\- The former mobile SUPERGRID is now GRID.
 
-\- Desktop/tablet Archive view behaviour remains separate and unchanged unless explicitly requested.
+\- Desktop/tablet Selector view behaviour remains separate unless explicitly changed.
 
 \- Mobile mixed-ratio grids should visually balance images like desktop grids rather than align awkwardly top-left.
 
@@ -115,6 +113,7 @@ Last updated: 2026-09-17
 \- Contextual `[ ? ]` help is permanent, user-invoked and page/view-specific throughout the relevant signed-in CHAINED experience, including public/network-facing views. It is authenticated-only for now and intentionally sits outside primary navigation as a quiet fixed bottom-left utility on desktop and mobile. It uses THIS PAGE / EDIT HERE / CONNECTED TO to clarify practical source-of-truth and relationships. It is not an onboarding wizard, tutorial or standalone Guide, and v1 provides no navigation shortcuts so unsaved work is never displaced.
 \- Contextual `[ ? ]` help is maintained as part of relevant product changes so that it remains aligned with actual CHAINED behavior and source-of-truth relationships over time.
 \- DISCOVER and FOLLOW progressively load the next deterministic batch when scrolling approaches the feed end. FOLLOW uses its cursor continuation; DISCOVER retains its bounded artist-spread candidate ordering. This is quiet progressive loading, not immediate full-feed loading, and Dashboard pagination remains manual.
+\- Desktop page scrolling keeps a native, draggable 6px green scrollbar; wide Dashboard compact lists keep a native, draggable 2px green scrollbar. On small coarse-pointer viewports, page scrolling has a temporary 3px green position indicator while native touch scrolling remains authoritative. Browser-native indicator suppression is best effort.
 
 
 
@@ -199,12 +198,11 @@ Last updated: 2026-09-17
 \- Selected images retain the Work's media order. Work order is independently changeable for the export. Every selected image gets a PDF page; the first page for a Work gets normal metadata and later pages use compact identification such as `TITLE · 2/3`.
 \- Numbering is relative to the images selected for that PDF, not their original positions. There are no saved preferred images or export presets in v1. Preserve native ratio; never crop or stretch.
 
-\## Guide and first login
+\## First-login introduction and contextual help
 
-\- Each relevant page may expose at most one compact `[?]` in a consistent position. It opens a large white page-specific guide with a black outline and an easy `[ X ]` close.
-\- A guide briefly defines the page/section, CHAINED-specific concepts and terms, relevant interactions, and privacy/status rules. Obvious generic controls need no explanation. Copy is dry, concise and functional; page feedback such as saving, publishing and errors never depends on the guide.
-\- The first login shows one account-level introduction only once per account. It is not a wizard, tutorial or checklist. It explains CHAINED as a tool or possible extension of an artist's practice, not a new social-media platform: no likes, view counts or popularity rankings, and users need not use every part.
-\- The introduction explains user-controlled visibility and that a new Artist Profile starts `DRAFT`. It can later be reopened under Settings → ABOUT CHAINED. Exact copy and any early-user note belong to a later sitewide copy audit.
+\- The permanent contextual `[ ? ]` is the existing compact, user-invoked, page-specific reference; it is not a Guide overlay or onboarding wizard. Ordinary save/publish/error feedback never depends on help.
+\- A separate, one-time first-login introduction remains to be built. It should give a compact overview of CHAINED's public/private model, DISCOVER and FOLLOW, SELECTOR, TAGS/PROJECTS, Artist Workspace, Work → Presentation → Agenda source-of-truth relationships, publication and contextual help. Approximately seven steps are the current direction; exact UI and copy remain open.
+\- The introduction should explain CHAINED as a tool for professional practice, without social popularity mechanics or pressure to use every area. Reopening it later may be useful but is not an implemented Settings contract.
 
 \## Profile and Work publication
 
@@ -217,14 +215,13 @@ Last updated: 2026-09-17
 
 \- Video is an ordinary artistic medium, not a premium type. v1 uses external hosting only, preferably Vimeo; do not support YouTube or native CHAINED video hosting. Keep provider handling extensible for another suitable provider later.
 \- Every video item requires a still selected or uploaded by the artist. In a Work carousel it initially behaves like a normal image; clicking it activates that item's player. Mixed order such as `IMAGE · IMAGE · VIDEO · IMAGE` and multiple videos within normal media limits are allowed.
-\- Video playback exists on Work detail only. Discover, Following, GRID, Archive overviews and similar views use stills, never autoplay or moving thumbnails. Scrolling away stops playback; provider fullscreen controls are sufficient.
+\- Video playback exists on Work detail only. Discover, Following, GRID, Selector overviews and similar views use stills, never autoplay or moving thumbnails. Scrolling away stops playback; provider fullscreen controls are sufficient.
 \- Duration is required metadata for video. PDF export uses the still plus `VIDEO + DURATION` and may include the external URL; no default QR code. No native hosting is planned unless later demand and economics justify it.
 
 \## Products and account types
 
-\- CHAINED is free: maximum 10 Works including drafts, maximum 5 media items per Work, maximum 3 Projects, unlimited Tags, normal Profile/CV/Agenda/Presentations/Press and Discover/Following access, and video within normal limits. It has no Portfolio Export, Archive Export or bulk import.
-\- At the 10-Work limit, existing Works are never hidden, locked or held hostage. Users may view, edit, publish, unpublish and delete them; only `[ NEW WORK ]` is blocked until a Work is deleted or the account upgrades. Explain the limit plainly.
-\- CHAINED+ is €7/month or €70/year, with product-facing effectively unlimited Works and Projects, more generous media capacity, Portfolio/Archive export, import and later professional personalization. A high technical abuse/fair-use ceiling may exist later but is not a normal product-facing limit.
+\- CHAINED and CHAINED+ may later have different creation/export/import entitlements and technical abuse ceilings. Exact prices, numeric limits and commercial quota behavior are not finalized or implemented by today's complimentary `CHAINED` plan intent.
+\- Reaching a future creation limit must never hide, lock or hold existing Works hostage. Explain the limit plainly while retaining access to existing content and legitimate edit/publication controls.
 \- Payment never buys ranking, reach, boosts, visibility or admission privileges.
 \- Anonymous visitors may view public content without an account. `UNCHAINED` is a viewer account for Follow, Following and personal Agenda only; it has no Artist workspace. `ARTIST` uses CHAINED or CHAINED+. `INSTITUTION` has one primary owner, individually logged-in team members and a public subtype such as GALLERY, MUSEUM, PROJECT SPACE, ARTIST-RUN or FOUNDATION; public UI shows the subtype directly, not `INSTITUTION > GALLERY`. `CURATOR` works with existing CHAINED Artists/Works and exists relatively early; Artists do not automatically gain CURATED creation rights.
 
@@ -236,6 +233,8 @@ Last updated: 2026-09-17
 
 \## CURATED and communication
 
+\- DISCOVER/NOSY stays centered on Works and Artist practices. CURATED is for intentionally published curatorial/institutional material; eligible published Projects and Presentations may eventually enter it. Ordinary Artist Projects are not automatically public CURATED content. FOLLOW may later distinguish Artist Work activity from followed Curator/Institution Projects and Presentations; that feed model is not yet implemented.
+
 \- CURATED is an ordered/contextual selection of existing Works created by CURATOR or INSTITUTION, with at least 3 visible Works. It has a chosen Work as cover, no auto-collage, and optional short intro (about 100–200 words), optional essay/notes and optional sources/references; Works remain the main visual body and no arbitrary text blocks appear between them.
 \- CURATED has `DRAFT`/`PUBLISHED` state. Artist Work title, media and metadata remain authoritative. A public Work may be included without prior permission, while the Artist may hide that APPEARS IN → CURATED link on their own representation; hiding it does not remove the Work from CURATED.
 \- If an Artist unpublishes a Work, it silently disappears for public viewers; no `WORK UNAVAILABLE` placeholder is shown. Curators see the missing position privately. A published CURATED automatically unpublishes below 3 visible Works. A new CURATED may enter Following once; later edits do not repost it.
@@ -246,14 +245,14 @@ Last updated: 2026-09-17
 \- A Presentation is a shared durable context where possible, not a duplicate per Artist. The host/creator controls overall data; Artists attach their own authoritative Works. External Artists and Institutions may be represented, with aliases and later claim/merge preserving relationships.
 \- Presentations may contain documentation/exhibition images that are not Works and never become Discover Works. One series-level photo credit is sufficient by default. Presentations remain public/history after their date; participants control whether they surface them on their own Profile, and incorrect associations can be reported/corrected. One Presentation may contain multiple Agenda moments such as OPENING, ARTIST TALK and FINISSAGE, including a single moment for a one-evening event.
 \- Agenda moments feed Agenda automatically; no duplicate entry is required. Standalone Agenda items are allowed, including events hosted by Institutions not yet on CHAINED. Personal Agenda comes from followed accounts; Agenda supports `[ ALL ]` and `[ FOLLOW ]` views, as the first controls in its navigation column directly above `FILTER BY CITY`, with exactly one active view. There is no RSVP/GOING/INTERESTED system and CHAINED does not track attendance intent.
-\- Start/end times may be optional where appropriate. Changing only a time does not notify or repost/reorder an event when its date is unchanged; changing the date changes chronological placement. `CANCELLED` is supported. Past events leave active Agenda but remain in Presentation/history. Use structured CITY/COUNTRY for later filters; do not add `ONLINE`/`HYBRID`, location permissions or “events near you”. FOLLOWING is newly published content/context; AGENDA is scheduled happenings.
+\- Start/end times may be optional where appropriate. Changing only a time does not notify or repost/reorder an event when its date is unchanged; changing the date changes chronological placement. A later structured Agenda model should support `CANCELLED`. Past events leave active Agenda but remain in Presentation/history. Use structured CITY/COUNTRY for later filters; do not add `ONLINE`/`HYBRID`, location permissions or “events near you”. FOLLOWING is newly published content/context; AGENDA is scheduled happenings.
 
-\## Press, Publications and Archive
+\## Press, Publications and Selector
 
 \- PRESS is external media about the practice: compact title/outlet/date/URL metadata, optional author, no required image, no automatic APPEARS IN and no Following post.
 \- PUBLICATION is a genuine publication object with representative/documentation images and metadata such as title/year/author/editor/publisher/description/ISBN/link. It may connect to Artists, Works and Presentations and meaningfully participate in APPEARS IN and Following. Do not host publication PDFs or build a full book-digitization library; prefer object/cover/spread images plus an external link.
-\- TAGS are freeform Work descriptors and filters, unlimited for all tiers; combinations intersect where applicable and Tags have no manual presentation order. PROJECTS are ordered Work sets/contexts: a Work may belong to multiple Projects, manual Work order matters, removing a Project never removes Works, and Projects support export/select/share workflows.
-\- Projects have only small metadata (title, optional note and date/period), no nesting, tasks, collaborators or project-management system. CHAINED allows 3 Projects and CHAINED+ effectively unlimited. General Archive uses sorting/filtering rather than permanent manual order. Incomplete managed Works remain automatically available in SELECTOR; publishing is stricter.
+\- TAGS are freeform Work descriptors and filters, unlimited for all tiers; combinations intersect where applicable and Tags have no manual presentation order. PROJECTS are ordered Work sets/contexts: a Work may belong to multiple Projects, manual Work order matters, and removing a Project never removes Works. Selection and CHAINED SELECT export are live; deliberate sharing/publication is a later phase.
+\- Projects have only small metadata (title, optional note and date/period), no nesting, tasks, collaborators or project-management system. Product tier limits remain undecided. General Selector uses sorting/filtering rather than permanent manual order. Incomplete managed Works remain automatically available in SELECTOR; publishing is stricter.
 
 \## Unclaimed, APPEARS IN and FOLLOW
 
@@ -261,7 +260,7 @@ Last updated: 2026-09-17
 \- External Artist/Institution identities may exist through legitimate Presentation context. Public UI does not show `UNCLAIMED`, does not label them `UNCHAINED`, and does not show a public `IS THIS YOU?` or claim button; a minimal identity/context page is sufficient. Unclaimed profiles are network references under temporary management, not free full Artist accounts.
 \- Claim starts from the claimant's Dashboard/Settings via `CLAIM EXISTING PROFILE` and is initially human-reviewed. Suggested states are `CLAIM REQUESTED`, `IN REVIEW`, `APPROVED`, `TRANSFER IN PROGRESS`, `CLAIMED` and `DECLINED`. Identity, history and Presentation relations remain after claim. Institution-entered Works are not forced into an Artist's Works; the Artist may choose `ADD TO MY WORKS` or `IGNORE`. Aliases/duplicates can be merged during human/admin handling. Do not automatically email referenced external identities.
 \- Claiming an unclaimed profile must not create a duplicate Artist profile: it establishes ownership of the existing profile, preserves Works/CV/Presentation/network relationships, and retains provenance/audit history of who created or changed data.
-\- Gallery access to a claimed Artist is never implied by account/entity type. It derives from explicit relationship, capabilities and approval state. Delegated capabilities may eventually cover WORKS, CV and PRESENTATIONS, but not ARCHIVE, SELECTOR, private Workspace data, Auth/account settings or email/password/account ownership controls. Delegated public Work management must not grant access to private Archive media or private originals; existing broad work-management authorization must be reviewed against this boundary.
+\- Gallery access to a claimed Artist is never implied by account/entity type. It derives from explicit relationship, capabilities and approval state. Delegated capabilities may eventually cover WORKS, CV and PRESENTATIONS, but not SELECTOR, private Workspace data, Auth/account settings or email/password/account ownership controls. Delegated public Work management must not grant access to private Selector media or private originals; existing broad work-management authorization must be reviewed against this boundary.
 \- For claimed Artists, Gallery-originated CV, Presentation or Work changes use a proposal/change-set flow for Artist review and acceptance/rejection rather than silently becoming authoritative. REQUESTS is the central approval layer for relationship requests, delegated management, proposed data changes and related confirmations. Curators later reuse these relationship/capability/request primitives rather than a separate permission system.
 \- APPEARS IN connects a Work to meaningful PRESENTATION, CURATED or PUBLICATION context; it is discovery, not a count/status/popularity metric. An Artist may hide an individual APPEARS IN entry on their own Work/Profile representation, but this does not erase the legitimate source context and is not an automatic CV dump.
 \- FOLLOW exists only to construct personal Following and Agenda. There are no follower counts, following counts, public follower graph or follow notifications. Unfollow happens from the encountered account/profile. Follow is not a social-status mechanic.
@@ -289,9 +288,9 @@ Last updated: 2026-09-17
 \- CV Export is a private, same-page Dashboard CV selection mode. It initializes from each stored CV entry's public `is_visible` value (public entries selected; hidden entries unselected), then becomes export-local and independent: an artist may include a hidden entry or exclude a public one without altering the stored CV or its public visibility.
 \- The generated PDF uses the existing CV category/order display semantics, includes only selected entries and non-empty categories, exposes no origin/provider metadata, and reuses CHAINED's browser-local PDF delivery. CV Export performs no database, Storage or provider write/call.
 
-\## Archive PDF export
+\## Project PDF export
 
-\- Archive should eventually provide a separate export from public Portfolio export. Users should be able to select a subset through Projects, Tags and useful filters such as medium, dimensions or availability, then export/share it for galleries, exhibitions, applications or other external use.
+\- CHAINED SELECT is the implemented private Project PDF, separate from Portfolio. It requires one active ordered Project and freshly revalidates membership; Tags, search and transient Selector filters do not define its contents. Later sharing/publication and richer filters must preserve this source-of-truth boundary.
 
 \## Video
 
@@ -312,7 +311,7 @@ Last updated: 2026-09-17
 \## Export image selection
 
 \- CHAINED SELECT and Portfolio use one export-local image-selection model. Each included Work starts with its cover image, or the first eligible image by `sort_order` when no valid cover exists. Users may add, replace or deselect images but cannot leave an included Work with zero selected images. Selection is keyed by Work and image ID, preserves media order, is not persisted and never changes Work/media data.
-\- The picker belongs inside the primary export action: Archive Project → `EXPORT CHAINED SELECT` → picker → `EXPORT SELECT`; Works → `EXPORT PORTFOLIO` → picker → `EXPORT PORTFOLIO`. There are no standalone image-selection controls outside those flows.
+\- The picker belongs inside the primary export action: Selector Project → `EXPORT CHAINED SELECT` → picker → `EXPORT SELECT`; Works → `EXPORT PORTFOLIO` → picker → `EXPORT PORTFOLIO`. There are no standalone image-selection controls outside those flows.
 \- CHAINED SELECT is private contextual output: active Project membership is freshly revalidated at generation. Managed own Works, including drafts, use direct-management-authorized private originals; external saved Works remain limited to eligible canonical public LARGE media, with no legacy JPG fallback. PDF export does not publish a Work. Portfolio remains the separate formal private-original export through authorized `pdf_export` media.
 
 \## Presentation role and visibility semantics
@@ -321,3 +320,12 @@ Last updated: 2026-09-17
 \- Public Presentation identity distinguishes organizational `HOST / PRESENTED BY` from artist `PARTICIPANTS`. `MANAGER / OWNER` is technical CHAINED management metadata and must not become prominent public identity merely because an account has that role. Public rendering should avoid duplicate people caused by overlapping internal roles.
 \- Presentation Program visibility and Agenda visibility are independent: `show_in_presentation` does not imply `show_in_agenda`, and vice versa.
 \- A Presentation may have one dedicated Agenda-context image and one explicit eligible representative Work fallback. The dedicated image has priority; CHAINED never infers the first linked Work as a cover. This image is not Presentation documentation/gallery media, and its public availability follows published Agenda occurrence visibility rather than public Presentation-detail visibility. The state is Presentation-scoped, but its primary management UX is Dashboard → Agenda → edit; the Presentation editor may share the same controller. Without either valid source, Agenda remains text-only; standalone Agenda entries remain text-only.
+
+\## CHAINED TOOLS
+
+\- TOOLS is a future eligible-account Dashboard feature. A tool may open in a dedicated view; the existing Photo Corrector is the first concrete tool. PDF Compressor, Image Resizer/Compressor, Contact Sheet and PDF merge/split are possibilities, not commitments.
+\- Prefer client-side processing so user media stays local wherever practical. Upload or store media only when a specific future tool needs server processing and its boundary has been reviewed. No Tools price, quota or subscription is decided.
+
+\## Public-table Data API grants
+
+\- Every future migration that creates a `public` table must state the intended Data API privileges for `anon`, `authenticated` and `service_role` explicitly with narrow `GRANT`/`REVOKE` statements. RLS remains a separate row-authorization layer; generic CRUD grants and RLS-only access assumptions are unacceptable. Audit existing migrations and clean replay before Supabase's 2026-10-30 default-grant change; existing tables do not need emergency mutation solely because of that change.

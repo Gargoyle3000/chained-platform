@@ -1,15 +1,13 @@
 # CHAINED — ACTIVE BUGS / BLOCKERS
 
-Last updated: 2026-09-12
+Last updated: 2026-09-26
 
-## CV Import ADD persistence
+## Frontend carousel test assertions
 
-- Real PDF extraction and same-page review are now proven in production. The atomic ADD implementation exists locally but remains open until its migration/frontend release and one controlled production persistence test succeed.
-- ADD must remain one profile-authorized transaction with exact duplicate protection. Imported records are ordinary manual `cv_entries` with `source_activity_id = null`; no PDF, provider metadata, unsupported section, Presentation or Agenda state may be persisted.
+- `node --test tests/public-work-carousel.test.mjs` currently fails two assertions: “every compact Work viewer uses shared circular state, controls, and contained hit areas” and “compact carousel counter precedes SELECT action on Discover, Follow, and Archive.” The failures reproduce in isolation (2026-09-26).
+- The affected test and viewer behavior need focused investigation before claiming a product regression or changing the shared carousel. This is a validation blocker, not evidence that public image navigation is broken in the browser.
 
-## Terminal Work image derivative recovery
-
-- The Work editor now detects terminal current-source derivative failure, reports `IMAGE PROCESSING FAILED`, and keeps Publish unavailable. Recovery remains trusted service-role maintenance only; there is no reviewed artist-safe retry/reprocess contract or editor action yet. Keep this open until that narrow recovery path is authorized and validated without exposing service-role capabilities.
+CV Import ADD production release/validation and an Artist-safe terminal derivative recovery path are planned work in `ROADMAP.md`, not confirmed defects in current behavior.
 
 ## Resolved incidents
 - Stale soft-deleted Work save feedback: the repository's `not_found` result now remains `THIS WORK IS NOT AVAILABLE` in the editor instead of collapsing into `WORK COULD NOT BE SAVED`.
