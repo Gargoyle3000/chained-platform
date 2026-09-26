@@ -20,8 +20,10 @@ test("page scrolling keeps a native desktop scrollbar", async () => {
   assert.match(styles, /--scrollbar-thumb: var\(--accent\);/);
   assert.match(styles, /--scrollbar-width-page: 6px;/);
   assert.match(styles, /--scrollbar-width-compact: 3px;/);
-  assert.doesNotMatch(styles, /html\.chained-page-scrollbar/);
-  assert.doesNotMatch(indicators, /attachPageIndicator\(root\.document\)/);
+  assert.match(styles, /html\.chained-mobile-page-scrollbar,[\s\S]*?scrollbar-width: none;/);
+  assert.match(styles, /\.chained-page-scroll-indicator \{[\s\S]*?width: 3px;[\s\S]*?background: var\(--accent\);[\s\S]*?pointer-events: none;/);
+  assert.match(indicators, /\(max-width: 700px\) and \(pointer: coarse\)/);
+  assert.match(indicators, /attachPageIndicator\(root\.document\)/);
 });
 
 test("Dashboard Overview uses a native draggable list scrollbar", async () => {
@@ -40,4 +42,9 @@ test("Dashboard Overview uses a native draggable list scrollbar", async () => {
 
   const compactListRules = styles.slice(styles.lastIndexOf("/* MINIMAL RECENT SCROLL INDICATOR */"));
   assert.match(compactListRules, /dashboard-work-list,[\s\S]*dashboard-recent-presentation-list \{[\s\S]*padding-right: 12px;[\s\S]*scrollbar-gutter: stable;/);
+});
+
+test("root splash does not load the page indicator", async () => {
+  const page = await source("index.html");
+  assert.doesNotMatch(page, /scroll-indicators\.js/);
 });

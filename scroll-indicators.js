@@ -12,6 +12,8 @@
   "use strict";
 
   const MINIMUM_THUMB_SIZE = 18;
+  const PAGE_HIDE_DELAY = 700;
+  const MOBILE_PAGE_QUERY = "(max-width: 700px) and (pointer: coarse)";
 
   function calculateIndicatorGeometry({
     clientSize,
@@ -139,8 +141,111 @@
     };
   }
 
+  function attachPageIndicator(document) {
+    if (!root || !document?.body || !root.matchMedia) return null;
+
+    const media = root.matchMedia(MOBILE_PAGE_QUERY);
+    const { indicator } = createIndicator(document, "chained-page-scroll-indicator");
+    const page = document.documentElement;
+    const viewport = root.visualViewport;
+    let cleanupObservers = () => {};
+    let frame = 0;
+    let hideTimer = 0;
+
+    document.body.append(indicator);
+
+    function update() {
+      frame = 0;
+      const scroller = document.scrollingElement || page;
+      const viewportHeight = page.clientHeight;
+      const geometry = calculateIndicatorGeometry({
+        clientSize: viewportHeight,
+        scrollSize: Math.max(scroller.scrollHeight, document.body.scrollHeight),
+        scrollPosition: scroller.scrollTop
+      });
+
+      indicator.hidden = !geometry.scrollable;
+      if (!geometry.scrollable) {
+        indicator.classList.remove("is-visible");
+        root.clearTimeout(hideTimer);
+        return;
+      }
+
+      indicator.style.height = `${geometry.thumbSize}px`;
+      indicator.style.transform = `translateY(${geometry.offset}px)`;
+    }
+
+    function scheduleUpdate() {
+      if (!frame) frame = root.requestAnimationFrame(update);
+    }
+
+    function onScroll() {
+      scheduleUpdate();
+      indicator.classList.add("is-visible");
+      root.clearTimeout(hideTimer);
+      hideTimer = root.setTimeout(() => {
+        indicator.classList.remove("is-visible");
+      }, PAGE_HIDE_DELAY);
+    }
+
+    function enable() {
+      page.classList.add("chained-mobile-page-scrollbar");
+      root.addEventListener("scroll", onScroll, { passive: true });
+      root.addEventListener("resize", scheduleUpdate, { passive: true });
+      viewport?.addEventListener("resize", scheduleUpdate, { passive: true });
+      viewport?.addEventListener("scroll", scheduleUpdate, { passive: true });
+      cleanupObservers = observeUpdates([page, document.body], scheduleUpdate);
+      scheduleUpdate();
+    }
+
+    function disable() {
+      page.classList.remove("chained-mobile-page-scrollbar");
+      indicator.hidden = true;
+      indicator.classList.remove("is-visible");
+      root.clearTimeout(hideTimer);
+      if (frame) root.cancelAnimationFrame(frame);
+      frame = 0;
+      root.removeEventListener("scroll", onScroll);
+      root.removeEventListener("resize", scheduleUpdate);
+      viewport?.removeEventListener("resize", scheduleUpdate);
+      viewport?.removeEventListener("scroll", scheduleUpdate);
+      cleanupObservers();
+      cleanupObservers = () => {};
+    }
+
+    function sync() {
+      if (media.matches) enable();
+      else disable();
+    }
+
+    if (media.addEventListener) media.addEventListener("change", sync);
+    else media.addListener?.(sync);
+    sync();
+
+    return {
+      update: scheduleUpdate,
+      destroy() {
+        if (media.removeEventListener) media.removeEventListener("change", sync);
+        else media.removeListener?.(sync);
+        disable();
+        indicator.remove();
+      }
+    };
+  }
+
+  if (root?.document) {
+    if (root.document.readyState === "loading") {
+      root.document.addEventListener("DOMContentLoaded", () => {
+        attachPageIndicator(root.document);
+      }, { once: true });
+    } else {
+      attachPageIndicator(root.document);
+    }
+  }
+
   return Object.freeze({
     attachScrollIndicator,
+    attachPageIndicator,
     calculateIndicatorGeometry
   });
 }));

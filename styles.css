@@ -91,6 +91,39 @@ html {
   }
 }
 
+html.chained-mobile-page-scrollbar,
+html.chained-mobile-page-scrollbar body {
+  scrollbar-width: none;
+}
+
+html.chained-mobile-page-scrollbar::-webkit-scrollbar,
+html.chained-mobile-page-scrollbar body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.chained-page-scroll-indicator {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 1000;
+
+  width: 3px;
+  background: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.chained-page-scroll-indicator.is-visible {
+  opacity: 1;
+}
+
+.chained-page-scroll-indicator[hidden] {
+  display: none;
+}
+
 .chained-scroll-indicator-host {
   position: relative;
 }
