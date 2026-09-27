@@ -2,7 +2,7 @@
 
 
 
-Last updated: 2026-09-26
+Last updated: 2026-09-27
 
 
 
@@ -17,6 +17,15 @@ Last updated: 2026-09-26
 \- Return value should come from usefulness: Selector, organization, Agenda, profile and network.
 
 \- Keep the interface calm and avoid feature overload.
+
+
+\## Release environments and delivery
+
+\- The intended release path is LOCAL → BETA → LIVE; production is no longer the primary test environment. Local development provides fast implementation and automated testing. `beta.chained.work` is a public test environment with its own Supabase project, Auth, database, Storage, Edge Functions, project ref and secrets; it must not access Production Supabase or use production user data. Start Beta on a separate Supabase Free project/organisation while scale permits, with synthetic accounts and data. `chained.work` remains the live production environment; plan Supabase Pro before broader real-user/commercial operation requires it. Beta is not yet implemented.
+
+\- GitHub remains the source repository and home for history, branches, pull requests and useful CI/Actions. Web delivery will move from GitHub Pages to Cloudflare before paid/commercial service. The exact Cloudflare substrate (Pages, Workers with Static Assets, or another suitable configuration) is open; this is a hosting change, not a source-control move.
+
+\- Promote reviewed work through a beta branch and `beta.chained.work`, automated tests and a fixed Beta smoke loop, then approve the exact code and migration files for `main` and `chained.work`. Beta and Production use distinct refs/secrets. Apply the same recorded migration artifacts to both environments; avoid manual environment-only schema edits, undocumented production hotfixes and drift. Live deployment still receives a small post-deploy smoke check.
 
 
 
@@ -177,7 +186,7 @@ Last updated: 2026-09-26
 
 \## Management identity
 
-\- Management pages use a static, non-interactive `+` marker with `PROFILE LOADING` / hydrated profile name and `ARTIST ACCOUNT`; the global navigation `+` remains interactive.
+\- Management pages use a static, non-interactive `+` marker with `PROFILE LOADING` / hydrated profile name and `ARTIST ACCOUNT`; the interactive global Artist Workspace / Dashboard navigation action is `[+]`.
 \- `PROFILE LOADING` is intentional dry/computer-like product language during identity hydration.
 
 \## Public Work carousel

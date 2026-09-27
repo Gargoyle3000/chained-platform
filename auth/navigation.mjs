@@ -121,7 +121,7 @@ function ensureProfileGroup(navigation) {
     dashboardLink = document.createElement("a");
     dashboardLink.className = "dashboard-link";
     dashboardLink.href = DASHBOARD_HREF;
-    dashboardLink.textContent = "+";
+    dashboardLink.textContent = "[+]";
     dashboardLink.setAttribute("aria-label", "Open dashboard");
     group.append(dashboardLink);
   }

@@ -18,3 +18,23 @@ test("public action slots use the shared right-side header position", async () =
   assert.match(login, /auth-session-indicator public-action-slot[\s\S]*href="discover\.html"[^>]*>\[ DISCOVER \]/);
   assert.doesNotMatch(login, /<nav[^>]*>[\s\S]*>DISCOVER<\/a>[\s\S]*<\/nav>/);
 });
+
+test("interactive Dashboard links show [+] on public and management headers", async () => {
+  const pages = [
+    "agenda.html", "archive-project.html", "archive.html", "discover.html", "following.html",
+    "dashboard.html", "dashboard-admin-invite.html", "dashboard-agenda-edit.html",
+    "dashboard-agenda.html", "dashboard-cv.html", "dashboard-portfolio-export.html",
+    "dashboard-presentation-edit.html", "dashboard-presentations.html", "dashboard-press.html",
+    "dashboard-settings.html", "dashboard-work-edit.html", "dashboard-works.html"
+  ];
+  const dashboardAction = /<a\b(?=[^>]*class="dashboard-link(?: is-active)?")(?=[^>]*href="dashboard\.html")(?=[^>]*aria-label="Open dashboard")[^>]*>\s*\[\+\]\s*<\/a>/;
+  for (const page of pages) {
+    const markup = await readFile(new URL(`../${page}`, import.meta.url), "utf8");
+    assert.match(markup, dashboardAction, page);
+    if (page.startsWith("dashboard-") || page === "dashboard.html") {
+      assert.match(markup, /class="dashboard-page-marker" aria-hidden="true">\+<\/div>/, page);
+    }
+  }
+  const source = await readFile(new URL("../auth/navigation.mjs", import.meta.url), "utf8");
+  assert.match(source, /dashboardLink\.textContent = "\[\+\]"/);
+});
