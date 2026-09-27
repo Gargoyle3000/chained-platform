@@ -1,6 +1,6 @@
 # CHAINED — CURRENT STATE
 
-Last updated: 2026-09-26
+Last updated: 2026-09-27
 
 ## CURRENT SYSTEM
 
@@ -11,7 +11,7 @@ This file distinguishes repository implementation from production validation whe
 - Frontend auth is password-first: email + password login, Forgot password, and one invite/recovery password-update route.
 - Magic-link login remains an invitation-only fallback; no public signup exists.
 - Hosted redirect allowlist, invite redirect and recovery configuration are deployed and validated in production.
-- The trusted Artist invitation journey is production-validated end-to-end: Admin Console → transactional invite → password-update → Dashboard → ordinary password login. The disposable production test account and its related Auth, account, profile, membership, invitation and test-audit data were removed after validation; the first real Artist invitation remains intentionally pending Peer's onboarding availability.
+- The trusted Artist invitation journey is production-validated end-to-end: Admin Console → transactional invite → password-update → Dashboard → ordinary password login. The disposable production test account and its related Auth, account, profile, membership, invitation and test-audit data were removed after validation. The first external Artist, Koos De Vries, completed onboarding and reached active use on 2026-09-27; he uploaded real Works with images after the Agenda Storage predicate grant was deployed. Session observations are recorded in `USER_TESTING.md`.
 - Trusted account invitations expire after 12 hours in both the database default/approval fallback and Supabase Auth invite/OTP configuration.
 - An invite-only Auth session without a password cannot enter Dashboard: the self-scoped `current_account_has_password()` guard redirects to `password-update.html`, and password creation is rechecked server-side before Dashboard access.
 - Root `/` is a quiet session-aware CHAINED splash/router: active sessions continue to Dashboard; anonymous or unavailable sessions continue to the separate timeless, headerless public intro. The intro retains its `[ DISCOVER ]`, `[ AGENDA ]` and `[ PRIVATE ACCESS ]` routes; Discover retains its minimal `<CHAINED>` / `[ LOG IN ]` header. The root router does not intercept direct routes and implements no onboarding.
@@ -32,7 +32,7 @@ This file distinguishes repository implementation from production validation whe
 - Management pages use the static `+` / `PROFILE LOADING` / `ARTIST ACCOUNT` identity.
 - Portfolio Export uses immediate disabled `EXPORTING…` progress and final `PORTFOLIO READY` status.
 - Management language uses concise `WORKS`, `PRESENTATIONS`, and `AGENDA` headings.
-- Compact multi-image browsing is live on Discover, Follow, Public Profile and Selector: these viewers use the same circular current-image state and compact green accessible `< current/total >` navigation (hidden for one-image Works), while preserving swipe/drag and keyboard browsing. Selector secondary images remain lazily resolved through its existing strict public projection; Project, Tag and export state is unaffected. Public Work Detail intentionally renders all ordered images vertically for close viewing/comparison and has no carousel. The control is UI-only and never enters exports.
+- Compact multi-image browsing is live on Discover, Follow, Public Profile and Selector: these viewers use the same circular current-image state and compact green accessible `< current/total >` navigation, while preserving swipe/drag and keyboard browsing. The one-image control visibility defect is tracked in `BUGS.md`. Selector secondary images remain lazily resolved through its existing strict public projection; Project, Tag and export state is unaffected. Public Work Detail intentionally renders all ordered images vertically for close viewing/comparison and has no carousel. The control is UI-only and never enters exports.
 - Discover NOSY and Follow progressively append their existing deterministic batches as an unobtrusive end sentinel approaches. Follow retains its cursor RPC; Discover retains its bounded, artist-spread candidate ordering. Dashboard mobile `[ LOAD MORE ]` remains unchanged.
 - Dashboard mobile initially shows 10 recent Works and 10 recent Presentations per independent list; `[ LOAD MORE ]` reveals 10 at a time. Wide desktop retains independently scrolling latest lists; the intermediate-width latest section stacks and uses normal page flow.
 - In the repository, Latest Updates stacks at 1880px and below, with flexible Work titles and right-aligned no-wrap status above mobile width. Desktop page scrolling uses a native 6px green scrollbar and wide Dashboard lists use native 2px compact scrollbars. A 3px transient green page-position indicator is implemented for coarse-pointer viewports at 700px and below; real-device/live validation remains open.
@@ -92,6 +92,6 @@ This file distinguishes repository implementation from production validation whe
 - Production is stable after the Phase 4 public-image derivative rollout.
 - Private preview frontend implementation is deployed and production-validated: the browser generates a fixed private WebP derivative before reservation, uploads both server-reserved objects, and finalizes them together. Production smoke covered JPEG and transparent PNG images, including full and partial alpha. Broader browser/device matrix validation remains future hardening.
 - Controlled private-preview backfill remains open where still needed; it is separate from the completed public-derivative legacy migration.
-- CV Import extraction and same-page review were production-validated; the atomic ADD path exists locally but its production persistence has not been validated or released. CV Export is also implemented locally pending release. Neither ADD nor CV Export is recorded here as production-live.
+- CV Import extraction and same-page review were production-validated. The extraction Edge Function currently requires the authenticated user ID in the `CV_IMPORT_BETA_USER_IDS` secret allowlist; a real Artist's access worked after manual inclusion. The atomic ADD path exists locally but its production persistence has not been validated or released. CV Export is also implemented locally pending release. Neither ADD nor CV Export is recorded here as production-live.
 - Protect the authorized private-media gateway, PDF export, Phase 4 public derivative behavior, and current Discover/Following/Profile geometry.
 - Optional drag-follow carousel animation is future polish, not an active bug.
