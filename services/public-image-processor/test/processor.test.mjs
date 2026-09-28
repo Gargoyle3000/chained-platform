@@ -21,9 +21,35 @@ test("creates deterministic SMALL and LARGE WebP derivatives with a pinned ICC",
   const second = await processImage(input, join(directory, "second"));
   assert.deepEqual([first.small.width, first.small.height], [960, 600]);
   assert.deepEqual([first.large.width, first.large.height], [1600, 1000]);
-  assert.equal(first.small.hasAlpha, true); assert.equal(first.large.hasIcc, true);
+  assert.equal((await sharp(input).stats()).isOpaque, false);
+  assert.equal(first.small.hasAlpha, true); assert.equal(first.large.hasAlpha, true); assert.equal(first.large.hasIcc, true);
   assert.equal(first.small.checksumSha256, second.small.checksumSha256);
   assert.match(await readFile(first.large.path, "utf8"), /RIFF/);
+});
+
+test("fully opaque four-channel PNG produces both renditions without redundant alpha", async (t) => {
+  const directory = await temporary(); t.after(() => cleanup(directory));
+  const input = join(directory, "opaque-rgba.png");
+  await sharp({ create: { width: 1221, height: 947, channels: 4, background: { r: 40, g: 100, b: 200, alpha: 1 } } }).png().toFile(input);
+  assert.equal((await sharp(input).metadata()).hasAlpha, true);
+  assert.equal((await sharp(input).stats()).isOpaque, true);
+  const result = await processImage(input, join(directory, "out"));
+  assert.deepEqual([result.small.width, result.small.height], [960, 745]);
+  assert.deepEqual([result.large.width, result.large.height], [1221, 947]);
+  assert.equal(result.small.hasAlpha, false);
+  assert.equal(result.large.hasAlpha, false);
+});
+
+test("three-channel PNG still produces SMALL and LARGE", async (t) => {
+  const directory = await temporary(); t.after(() => cleanup(directory));
+  const input = join(directory, "rgb.png");
+  await sharp({ create: { width: 1200, height: 800, channels: 3, background: { r: 40, g: 100, b: 200 } } }).png().toFile(input);
+  assert.equal((await sharp(input).metadata()).hasAlpha, false);
+  const result = await processImage(input, join(directory, "out"));
+  assert.deepEqual([result.small.width, result.small.height], [960, 640]);
+  assert.deepEqual([result.large.width, result.large.height], [1200, 800]);
+  assert.equal(result.small.hasAlpha, false);
+  assert.equal(result.large.hasAlpha, false);
 });
 
 test("does not upscale sources", async (t) => {

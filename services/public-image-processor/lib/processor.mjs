@@ -9,10 +9,10 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const profilePath = join(root, "assets", "chained-srgb-v4.icc");
 
 export class ProcessorFailure extends Error {
-  constructor(code) { super(code); this.code = code; }
+  constructor(code, stage = "source_inspection") { super(code); this.code = code; this.stage = stage; }
 }
 
-function fail(code) { throw new ProcessorFailure(code); }
+function fail(code, stage) { throw new ProcessorFailure(code, stage); }
 function safeInteger(value) { return Number.isSafeInteger(value) && value > 0; }
 function dimensionsWithin(width, height, edge) {
   const scale = Math.min(1, edge / Math.max(width, height));
@@ -54,12 +54,12 @@ async function encodeOne(inputPath, source, outputPath, kind, maxDecodedPixels) 
       .withIccProfile(profilePath, { b2a: 0 })
       .webp({ quality: spec.quality, effort: 4, smartSubsample: false })
       .toBuffer();
-  } catch { fail("processing_failed"); }
-  if (!isWebp(buffer)) fail("output_signature_invalid");
-  await writeFile(outputPath, buffer).catch(() => fail("output_write_failed"));
-  const verified = await sharp(buffer, { animated: false, failOn: "warning" }).metadata().catch(() => fail("output_verification_failed"));
-  if (verified.format !== "webp" || verified.width !== target.width || verified.height !== target.height || !verified.icc) fail("output_verification_failed");
-  if (source.hasAlpha && !hasAlpha(verified)) fail("alpha_not_preserved");
+  } catch { fail("processing_failed", `${kind}_encoding`); }
+  if (!isWebp(buffer)) fail("output_signature_invalid", `${kind}_verification`);
+  await writeFile(outputPath, buffer).catch(() => fail("output_write_failed", `${kind}_output`));
+  const verified = await sharp(buffer, { animated: false, failOn: "warning" }).metadata().catch(() => fail("output_verification_failed", `${kind}_verification`));
+  if (verified.format !== "webp" || verified.width !== target.width || verified.height !== target.height || !verified.icc) fail("output_verification_failed", `${kind}_verification`);
+  if (source.hasTransparency && !hasAlpha(verified)) fail("alpha_not_preserved", `${kind}_verification`);
   return { path: outputPath, width: verified.width, height: verified.height, bytes: buffer.length, checksumSha256: createHash("sha256").update(buffer).digest("hex"), mimeType: "image/webp", hasAlpha: hasAlpha(verified), hasIcc: Boolean(verified.icc) };
 }
 
@@ -69,8 +69,14 @@ export async function processImage(inputPath, outputDir, options = {}) {
   const maxDecodedPixels = Number(options.maxDecodedPixels ?? process.env.CHAINED_MAX_DECODED_PIXELS ?? DEFAULT_DECODED_PIXEL_LIMIT);
   if (!Number.isSafeInteger(maxDecodedPixels) || maxDecodedPixels < 1) fail("invalid_decoded_pixel_limit");
   const source = await inspectInput(inputPath, { maxDecodedPixels });
+  let hasTransparency = false;
+  if (hasAlpha(source.metadata)) {
+    const stats = await sharp(inputPath, { animated: false, failOn: "warning", limitInputPixels: maxDecodedPixels, sequentialRead: true })
+      .stats().catch(() => fail("decoder_failed", "source_transparency"));
+    hasTransparency = !stats.isOpaque;
+  }
   await mkdir(outputDir, { recursive: true });
-  const small = await encodeOne(inputPath, { ...source, hasAlpha: hasAlpha(source.metadata) }, join(outputDir, "small.webp"), "small", maxDecodedPixels);
-  const large = await encodeOne(inputPath, { ...source, hasAlpha: hasAlpha(source.metadata) }, join(outputDir, "large.webp"), "large", maxDecodedPixels);
+  const small = await encodeOne(inputPath, { ...source, hasTransparency }, join(outputDir, "small.webp"), "small", maxDecodedPixels);
+  const large = await encodeOne(inputPath, { ...source, hasTransparency }, join(outputDir, "large.webp"), "large", maxDecodedPixels);
   return { pipelineVersion: PIPELINE_VERSION, iccProfileVersion: ICC_PROFILE_VERSION, processingMs: Math.round((performance.now() - started) * 10) / 10, runtime: { rssBeforeBytes, rssAfterBytes: process.memoryUsage.rss(), maxRssKilobytes: process.resourceUsage().maxRSS }, source: { path: basename(inputPath), bytes: source.sourceStat.size, width: source.orientedWidth, height: source.orientedHeight, format: sourceFormat(source.metadata), hasAlpha: hasAlpha(source.metadata), hasIcc: Boolean(source.metadata.icc), colourAction: source.action }, small, large };
 }

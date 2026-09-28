@@ -94,6 +94,13 @@ export function createWorker({ brokerUrl, workerToken, process = processImage, f
         });
       }
       const code = error instanceof ProcessorFailure ? error.code : (error instanceof Error ? error.message : "processing_failed");
+      if (error instanceof ProcessorFailure) {
+        diagnostic(logger, "derivative_processing_failed", {
+          job_id: claim?.job_id,
+          failure_code: /^[a-z_]{1,80}$/.test(code) ? code : "processing_failed",
+          stage: /^[a-z_]{1,40}$/.test(error.stage) ? error.stage : "unknown",
+        });
+      }
       let recorded = false;
       if (claim?.lease_token && !completing) {
         const permanent = error instanceof ProcessorFailure;

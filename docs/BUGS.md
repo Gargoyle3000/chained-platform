@@ -1,6 +1,12 @@
 # CHAINED — ACTIVE BUGS / BLOCKERS
 
-Last updated: 2026-09-27
+Last updated: 2026-09-28
+
+## Opaque-RGBA Work derivative rejection — local fix, production validation pending
+
+- A verified PNG Work original (the 2026-09-28 `Green` upload) reached the derivative worker, but its SMALL/LARGE job failed on attempt 1 with `processing_failed`. The PNG has an alpha channel whose pixels are all opaque. The processor checked `metadata.hasAlpha` and rejected Sharp's valid opaque WebP as `alpha_not_preserved`; the worker's bounded failure-code list reduced that internal code to `processing_failed`.
+- The local processor now uses Sharp pixel statistics once per source and requires derivative alpha only when the source contains actual transparency. Focused Linux tests cover opaque four-channel PNG, transparent PNG, three-channel PNG, and successful worker completion without a broker failure. Bounded worker diagnostics retain the internal processor code and stage without logging signed URLs or private paths.
+- The processor image has not been deployed. Production validation, including the previously failed Work's separate trusted recovery path, remains open; no production retry was performed during this fix.
 
 ## Existing database-suite validation assertions
 
