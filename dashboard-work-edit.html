@@ -116,6 +116,19 @@
 
       <form class="work-form" novalidate>
 
+        <div class="work-publication-control">
+          <p>STATUS: <span id="work-publication-status">NEW WORK</span></p>
+          <button class="text-action work-form-publish" type="submit">[ PUBLISH ]</button>
+          <button class="text-action" id="work-unpublish" type="button" hidden>[ UNPUBLISH ]</button>
+          <a class="text-action work-new-work" href="dashboard-work-edit.html" hidden>[ NEW WORK ]</a>
+        </div>
+        <p class="work-publication-context" id="work-publication-context" hidden></p>
+
+        <div class="work-form-status-region">
+          <p class="work-form-status" id="work-form-status" role="status" aria-live="polite" hidden></p>
+          <button class="text-action work-readiness-check" id="work-readiness-check" type="button" hidden>[ CHECK AGAIN ]</button>
+        </div>
+
         <!-- BASIC INFORMATION -->
 
         <section class="work-form-section">
@@ -458,72 +471,7 @@
         </section>
 
 
-        <!-- VISIBILITY -->
-
-        <section class="work-form-section">
-
-          <header class="work-form-section-header">
-            <p>05</p>
-
-            <div>
-              <h3>VISIBILITY</h3>
-              <p>CHOOSE WHETHER THE WORK IS PUBLIC</p>
-            </div>
-          </header>
-
-
-          <fieldset class="work-visibility-options">
-
-            <label>
-              <input
-                type="radio"
-                name="visibility"
-                value="draft"
-                checked>
-
-              <span>
-                DRAFT
-                <small>ONLY VISIBLE IN YOUR DASHBOARD</small>
-              </span>
-            </label>
-
-
-            <label>
-              <input
-                type="radio"
-                name="visibility"
-                value="published">
-
-              <span>
-                PUBLISHED
-                <small>VISIBLE ON YOUR PUBLIC PROFILE</small>
-              </span>
-            </label>
-
-          </fieldset>
-
-        </section>
-
-
         <!-- ACTIONS -->
-
-        <div class="work-form-status-region">
-          <p
-            class="work-form-status"
-            id="work-form-status"
-            role="status"
-            aria-live="polite"
-            hidden></p>
-
-          <button
-            class="text-action work-readiness-check"
-            id="work-readiness-check"
-            type="button"
-            hidden>
-            [ CHECK AGAIN ]
-          </button>
-        </div>
-
         <footer class="work-form-actions">
 
           <a
@@ -543,23 +491,9 @@
           </button>
 
           <button
-            class="text-action"
-            id="work-unpublish"
-            type="button"
-            hidden>
-            [ UNPUBLISH WORK ]
-          </button>
-
-          <button
             class="text-action work-form-save"
             type="button">
             [ SAVE DRAFT ]
-          </button>
-
-          <button
-            class="text-action work-form-publish"
-            type="submit">
-            [ PUBLISH WORK ]
           </button>
 
         </footer>

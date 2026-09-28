@@ -4,6 +4,23 @@ export const PUBLICATION_READINESS_INTERVAL_MS = 5_000;
 export const PUBLICATION_READINESS_BOUND_MS = 120_000;
 export const PUBLICATION_LONG_PROCESSING_INTERVAL_MS = 15_000;
 
+export function workEditorPublicationState(work) {
+  const published = work?.visibility === "published";
+  return Object.freeze({
+    status: work ? (published ? "PUBLISHED" : "DRAFT") : "NEW WORK",
+    visibility: published ? "published" : "draft",
+    saveLabel: published ? "[ SAVE CHANGES ]" : "[ SAVE DRAFT ]",
+    published
+  });
+}
+
+export function canContinueToNewWork({ saved, busy, dirty, images = [], managedMode, readinessState }) {
+  if (!saved || busy || dirty) return false;
+  if (!managedMode) return true;
+  if (!images.every((image) => image.serverRecord && image.uploadStatus === "ready")) return false;
+  return ["processing", "ready", "prerequisite_invalid", "published"].includes(readinessState);
+}
+
 export function publicationReadinessUiState(readiness, prerequisiteMessage = "WORK IS NOT READY TO PUBLISH") {
   if (readiness?.state === "ready") {
     return Object.freeze({ message: "READY TO PUBLISH", isError: false, publishEnabled: true, showCheckAgain: false });

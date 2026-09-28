@@ -2,13 +2,34 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
+  canContinueToNewWork,
   createPublicationReadinessWatcher,
   PUBLICATION_LONG_PROCESSING_INTERVAL_MS,
   publicationReadinessUiState,
   PUBLICATION_READINESS_BOUND_MS,
   PUBLICATION_READINESS_INTERVAL_MS,
-  workOperationFailureUiState
+  workOperationFailureUiState,
+  workEditorPublicationState
 } from "../data/work-publication-readiness.mjs";
+
+test("NEW WORK is available only after a complete accepted save with no pending edits or media", () => {
+  const readyImage = { serverRecord: true, uploadStatus: "ready" };
+  const base = { saved: true, busy: false, dirty: false, images: [readyImage, readyImage], managedMode: true, readinessState: "processing" };
+  assert.equal(canContinueToNewWork({ ...base, saved: false }), false);
+  assert.equal(canContinueToNewWork({ ...base, busy: true }), false);
+  assert.equal(canContinueToNewWork({ ...base, dirty: true }), false);
+  assert.equal(canContinueToNewWork({ ...base, images: [readyImage, { serverRecord: false, uploadStatus: "selected" }] }), false);
+  assert.equal(canContinueToNewWork({ ...base, images: [readyImage, { serverRecord: true, uploadStatus: "reserved" }] }), false);
+  assert.equal(canContinueToNewWork({ ...base, images: [readyImage, { serverRecord: true, uploadStatus: "failed" }] }), false);
+  assert.equal(canContinueToNewWork({ ...base, readinessState: "failed" }), false);
+  assert.equal(canContinueToNewWork({ ...base, readinessState: "unknown" }), false);
+  assert.equal(canContinueToNewWork({ ...base, readinessState: "checking" }), false);
+  assert.equal(canContinueToNewWork(base), true);
+  assert.equal(canContinueToNewWork({ ...base, readinessState: "ready" }), true);
+  assert.equal(canContinueToNewWork({ ...base, readinessState: "published" }), true);
+  assert.equal(canContinueToNewWork({ ...base, images: [], readinessState: "prerequisite_invalid" }), true);
+  assert.equal(canContinueToNewWork({ ...base, managedMode: false, images: [], readinessState: "new" }), true);
+});
 
 function harness(states, { intervalMs = 50, boundMs = 100, longIntervalMs = 150 } = {}) {
   let time = 0;
@@ -224,7 +245,7 @@ test("editor copy and boundaries distinguish save, processing, publication, and 
   const editorStyles = await readFile(new URL("../dashboard-form.css", import.meta.url), "utf8");
   assert.match(source, /showFormStatus\("SAVING WORK"\)/);
   assert.match(source, /showFormStatus\("CHECKING IMAGE PROCESSING"\)/);
-  assert.match(source, /showFormStatus\("DRAFT SAVED"\);\s*phase = "readiness";\s*await refreshPublicationReadiness\(\);/s);
+  assert.match(source, /if \(!currentWorkPublished\) \{\s*phase = "readiness";\s*await refreshPublicationReadiness\(\);\s*\}/s);
   assert.match(source, /await populateForm\(work\);\s*if \(!currentWorkPublished\) await refreshPublicationReadiness\(\);/s);
   assert.doesNotMatch(source, /announceReadiness|refreshPublicationReadiness\(\{\s*announce:\s*false\s*\}\)/);
   assert.match(readinessSource, /PREPARING IMAGES FOR PUBLISH/);
@@ -248,4 +269,44 @@ test("editor copy and boundaries distinguish save, processing, publication, and 
   assert.equal(PUBLICATION_READINESS_INTERVAL_MS, 5_000);
   assert.equal(PUBLICATION_READINESS_BOUND_MS, 120_000);
   assert.equal(PUBLICATION_LONG_PROCESSING_INTERVAL_MS, 15_000);
+});
+
+test("Work editor keeps publication as a top action and metadata save separate", async () => {
+  const [source, markup, styles] = await Promise.all([
+    readFile(new URL("../dashboard-form.js", import.meta.url), "utf8"),
+    readFile(new URL("../dashboard-work-edit.html", import.meta.url), "utf8"),
+    readFile(new URL("../dashboard-form.css", import.meta.url), "utf8")
+  ]);
+  const form = markup.match(/<form class="work-form"[\s\S]*?<\/form>/)?.[0] || "";
+  assert.ok(form);
+  assert.doesNotMatch(form, /name="visibility"|work-visibility-options|VISIBLE ON YOUR PUBLIC PROFILE/);
+  assert.match(form, /id="work-publication-status">NEW WORK/);
+  assert.match(form, /id="work-publication-context" hidden/);
+  assert.ok(form.indexOf("work-publication-control") < form.indexOf("BASIC INFORMATION"));
+  assert.equal((form.match(/class="text-action work-form-publish"/g) || []).length, 1);
+  assert.equal((form.match(/id="work-unpublish"/g) || []).length, 1);
+  assert.equal((form.match(/class="text-action work-new-work"/g) || []).length, 1);
+  assert.match(form, /class="text-action work-new-work" href="dashboard-work-edit\.html" hidden>\[ NEW WORK \]/);
+  assert.match(styles, /\.work-publication-control\s*\{[^}]*flex-wrap:\s*wrap/s);
+  assert.match(form, /work-form-publish" type="submit">\[ PUBLISH \]/);
+  assert.match(form, /id="work-unpublish" type="button" hidden>\[ UNPUBLISH \]/);
+  assert.deepEqual(workEditorPublicationState(null), { status: "NEW WORK", visibility: "draft", saveLabel: "[ SAVE DRAFT ]", published: false });
+  assert.deepEqual(workEditorPublicationState({ visibility: "draft" }), { status: "DRAFT", visibility: "draft", saveLabel: "[ SAVE DRAFT ]", published: false });
+  assert.deepEqual(workEditorPublicationState({ visibility: "published" }), { status: "PUBLISHED", visibility: "published", saveLabel: "[ SAVE CHANGES ]", published: true });
+  assert.match(source, /publicationStatus\.textContent = state\.status/);
+  assert.match(source, /saveDraftButton\.textContent = state\.saveLabel/);
+  assert.match(source, /buildWorkRecord\(workEditorPublicationState\(lastAuthoritativeWork\)\.visibility\)/);
+  assert.match(source, /const publishFieldsAreValid = !publishIntent \|\| validateForPublishing\(record\)/);
+  assert.match(source, /if \(publishIntent\) \{[\s\S]*?workStore\.media\.publish\(currentWorkId, publishAttempt\.current\(\)\)/);
+  assert.match(source, /workStore\.media\.unpublish\(currentWorkId, unpublishAttempt\.current\(\)\)/);
+  assert.match(source, /if \(managedPublicationState !== "ready"\) \{[\s\S]*?savedForContinuation = true;[\s\S]*?return;/);
+  assert.match(source, /profileDraft = published && managedProfileStatus\.get\(work\.ownerProfileId\) === "draft"/);
+  assert.match(source, /firstDraftProfilePublicationExplanation\(\) \|\| "WORK PUBLISHED"/);
+  assert.match(source, /window\.localStorage\.getItem\(key\)[\s\S]*window\.localStorage\.setItem\(key, "1"\)/);
+  assert.match(source, /PROFILE IS DRAFT · THIS WORK IS NOT PUBLICLY VISIBLE/);
+  assert.match(source, /if \(selectedImages\.some\(\(image\) => !image\.serverRecord && image\.blob\)\) await uploadPendingImages\(currentWorkId\)/);
+  assert.match(source, /await populateForm\(authoritative\);\s*if \(publishIntent\)/);
+  assert.match(source, /savedForContinuation = true/);
+  assert.match(source, /if \(unsavedChanges \|\| saveInFlight \|\| imageOperationBusy\)/);
+  assert.match(source, /newWorkLink\?\.addEventListener\("click"/);
 });

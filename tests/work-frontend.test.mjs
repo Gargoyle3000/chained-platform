@@ -140,6 +140,7 @@ test("form and database mapping normalize every supported field", () => {
   assert.equal(row.edition_text, "1/3");
   assert.equal(row.collaborator_url, "https://example.com/a");
   assert.equal(Object.hasOwn(row, "owner_profile_id"), false);
+  assert.equal(Object.hasOwn(row, "visibility"), false);
   const client = databaseToWork({ id: ID, owner_profile_id: ID, ...row, visibility: "draft", created_at: "a", updated_at: "b" });
   assert.equal(client.materials, "Wood, Steel");
   assert.equal(client.year, "2026");

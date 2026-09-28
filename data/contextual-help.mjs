@@ -17,7 +17,7 @@ const HELP_CONTEXTS = Object.freeze({
       ["CONNECTED TO", "Eligible published Works can appear on your public Profile and can be connected to Presentations where supported."]
     ]
   },
-  "work-editor": { title: "WORK EDITOR", sections: [["THIS PAGE", "Create or manage one Work."], ["EDIT HERE", "Edit its type, title, year, images, medium, materials, dimensions, description, credits and visibility. Drafts remain private; publishing makes an eligible Work publicly visible."], ["CONNECTED TO", "Published Works can appear on your public Profile and may be linked to Presentations. A Work is used for an Agenda thumbnail only when it is explicitly selected through Agenda Edit; CHAINED never selects the first linked Work automatically."]] },
+  "work-editor": { title: "WORK EDITOR", sections: [["THIS PAGE", "Create or manage one Work."], ["EDIT HERE", "Edit its details and images here. Save changes separately from Publish or Unpublish beside the status. After a successful save and any image upload, NEW WORK starts another Work; image processing can continue without publishing the previous Work."], ["CONNECTED TO", "A published Work can appear publicly when its Artist Profile is also published, and may be linked to Presentations. A Work is used for an Agenda thumbnail only when it is explicitly selected through Agenda Edit; CHAINED never selects the first linked Work automatically."]] },
   presentations: {
     title: "PRESENTATIONS",
     sections: [

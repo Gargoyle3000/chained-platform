@@ -217,6 +217,8 @@ Last updated: 2026-09-27
 
 \- Artist Profiles start `DRAFT`; Dashboard persistently shows `PROFILE [ DRAFT ]` or `PROFILE [ PUBLISHED ]` and may explain that draft profiles are hidden publicly.
 \- Work publication and Profile publication are independent. A Work can be `PUBLISHED` while its Profile is `DRAFT`; do not block the Work or auto-publish the Profile. The Work is not publicly reachable, including by direct URL, until the Profile is published.
+\- Work publication in the editor is an explicit Publish / Unpublish lifecycle action beside its status, not an editable visibility field. Ordinary metadata saves preserve the Work's current publication state.
+\- After a successful Work save, `[ NEW WORK ]` may leave the editor only once every selected original and preview upload has been finalized and no unsaved edits remain. Server-owned derivative preparation may continue after navigation; starting another Work never publishes the previous one.
 \- The first time a Work is published while its Profile remains draft, show one clear explanation that it is published but not publicly visible. Do not ask for confirmation every time and do not repeat the warning after that; persistent status is the ongoing explanation.
 \- Publishing the Profile makes already-published Works visible without changing their Work states. Returning the Profile to `DRAFT` hides public content without unpublishing each Work.
 

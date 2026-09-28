@@ -13,7 +13,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const {
     createPublicationReadinessWatcher,
     publicationReadinessUiState,
-    workOperationFailureUiState
+    workOperationFailureUiState,
+    workEditorPublicationState,
+    canContinueToNewWork
   } = await import("./data/work-publication-readiness.mjs");
   const { normalizeHttpUrl } = await import("./data/url-normalization.mjs");
   const { materialDisplayValues } = await import("./data/material-terms.mjs");
@@ -36,6 +38,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   );
   const saveDraftButton = document.querySelector(".work-form-save");
   const publishButton = document.querySelector(".work-form-publish");
+  const publicationStatus = document.querySelector("#work-publication-status");
+  const publicationContext = document.querySelector("#work-publication-context");
+  const newWorkLink = document.querySelector(".work-new-work");
   const imageInput = document.querySelector("#work-images-input");
   const imageValidation = document.querySelector("#work-image-validation");
   const imagePreviews = document.querySelector(".work-image-previews");
@@ -58,11 +63,32 @@ document.addEventListener("DOMContentLoaded", async () => {
   let imageOperationBusy = false;
   let currentWorkPublished = false;
   let editorBusy = false;
+  let saveInFlight = false;
+  let savedForContinuation = false;
+  let editVersion = 0;
   let managedPublicationState = currentWorkId ? "unknown" : "new";
   let manualReadinessCheckInFlight = false;
   let lastAuthoritativeWork = null;
+  const managedProfileStatus = new Map();
   const publishAttempt = createIdempotencyState();
   const unpublishAttempt = createIdempotencyState();
+
+  function updateNewWorkAvailability() {
+    if (!newWorkLink) return;
+    newWorkLink.hidden = !canContinueToNewWork({
+      saved: savedForContinuation,
+      busy: editorBusy || saveInFlight || imageOperationBusy,
+      dirty: unsavedChanges,
+      images: selectedImages,
+      managedMode: localSupabaseMode,
+      readinessState: managedPublicationState
+    });
+  }
+
+  function invalidateNewWorkContinuation() {
+    savedForContinuation = false;
+    updateNewWorkAvailability();
+  }
 
   const readinessWatcher = createPublicationReadinessWatcher({
     read: (workId) => workStore.publicationReadiness(workId),
@@ -70,6 +96,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     onError: () => {
       managedPublicationState = "unknown";
       updatePublishAvailability();
+      updateNewWorkAvailability();
       showFormStatus(
         manualReadinessCheckInFlight
           ? "WORK SAVED\nCHECKING IMAGE PREPARATION IS TEMPORARILY UNAVAILABLE"
@@ -180,6 +207,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function applyManagedPublicationReadiness(readiness) {
     managedPublicationState = readiness.state;
     updatePublishAvailability();
+    updateNewWorkAvailability();
     const state = publicationReadinessUiState(readiness, prerequisiteMessage());
     showFormStatus(state.message, state.isError, {
       showCheckAgain: state.showCheckAgain
@@ -196,6 +224,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (["ready", "failed"].includes(managedPublicationState)) return managedPublicationState;
     managedPublicationState = "checking";
     updatePublishAvailability();
+    updateNewWorkAvailability();
     showFormStatus("CHECKING IMAGE PROCESSING");
     await readinessWatcher.start(currentWorkId);
     return managedPublicationState;
@@ -225,6 +254,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     readinessWatcher.stop();
     if (localSupabaseMode && currentWorkId && !currentWorkPublished) managedPublicationState = "unknown";
     updatePublishAvailability();
+    updateNewWorkAvailability();
   }
 
 
@@ -241,6 +271,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (unpublishButton) unpublishButton.disabled = isBusy;
     if (deleteWorkButton) deleteWorkButton.disabled = isBusy;
     if (imageInput) imageInput.disabled = isBusy || currentWorkPublished;
+    updateNewWorkAvailability();
   }
 
 
@@ -300,6 +331,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const [coverImage] = selectedImages.splice(imageIndex, 1);
 
+    invalidateNewWorkContinuation();
     selectedImages.unshift(coverImage);
     renderImagePreviews();
     if (localSupabaseMode && currentWorkId && coverImage.serverRecord) {
@@ -309,6 +341,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         await loadSelectedImages(images);
       } catch { showFormStatus("IMAGE ORDER COULD NOT BE SAVED", true); }
       finally { setEditorBusy(false); }
+    } else {
+      unsavedChanges = true;
+      editVersion += 1;
     }
   }
 
@@ -325,6 +360,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const target = selectedImages[imageIndex];
     if (localSupabaseMode && target.serverRecord) {
       if (!window.confirm("REMOVE THIS IMAGE?")) return;
+      invalidateNewWorkContinuation();
       try {
         setEditorBusy(true);
         const result = await workStore.media.deleteImage(imageId);
@@ -336,6 +372,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     releasePreviewUrl(target);
     selectedImages.splice(imageIndex, 1);
+    unsavedChanges = true;
+    editVersion += 1;
+    invalidateNewWorkContinuation();
 
     if (imageInput) {
       imageInput.value = "";
@@ -452,6 +491,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function retryImageVerification(imageId) {
+    invalidateNewWorkContinuation();
     try {
       setEditorBusy(true);
       showFormStatus("VERIFYING");
@@ -466,6 +506,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const index = selectedImages.findIndex((image) => image.id === imageId);
     const next = index + offset;
     if (index < 0 || next < 0 || next >= selectedImages.length) return;
+    invalidateNewWorkContinuation();
     [selectedImages[index], selectedImages[next]] = [selectedImages[next], selectedImages[index]];
     renderImagePreviews();
     try {
@@ -529,7 +570,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     showImageValidation(validationMessages);
     renderImagePreviews();
     invalidatePublicationReadiness();
-    if (files.length > validationMessages.length) unsavedChanges = true;
+    if (files.length > validationMessages.length) {
+      unsavedChanges = true;
+      editVersion += 1;
+      invalidateNewWorkContinuation();
+    }
 
     if (imageInput) {
       imageInput.value = "";
@@ -689,17 +734,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 
-  function setVisibility(visibility) {
-    const radio = form?.querySelector(
-      `input[name="visibility"][value="${visibility}"]`
-    );
-
-    if (radio) {
-      radio.checked = true;
-    }
-  }
-
-
   function setEditMode(workId) {
     if (currentWorkId && currentWorkId !== workId) readinessWatcher.stop();
     currentWorkId = workId;
@@ -735,10 +769,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         isCover: image.isCover === true
       }));
     if (localSupabaseMode) {
-      const privateImages = mapped.filter((image) => !(image.publicPath && currentVisibility() === "published"));
+      const privateImages = mapped.filter((image) => !(image.publicPath && currentWorkPublished));
       const privatePreviewResult = await workStore.media.privatePreviewBatchResult(privateImages);
       mapped.forEach((image) => {
-        image.previewUrl = image.publicPath && currentVisibility() === "published"
+        image.previewUrl = image.publicPath && currentWorkPublished
           ? workStore.media.publicUrl(image.publicPath)
           : privatePreviewResult.previews.get(String(image.id).toLowerCase()) || "";
         image.previewFailure = privatePreviewResult.failures.get(String(image.id).toLowerCase())?.category || "";
@@ -751,11 +785,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
     renderImagePreviews();
   }
-
-  function currentVisibility() {
-    return form?.querySelector('input[name="visibility"]:checked')?.value || "draft";
-  }
-
 
   async function populateForm(work) {
     lastAuthoritativeWork = work;
@@ -786,7 +815,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       setFormValue(name, value);
     });
 
-    setVisibility(work.visibility);
     expectedUpdatedAt = work.updatedAt;
     updateLifecycleControls(work);
     await loadSelectedImages(work.images);
@@ -795,8 +823,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function updateLifecycleControls(work) {
-    const published = work?.visibility === "published";
+    const state = workEditorPublicationState(work);
+    const published = state.published;
     currentWorkPublished = published;
+    if (publicationStatus) publicationStatus.textContent = state.status;
+    if (saveDraftButton) saveDraftButton.textContent = state.saveLabel;
+    if (publicationContext) {
+      const profileDraft = published && managedProfileStatus.get(work.ownerProfileId) === "draft";
+      publicationContext.textContent = profileDraft ? "PROFILE IS DRAFT · THIS WORK IS NOT PUBLICLY VISIBLE" : "";
+      publicationContext.hidden = !profileDraft;
+    }
     if (imageInput) imageInput.disabled = published;
     if (unpublishButton) unpublishButton.hidden = !published;
     if (deleteWorkButton) deleteWorkButton.hidden = !work || published;
@@ -845,29 +881,35 @@ document.addEventListener("DOMContentLoaded", async () => {
     return saved;
   }
 
-  async function saveWork(visibility) {
+  async function saveWork(publishIntent = false) {
+    if (editorBusy) return;
+    invalidateNewWorkContinuation();
     clearValidationState();
     showFormStatus("");
 
-    const record = buildWorkRecord(visibility);
+    const record = buildWorkRecord(workEditorPublicationState(lastAuthoritativeWork).visibility);
     const urlsAreValid = validateLinkedUrls(record);
-    const publishFieldsAreValid = visibility !== "published" || validateForPublishing(record);
+    const publishFieldsAreValid = !publishIntent || validateForPublishing(record);
 
     if (!urlsAreValid || !publishFieldsAreValid) {
       return;
     }
 
+    const saveEditVersion = editVersion;
+    saveInFlight = true;
     setEditorBusy(true);
     let phase = "saving";
     let metadataPersisted = false;
 
     try {
       if (!localSupabaseMode) {
-        setVisibility(visibility);
-        const savedWork = currentWorkId ? await workStore.updateWork(record) : await workStore.createWork(record);
+        const prototypeRecord = { ...record, visibility: publishIntent ? "published" : record.visibility };
+        const savedWork = currentWorkId ? await workStore.updateWork(prototypeRecord) : await workStore.createWork(prototypeRecord);
         setEditMode(savedWork.id);
-        await loadSelectedImages(savedWork.images);
-        showFormStatus(visibility === "published" ? "WORK PUBLISHED" : "DRAFT SAVED");
+        await populateForm(savedWork);
+        savedForContinuation = true;
+        if (editVersion !== saveEditVersion) unsavedChanges = true;
+        showFormStatus(publishIntent ? "WORK PUBLISHED" : currentWorkPublished ? "CHANGES SAVED" : "DRAFT SAVED");
         return;
       }
 
@@ -879,10 +921,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       phase = "loading";
       let authoritative = await workStore.getWork(currentWorkId);
       await populateForm(authoritative);
-      if (visibility === "published") {
+      if (publishIntent) {
         phase = "readiness";
         await refreshPublicationReadiness();
-        if (managedPublicationState !== "ready") return;
+        if (managedPublicationState !== "ready") {
+          savedForContinuation = true;
+          if (editVersion !== saveEditVersion) unsavedChanges = true;
+          return;
+        }
         phase = "publishing";
         showFormStatus("PUBLISHING");
         await workStore.media.publish(currentWorkId, publishAttempt.current());
@@ -890,17 +936,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         readinessWatcher.stop();
         authoritative = await workStore.getWork(currentWorkId);
         await populateForm(authoritative);
-        showFormStatus("WORK PUBLISHED");
+        savedForContinuation = true;
+        if (editVersion !== saveEditVersion) unsavedChanges = true;
+        showFormStatus(firstDraftProfilePublicationExplanation() || "WORK PUBLISHED");
       } else {
-        showFormStatus("DRAFT SAVED");
-        phase = "readiness";
-        await refreshPublicationReadiness();
+        showFormStatus(currentWorkPublished ? "CHANGES SAVED" : "DRAFT SAVED");
+        if (!currentWorkPublished) {
+          phase = "readiness";
+          await refreshPublicationReadiness();
+        }
+        savedForContinuation = true;
+        if (editVersion !== saveEditVersion) unsavedChanges = true;
       }
     } catch (error) {
       const failure = workOperationFailureUiState({ phase, metadataPersisted, error });
       showFormStatus(failure.message, failure.isError);
       if (failure.restartReadiness) await refreshPublicationReadiness();
     } finally {
+      saveInFlight = false;
       setEditorBusy(false);
     }
   }
@@ -915,6 +968,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function populateOwnerProfiles(profiles) {
+    managedProfileStatus.clear();
+    profiles.forEach((profile) => managedProfileStatus.set(profile.id, profile.publicationStatus));
     profileSelect.replaceChildren(...profiles.map((profile) => {
       const option = document.createElement("option");
       option.value = profile.id;
@@ -926,6 +981,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       selectedOwnerProfileId = profiles[0].id;
       profileSelect.value = selectedOwnerProfileId;
     }
+  }
+
+  function firstDraftProfilePublicationExplanation() {
+    if (managedProfileStatus.get(selectedOwnerProfileId) !== "draft") return "";
+    const key = `chained-work-draft-profile-explained:${selectedOwnerProfileId}`;
+    try {
+      if (window.localStorage.getItem(key) === "1") return "";
+      window.localStorage.setItem(key, "1");
+    } catch {
+      // Publication still succeeds when browser storage is unavailable.
+    }
+    return "WORK PUBLISHED\nPROFILE IS DRAFT · THIS WORK IS NOT PUBLICLY VISIBLE";
   }
 
 
@@ -994,7 +1061,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   saveDraftButton?.addEventListener("click", () => {
-    saveWork("draft");
+    saveWork(false);
   });
 
   readinessCheckButton?.addEventListener("click", () => {
@@ -1003,11 +1070,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
-    saveWork("published");
+    saveWork(!currentWorkPublished);
   });
 
   form?.addEventListener("input", (event) => {
     unsavedChanges = true;
+    editVersion += 1;
+    invalidateNewWorkContinuation();
     event.target.removeAttribute?.("aria-invalid");
 
     if (["work-type", "title", "year"].includes(event.target.name)) {
@@ -1021,16 +1090,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   profileSelect?.addEventListener("change", () => {
     if (!currentWorkId) selectedOwnerProfileId = profileSelect.value;
+    unsavedChanges = true;
+    editVersion += 1;
+    invalidateNewWorkContinuation();
+  });
+
+  newWorkLink?.addEventListener("click", (event) => {
+    if (newWorkLink.hidden || unsavedChanges || editorBusy || saveInFlight) event.preventDefault();
   });
 
   unpublishButton?.addEventListener("click", async () => {
     if (!currentWorkId || !window.confirm("UNPUBLISH THIS WORK?")) return;
+    invalidateNewWorkContinuation();
     try {
       setEditorBusy(true);
       showFormStatus("UNPUBLISHING");
       const result = await workStore.media.unpublish(currentWorkId, unpublishAttempt.current());
       unpublishAttempt.reset();
       await reloadCurrentWork();
+      savedForContinuation = true;
       showFormStatus(result.cleanup_status === "cleanup_pending" ? "WORK HIDDEN · PUBLIC REMOVAL IN PROGRESS" : "WORK UNPUBLISHED");
     } catch { showFormStatus("WORK COULD NOT BE UNPUBLISHED", true); }
     finally { setEditorBusy(false); }
@@ -1059,12 +1137,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.addEventListener("focus", refreshReadinessAfterReturn);
 
   window.addEventListener("beforeunload", (event) => {
+    if (unsavedChanges || saveInFlight || imageOperationBusy) { event.preventDefault(); event.returnValue = ""; }
+  });
+
+  window.addEventListener("pagehide", (event) => {
+    if (event.persisted) return;
     document.removeEventListener("visibilitychange", handleVisibilityChange);
     window.removeEventListener("focus", refreshReadinessAfterReturn);
     readinessWatcher.dispose();
     releaseAllPreviewUrls();
     workStore?.media?.urls.revokeAll();
-    if (unsavedChanges) { event.preventDefault(); event.returnValue = ""; }
   });
 
 
