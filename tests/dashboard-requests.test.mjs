@@ -2,10 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   acknowledgeDashboardPublishReadyWork,
+  dashboardPublishedWorkMessage,
   decideDashboardRequest,
   dashboardWorkEditorHref,
   loadDashboardPublishReadyWorks,
-  loadDashboardRequests
+  loadDashboardRequests,
+  publishDashboardReadyWork
 } from "../data/dashboard-requests.mjs";
 
 const IDS = Object.freeze({
@@ -164,6 +166,68 @@ test("Dashboard explicitly acknowledges only a publish-ready Work action", async
     }),
     /WORK READY STATE COULD NOT BE UPDATED/
   );
+});
+
+test("Dashboard Publish rechecks the ready projection and uses the trusted Work media operation", async () => {
+  const calls = [];
+  const repository = {
+    async listPublishReadyWorkActions() {
+      calls.push("list-ready");
+      return [{ workId: "ready-work", workTitle: "A Work" }];
+    },
+    media: {
+      async publish(workId, key) {
+        calls.push(["publish-work", workId, key]);
+        return { ok: true, status: "published" };
+      }
+    },
+    async getWork(workId) {
+      calls.push(["get-work", workId]);
+      return { id: workId, ownerProfileId: "artist", visibility: "published" };
+    }
+  };
+  const work = await publishDashboardReadyWork(repository, {
+    kind: "work_ready_to_publish", workId: "ready-work"
+  }, "one-idempotency-key");
+  assert.equal(work.visibility, "published");
+  assert.deepEqual(calls, [
+    "list-ready",
+    ["publish-work", "ready-work", "one-idempotency-key"],
+    ["get-work", "ready-work"]
+  ]);
+});
+
+test("Dashboard Publish rejects stale and unconfirmed results without reporting success", async () => {
+  const calls = [];
+  const repository = {
+    async listPublishReadyWorkActions() { calls.push("list-ready"); return []; },
+    media: { async publish() { calls.push("publish"); } },
+    async getWork() { calls.push("get-work"); return { visibility: "draft" }; }
+  };
+  const request = { kind: "work_ready_to_publish", workId: "ready-work" };
+  await assert.rejects(() => publishDashboardReadyWork(repository, request, "key"), /WORK READY STATE CHANGED/);
+  assert.deepEqual(calls, ["list-ready"]);
+
+  repository.listPublishReadyWorkActions = async () => [{ workId: "ready-work", workTitle: "A Work" }];
+  await assert.rejects(() => publishDashboardReadyWork(repository, request, "key"), /COULD NOT BE CONFIRMED/);
+  assert.deepEqual(calls, ["list-ready", "publish", "get-work"]);
+});
+
+test("Dashboard Publish preserves trusted rejection and Profile-draft explanation", async () => {
+  const repository = {
+    async listPublishReadyWorkActions() { return [{ workId: "ready-work", workTitle: "A Work" }]; },
+    media: { async publish() { throw new Error("trusted publish rejected"); } },
+    async getWork() { throw new Error("must not run"); }
+  };
+  await assert.rejects(() => publishDashboardReadyWork(repository, {
+    kind: "work_ready_to_publish", workId: "ready-work"
+  }, "key"), /trusted publish rejected/);
+  assert.equal(dashboardPublishedWorkMessage({ ownerProfileId: "artist" }, [
+    { id: "artist", publicationStatus: "draft" }
+  ]), "WORK PUBLISHED — PROFILE IS DRAFT · NOT PUBLICLY VISIBLE");
+  assert.equal(dashboardPublishedWorkMessage({ ownerProfileId: "artist" }, [
+    { id: "artist", publicationStatus: "published" }
+  ]), "WORK PUBLISHED");
 });
 
 test("Dashboard request decisions use trusted repository actions then reload both summaries", async () => {

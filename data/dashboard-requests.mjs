@@ -1,3 +1,5 @@
+import { WorkError, WORK_ERROR_CODES } from "./work-errors.mjs";
+
 function pendingRequests(rows, kind) {
   return Array.isArray(rows)
     ? rows
@@ -47,6 +49,37 @@ export async function acknowledgeDashboardPublishReadyWork(repository, request) 
   }
 
   await repository.acknowledgePublishReadyWorkAction(request.workId);
+}
+
+export async function publishDashboardReadyWork(repository, request, idempotencyKey) {
+  if (request?.kind !== "work_ready_to_publish"
+    || typeof request.workId !== "string"
+    || !request.workId.trim()
+    || typeof idempotencyKey !== "string"
+    || !idempotencyKey
+    || typeof repository?.media?.publish !== "function"
+    || typeof repository?.getWork !== "function") {
+    throw new WorkError(WORK_ERROR_CODES.INVALID, "WORK COULD NOT BE PUBLISHED");
+  }
+
+  const current = await loadDashboardPublishReadyWorks(repository);
+  if (!current.some((item) => item.workId === request.workId)) {
+    throw new WorkError(WORK_ERROR_CODES.CONFLICT, "WORK READY STATE CHANGED");
+  }
+
+  await repository.media.publish(request.workId, idempotencyKey);
+  const work = await repository.getWork(request.workId);
+  if (work?.visibility !== "published") {
+    throw new WorkError(WORK_ERROR_CODES.UNAVAILABLE, "WORK PUBLICATION COULD NOT BE CONFIRMED");
+  }
+  return work;
+}
+
+export function dashboardPublishedWorkMessage(work, managedProfiles = []) {
+  const ownerProfile = managedProfiles.find((profile) => profile.id === work?.ownerProfileId);
+  return ownerProfile?.publicationStatus === "draft"
+    ? "WORK PUBLISHED — PROFILE IS DRAFT · NOT PUBLICLY VISIBLE"
+    : "WORK PUBLISHED";
 }
 
 export async function loadDashboardRequests(repository) {

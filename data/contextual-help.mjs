@@ -5,7 +5,7 @@ const HELP_CONTEXTS = Object.freeze({
     title: "DASHBOARD",
     sections: [
       ["THIS PAGE", "Your private working overview. It shows the main areas of your Artist workspace."],
-      ["EDIT HERE", "Dashboard is an overview rather than the place to edit Works or Presentation details."],
+      ["EDIT HERE", "For a Work ready to publish, DETAILS opens its editor for review; PUBLISH publishes it directly through the same Work lifecycle. Edit Work and Presentation details in their editors."],
       ["CONNECTED TO", "Works, Presentations, Agenda and other workspace sections. REQUESTS appears only when something needs attention or a meaningful load failure must be shown."]
     ]
   },

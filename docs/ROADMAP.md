@@ -1,6 +1,6 @@
 # CHAINED — ROADMAP
 
-Last updated: 2026-09-27
+Last updated: 2026-09-28
 
 This is a priority map for remaining work, not a deployment record or fixed calendar. Current implementation and deployment status belong in `CHAINED_STATE.md`; established contracts belong in `DECISIONS.md`.
 
@@ -8,7 +8,7 @@ This is a priority map for remaining work, not a deployment record or fixed cale
 
 - Finish live checks of the current mobile/responsive polish, including Dashboard intermediate widths and the transient mobile page indicator on real devices. Keep PROFILE and the global `[+]` together at phone widths by tightening mobile navigation spacing. Make a short sitewide visual pass at desktop and narrow mobile widths; retain known good Discover SINGLE and original artwork ratios.
 - Build a compact, approximately seven-step first-login introduction to the public/private model, DISCOVER and FOLLOW, SELECTOR, TAGS and PROJECTS, Artist Workspace, Work → Presentation → Agenda relationships, publication, and the existing contextual `[ ? ]`. Explain that the interactive global `[+]` enters the Workspace, how Profile and Workspace relate, and which actions are private or public. The introduction is separate from permanent help and cannot be the sole remedy for ambiguous controls; its exact UI remains open.
-- Continue the Work publication journey audit: clarify `WORK READY TO PUBLISH` wording and evaluate direct Dashboard Publish. The duplicate visibility field, bottom-only publication action and path to another Work after safe upload/finalization have been addressed in the editor; preserve publication validation and truthful processing state.
+- Complete signed-in production validation of Dashboard DETAILS, direct PUBLISH and draft-Profile feedback after release; preserve publication validation and truthful processing state during the live check.
 - Validate the revised Presentation editor with a signed-in first save and persisted context at desktop and narrow mobile widths. Evaluate whether a direct canonical NEW WORK route can preserve Presentation return/association context without changing authoritative Work ownership; the existing ADD WORK association path is now clearer.
 - Measure image delivery for a representative slower connection: Profile/Discover/Follow/Selector derivative selection (SMALL versus LARGE), responsive sizing, lazy/eager loading, request concurrency and transfer sizes. Optimize normal delivery before considering a reduced-bandwidth mode.
 - Complete the controlled production smoke check of the dedicated Presentation-scoped Agenda image upload/finalize path; representative-Work thumbnail delivery is already visibly confirmed.

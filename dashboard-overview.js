@@ -7,13 +7,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     await import("./data/presentation-repository.mjs");
   const {
     acknowledgeDashboardPublishReadyWork,
+    dashboardPublishedWorkMessage,
     decideDashboardRequest,
     loadDashboardPublishReadyWorks,
-    loadDashboardRequests
+    loadDashboardRequests,
+    publishDashboardReadyWork
   } =
     await import("./data/dashboard-requests.mjs");
   const { renderDashboardAccountIdentity } =
     await import("./data/dashboard-context.mjs");
+  const { createIdempotencyState } =
+    await import("./data/work-mapping.mjs");
   const { RECENT_WORKS_LIMIT, nextRecentItemsCount, recentWorksCountLabel } =
     await import("./data/dashboard-recent-work-copy.mjs");
 
@@ -57,10 +61,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   const requestsError = document.querySelector(
     "#dashboard-requests-error"
   );
+  const requestsStatus = document.querySelector(
+    "#dashboard-requests-status"
+  );
 
   const activeObjectUrls = new Set();
   const requestActionInFlight = new Set();
+  const publishAttempts = new Map();
   let repository = null;
+  let managedProfiles = [];
+  let managedProfileIds = [];
   let recentWorks = [];
   let recentPresentations = [];
   let recentWorksVisibleCount = RECENT_WORKS_LIMIT;
@@ -105,6 +115,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     requestsError.textContent = message;
     requestsError.hidden = !message;
+    if (message && requestsSection) requestsSection.hidden = false;
+  }
+
+  function setRequestsStatus(message = "") {
+    if (!requestsStatus) return;
+    requestsStatus.textContent = message;
+    requestsStatus.hidden = !message;
+    if (message && requestsSection) requestsSection.hidden = false;
   }
 
   function createRequestAction(label, onClick) {
@@ -122,23 +140,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     const row = document.createElement("article");
 
     if (request.kind === "work_ready_to_publish") {
-      const link = document.createElement("a");
+      const summary = document.createElement("p");
+      const details = document.createElement("a");
 
       row.className = "dashboard-request-row";
-      link.className = "dashboard-request-link";
-      link.href = request.href;
-      link.textContent = `WORK READY TO PUBLISH — ${request.workTitle}`;
-      link.setAttribute(
+      summary.textContent = `WORK READY TO PUBLISH — ${request.workTitle}`;
+      details.className = "text-action dashboard-request-action dashboard-request-details";
+      details.href = request.href;
+      details.textContent = "[ DETAILS ]";
+      details.setAttribute(
         "aria-label",
-        `Open ${request.workTitle} to publish`
+        `Review ${request.workTitle} in the Work editor`
       );
+      details.addEventListener("click", (event) => {
+        if (requestActionInFlight.has(`${request.kind}:${request.workId}`)) event.preventDefault();
+      });
       const actions = document.createElement("div");
 
       actions.className = "dashboard-request-actions";
       actions.append(
-        createRequestAction("NOT NOW", (action) => onAcknowledge(request, action))
+        details,
+        createRequestAction("[ PUBLISH ]", (action) => publishReadyWork(request, action)),
+        createRequestAction("[ NOT NOW ]", (action) => onAcknowledge(request, action))
       );
-      row.append(link, actions);
+      row.append(summary, actions);
 
       return row;
     }
@@ -175,7 +200,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderRequests(requests, onDecision, onAcknowledge, hasError = false) {
     if (!requestsSection || !requestsList) return;
 
-    requestsSection.hidden = requests.length === 0 && !hasError;
+    requestsSection.hidden = requests.length === 0 && !hasError && requestsStatus?.hidden !== false;
     requestsList.replaceChildren(
       ...requests.map((request) =>
         createRequestRow(request, onDecision, onAcknowledge)
@@ -183,9 +208,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  async function loadRequests() {
-    const publishReadyWorksPromise =
-      loadDashboardPublishReadyWorks(repository).catch((error) => {
+  async function loadRequests(currentReadyWorks = null) {
+    const publishReadyWorksPromise = Array.isArray(currentReadyWorks)
+      ? Promise.resolve(currentReadyWorks)
+      : loadDashboardPublishReadyWorks(repository).catch((error) => {
         console.error("Could not load Dashboard Work-ready actions.", error);
         return [];
       });
@@ -262,6 +288,71 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  function setReadyRowBusy(action, busy) {
+    const actions = action.closest(".dashboard-request-actions");
+    actions?.querySelectorAll("button").forEach((button) => {
+      button.disabled = busy;
+    });
+    actions?.querySelector(".dashboard-request-details")
+      ?.setAttribute("aria-disabled", String(busy));
+  }
+
+  async function publishReadyWork(request, action) {
+    const requestKey = request?.workId
+      ? `${request.kind}:${request.workId}`
+      : "";
+    if (!requestKey || requestActionInFlight.has(requestKey)) return;
+
+    const attempt = publishAttempts.get(request.workId) || createIdempotencyState();
+    publishAttempts.set(request.workId, attempt);
+    requestActionInFlight.add(requestKey);
+    setReadyRowBusy(action, true);
+    action.textContent = "[ PUBLISHING ]";
+    setRequestsError();
+    setRequestsStatus();
+    let publishedWork = null;
+
+    try {
+      publishedWork = await publishDashboardReadyWork(repository, request, attempt.current());
+      const currentReadyWorks = await loadDashboardPublishReadyWorks(repository);
+      if (currentReadyWorks.some((item) => item.workId === request.workId)) {
+        throw new Error("Published Work remains in ready actions");
+      }
+      await loadRequests(currentReadyWorks);
+      attempt.reset();
+      publishAttempts.delete(request.workId);
+      setRequestsStatus(dashboardPublishedWorkMessage(publishedWork, managedProfiles));
+      try {
+        const works = await repository.listWorks(managedProfileIds);
+        updateSummary(works);
+        await renderRecentWorks(works);
+      } catch (error) {
+        console.error("Could not refresh Dashboard Works after publication.", error);
+      }
+    } catch (error) {
+      console.error("Could not publish Dashboard Work.", error);
+      try {
+        const currentReadyWorks = await loadDashboardPublishReadyWorks(repository);
+        await loadRequests(currentReadyWorks);
+      } catch (refreshError) {
+        console.error("Could not refresh Dashboard Work-ready actions.", refreshError);
+      }
+      setRequestsError(publishedWork
+        ? "WORK PUBLISHED · DASHBOARD STATUS COULD NOT BE REFRESHED"
+        : error?.code === "media_processing"
+          ? "WORK IS STILL PROCESSING · REVIEW WORK DETAILS"
+          : error?.code === "conflict"
+            ? "WORK READY STATE CHANGED · REVIEW WORK DETAILS"
+            : error?.code === "unavailable"
+              ? "WORK PUBLICATION STATUS UNAVAILABLE · REVIEW WORK DETAILS"
+            : "WORK COULD NOT BE PUBLISHED · REVIEW WORK DETAILS");
+    } finally {
+      requestActionInFlight.delete(requestKey);
+      action.textContent = "[ PUBLISH ]";
+      setReadyRowBusy(action, false);
+    }
+  }
+
   async function acknowledgePublishReady(request, action) {
     const requestKey = request?.workId
       ? `${request.kind}:${request.workId}`
@@ -270,8 +361,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!requestKey || requestActionInFlight.has(requestKey)) return;
 
     requestActionInFlight.add(requestKey);
-    action.disabled = true;
+    setReadyRowBusy(action, true);
     setRequestsError();
+    setRequestsStatus();
 
     try {
       await acknowledgeDashboardPublishReadyWork(repository, request);
@@ -279,7 +371,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (error) {
       console.error("Could not acknowledge Dashboard Work readiness.", error);
       setRequestsError("WORK READY STATE COULD NOT BE UPDATED");
-      action.disabled = false;
+      setReadyRowBusy(action, false);
     } finally {
       requestActionInFlight.delete(requestKey);
     }
@@ -774,10 +866,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       await repository.initialise();
 
       let works = [];
-      let managedProfileIds = [];
 
       if (repository.mode === "supabase") {
         const profiles = await repository.listManagedProfiles();
+        managedProfiles = profiles;
         renderDashboardAccountIdentity(profiles);
         managedProfileIds = profiles.map(
           (profile) => profile.id
