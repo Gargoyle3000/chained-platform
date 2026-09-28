@@ -116,7 +116,7 @@
 
       <form class="work-form" novalidate>
 
-        <div class="work-publication-control">
+        <div class="work-publication-control" id="work-publication-control" role="group" aria-label="Work publication status and actions" tabindex="-1">
           <p>STATUS: <span id="work-publication-status">NEW WORK</span></p>
           <button class="text-action work-form-publish" type="submit">[ PUBLISH ]</button>
           <button class="text-action" id="work-unpublish" type="button" hidden>[ UNPUBLISH ]</button>
@@ -494,6 +494,13 @@
             class="text-action work-form-save"
             type="button">
             [ SAVE DRAFT ]
+          </button>
+
+          <button
+            class="text-action work-form-publish work-form-bottom-publish"
+            type="submit"
+            hidden>
+            [ PUBLISH ]
           </button>
 
         </footer>

@@ -271,7 +271,7 @@ test("editor copy and boundaries distinguish save, processing, publication, and 
   assert.equal(PUBLICATION_LONG_PROCESSING_INTERVAL_MS, 15_000);
 });
 
-test("Work editor keeps publication as a top action and metadata save separate", async () => {
+test("Work editor shares publication across top and saved-draft bottom actions while save stays separate", async () => {
   const [source, markup, styles] = await Promise.all([
     readFile(new URL("../dashboard-form.js", import.meta.url), "utf8"),
     readFile(new URL("../dashboard-work-edit.html", import.meta.url), "utf8"),
@@ -284,16 +284,20 @@ test("Work editor keeps publication as a top action and metadata save separate",
   assert.match(form, /id="work-publication-context" hidden/);
   assert.ok(form.indexOf("work-publication-control") < form.indexOf("BASIC INFORMATION"));
   assert.equal((form.match(/class="text-action work-form-publish"/g) || []).length, 1);
+  assert.equal((form.match(/work-form-publish/g) || []).length, 2);
+  assert.match(form, /class="text-action work-form-publish work-form-bottom-publish"\s+type="submit"\s+hidden>\s*\[ PUBLISH \]/);
   assert.equal((form.match(/id="work-unpublish"/g) || []).length, 1);
   assert.equal((form.match(/class="text-action work-new-work"/g) || []).length, 1);
   assert.match(form, /class="text-action work-new-work" href="dashboard-work-edit\.html" hidden>\[ NEW WORK \]/);
   assert.match(styles, /\.work-publication-control\s*\{[^}]*flex-wrap:\s*wrap/s);
+  assert.match(styles, /\.work-form-bottom-publish\[hidden\]\s*\{\s*display:\s*none;/);
   assert.match(form, /work-form-publish" type="submit">\[ PUBLISH \]/);
   assert.match(form, /id="work-unpublish" type="button" hidden>\[ UNPUBLISH \]/);
   assert.deepEqual(workEditorPublicationState(null), { status: "NEW WORK", visibility: "draft", saveLabel: "[ SAVE DRAFT ]", published: false });
   assert.deepEqual(workEditorPublicationState({ visibility: "draft" }), { status: "DRAFT", visibility: "draft", saveLabel: "[ SAVE DRAFT ]", published: false });
   assert.deepEqual(workEditorPublicationState({ visibility: "published" }), { status: "PUBLISHED", visibility: "published", saveLabel: "[ SAVE CHANGES ]", published: true });
   assert.match(source, /publicationStatus\.textContent = state\.status/);
+  assert.match(source, /bottomPublishButton\.hidden = !work\?\.id \|\| published/);
   assert.match(source, /saveDraftButton\.textContent = state\.saveLabel/);
   assert.match(source, /buildWorkRecord\(workEditorPublicationState\(lastAuthoritativeWork\)\.visibility\)/);
   assert.match(source, /const publishFieldsAreValid = !publishIntent \|\| validateForPublishing\(record\)/);
@@ -309,4 +313,12 @@ test("Work editor keeps publication as a top action and metadata save separate",
   assert.match(source, /savedForContinuation = true/);
   assert.match(source, /if \(unsavedChanges \|\| saveInFlight \|\| imageOperationBusy\)/);
   assert.match(source, /newWorkLink\?\.addEventListener\("click"/);
+  assert.match(source, /saveDraftButton\?\.addEventListener\("click", \(\) => \{\s*saveWork\(false\)/);
+  assert.match(source, /const fromBottom = event\.submitter === bottomPublishButton/);
+  assert.match(source, /void saveWork\(!currentWorkPublished, \{ returnToStatus: fromBottom \}\)/);
+  assert.match(source, /if \(fromBottom && publishButton\?\.disabled\) \{\s*showPublicationFeedback\(\);\s*return;/);
+  assert.match(source, /if \(!urlsAreValid \|\| !publishFieldsAreValid\) \{\s*return;\s*\}/);
+  assert.match(source, /if \(returnToStatus\) showPublicationFeedback\(\)/);
+  assert.match(source, /publicationControl\?\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(source, /publicationControl\?\.scrollIntoView\(\{[\s\S]*?prefers-reduced-motion: reduce/);
 });

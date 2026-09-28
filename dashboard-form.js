@@ -38,6 +38,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   );
   const saveDraftButton = document.querySelector(".work-form-save");
   const publishButton = document.querySelector(".work-form-publish");
+  const bottomPublishButton = document.querySelector(".work-form-bottom-publish");
+  const publicationControl = document.querySelector("#work-publication-control");
   const publicationStatus = document.querySelector("#work-publication-status");
   const publicationContext = document.querySelector("#work-publication-context");
   const newWorkLink = document.querySelector(".work-new-work");
@@ -193,6 +195,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const readinessBlocksPublish = ["unknown", "checking", "processing", "failed"].includes(managedPublicationState);
     const managedDraftBlocked = localSupabaseMode && currentWorkId && !currentWorkPublished && readinessBlocksPublish && !hasPendingImageUpload;
     publishButton.disabled = editorBusy || managedDraftBlocked;
+    if (bottomPublishButton) bottomPublishButton.disabled = editorBusy;
+  }
+
+
+  function showPublicationFeedback() {
+    publicationControl?.focus({ preventScroll: true });
+    publicationControl?.scrollIntoView({
+      behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "start"
+    });
   }
 
 
@@ -841,6 +853,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (published) publicWorkLink.href = `artwork.html?id=${encodeURIComponent(work.id)}`;
     }
     if (publishButton) publishButton.hidden = published;
+    if (bottomPublishButton) bottomPublishButton.hidden = !work?.id || published;
     if (published) {
       readinessWatcher.stop();
       managedPublicationState = "published";
@@ -881,7 +894,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return saved;
   }
 
-  async function saveWork(publishIntent = false) {
+  async function saveWork(publishIntent = false, { returnToStatus = false } = {}) {
     if (editorBusy) return;
     invalidateNewWorkContinuation();
     clearValidationState();
@@ -955,6 +968,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     } finally {
       saveInFlight = false;
       setEditorBusy(false);
+      if (returnToStatus) showPublicationFeedback();
     }
   }
 
@@ -1070,7 +1084,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
-    saveWork(!currentWorkPublished);
+    const fromBottom = event.submitter === bottomPublishButton;
+    if (fromBottom && publishButton?.disabled) {
+      showPublicationFeedback();
+      return;
+    }
+    void saveWork(!currentWorkPublished, { returnToStatus: fromBottom });
   });
 
   form?.addEventListener("input", (event) => {

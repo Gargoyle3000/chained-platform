@@ -346,6 +346,7 @@
   flex-wrap: wrap;
   gap: 12px 32px;
   margin: 0 0 12px;
+  scroll-margin-top: calc(var(--header-height) + 24px);
 }
 
 .work-publication-control p {
@@ -416,6 +417,10 @@
 
 .work-form-publish {
   color: var(--accent);
+}
+
+.work-form-bottom-publish[hidden] {
+  display: none;
 }
 
 .work-form-publish:disabled {

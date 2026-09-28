@@ -10,7 +10,7 @@ Koos completed invitation/password onboarding and reached active Artist use. Wor
 
 ### Findings
 
-1. **Work publication controls.** Observation: EDIT WORK offers DRAFT / PUBLISHED radio controls and bottom SAVE DRAFT / PUBLISH WORK actions; Koos experienced duplicated publication control. Interpretation/question: publication appears as both a field and an action. Follow-up: the radio field was removed; the editor now shows publication status and Publish / Unpublish at the top, with a separate save action.
+1. **Work publication controls.** Observation: EDIT WORK offers DRAFT / PUBLISHED radio controls and bottom SAVE DRAFT / PUBLISH WORK actions; Koos experienced duplicated publication control. Interpretation/question: publication appears as both a field and an action. Follow-up: the radio field was removed; the editor now shows publication status and Publish / Unpublish at the top, with a separate save action. A saved draft also offers the same Publish action beside Save Draft at the form end, returning attention to the top status after the attempt.
 
 2. **Photo Corrector Crop.** Observation: Crop would help. Interpretation/question: this extends the existing tool. Possible action: add Crop to later Photo Corrector / TOOLS work.
 
