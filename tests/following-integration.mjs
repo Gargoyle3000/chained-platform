@@ -1,4 +1,4 @@
-import { execSync, spawn, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rename, rm } from "node:fs/promises";
@@ -8,10 +8,11 @@ import { randomUUID } from "node:crypto";
 import assert from "node:assert/strict";
 
 import { createDiscoverRepository } from "../data/discover-repository.mjs";
+import { npxExecutable, resolveBrowserExecutable } from "./platform-tools.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const origin = "http://127.0.0.1:5511";
-const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const chromePath = resolveBrowserExecutable();
 const configPath = join(root, "frontend-config.local.mjs");
 const disabledConfigPath = join(root, "frontend-config.local.mjs.following-integration");
 const browserProfile = await mkdtemp(join(tmpdir(), "chained-following-integration-"));
@@ -34,7 +35,7 @@ function wait(milliseconds) {
 }
 
 function localStatus() {
-  const output = execSync("npx.cmd supabase status --output json", {
+  const output = execFileSync(npxExecutable(), ["supabase", "status", "--output", "json"], {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
@@ -241,7 +242,7 @@ async function setBrowserSession(session) {
 }
 
 try {
-  if (!existsSync(chromePath) || !existsSync(configPath) || existsSync(disabledConfigPath)) {
+  if (!chromePath || !existsSync(configPath) || existsSync(disabledConfigPath)) {
     throw new Error("local_browser_configuration_unavailable");
   }
   const status = localStatus();

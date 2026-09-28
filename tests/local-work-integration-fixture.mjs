@@ -1,8 +1,9 @@
-import { execSync, spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import { createSupabaseWorkRepository } from "../data/supabase-work-repository.mjs";
+import { npxExecutable } from "./platform-tools.mjs";
 
 const PRIVATE_PREVIEW_WEBP = Buffer.from(
   "UklGRiIAAABXRUJQVlA4IBYAAADQAQCdASoBAAEAAUAmJaQAA3AA/vuUAAA=",
@@ -14,7 +15,7 @@ const TEST_RGB_JPEG = Buffer.from(
 );
 
 function localStatus() {
-  const output = execSync("npx.cmd supabase status --output json", {
+  const output = execFileSync(npxExecutable(), ["supabase", "status", "--output", "json"], {
     cwd: process.cwd(),
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],

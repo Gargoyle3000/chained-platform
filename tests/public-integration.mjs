@@ -1,4 +1,4 @@
-import { execSync, spawn, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -11,10 +11,11 @@ import { createDiscoverRepository } from "../data/discover-repository.mjs";
 import { createPublicProfileRepository } from "../data/public-profile-repository.mjs";
 import { createPublicPresentationRepository } from "../data/public-presentation-repository.mjs";
 import { createSupabaseWorkRepository } from "../data/supabase-work-repository.mjs";
+import { npxExecutable, resolveBrowserExecutable } from "./platform-tools.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const serverOrigin = "http://127.0.0.1:5510";
-const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const chromePath = resolveBrowserExecutable();
 const configPath = join(root, "frontend-config.local.mjs");
 const browserProfile = await mkdtemp(join(tmpdir(), "chained-public-integration-"));
 const publicObjects = [];
@@ -42,7 +43,7 @@ function wait(milliseconds) {
 }
 
 function localStatus() {
-  const output = execSync("npx.cmd supabase status --output json", {
+  const output = execFileSync(npxExecutable(), ["supabase", "status", "--output", "json"], {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
@@ -261,7 +262,7 @@ async function loadDiscoverFixtures(fixtureSlugs) {
 }
 
 try {
-  if (!existsSync(chromePath)) throw new Error("chrome_unavailable");
+  if (!chromePath) throw new Error("chrome_unavailable");
   if (!existsSync(configPath)) throw new Error("local_config_unavailable");
 
   const status = localStatus();
