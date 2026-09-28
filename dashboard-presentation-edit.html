@@ -10,13 +10,14 @@
   <link rel="stylesheet" href="styles.css">
   <script src="scroll-indicators.js" defer></script>
   <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="dashboard-form.css">
   <link rel="stylesheet" href="presentation-agenda-image.css">
   <link rel="stylesheet" href="auth/auth.css">
 
   <script type="module" src="auth/guard.mjs"></script>
 </head>
 
-<body class="dashboard-page" data-auth-protected="true">
+<body class="dashboard-page dashboard-form-page" data-auth-protected="true">
 
   <header class="site-header">
     <a class="wordmark" href="discover.html">
@@ -111,6 +112,7 @@
           <h2 id="presentation-editor-heading">
             NEW PRESENTATION
           </h2>
+          <p class="presentation-editor-status" id="presentation-editor-status">STATUS: NEW</p>
         </div>
 
         <a
@@ -127,6 +129,8 @@
         role="alert"
         aria-live="polite"
         hidden></p>
+
+      <p class="presentation-first-save-note" id="presentation-first-save-note">SAVE THIS DRAFT TO ADD PARTICIPANTS, WORKS, AGENDA IMAGE, PROGRAM AND CO-OPERATORS.</p>
 
 
       <form
@@ -216,66 +220,10 @@
 
         </section>
 
-        <section class="work-form-section presentation-context-section" id="presentation-participants-section" hidden>
-          <header class="work-form-section-header"><p>04</p><div><h3>PARTICIPANTS</h3><p>PEOPLE INCLUDED IN THIS PRESENTATION</p></div></header>
-          <div class="presentation-context-list" id="presentation-participants-list"></div>
-          <div class="presentation-context-add" id="presentation-participant-add">
-            <label class="work-form-field"><span>NAME</span><input name="participant-name" maxlength="300" placeholder="PARTICIPANT NAME"></label>
-            <button class="text-action" type="button">[ ADD PARTICIPANT ]</button>
-          </div>
-        </section>
-
-        <section class="work-form-section presentation-context-section" id="presentation-cooperators-section" hidden>
-          <header class="work-form-section-header"><p>05</p><div><h3>CO-OPERATORS</h3><p>SHARED PRESENTATION CONTEXT</p></div></header>
-          <div class="presentation-context-list" id="presentation-cooperators-list"></div>
-          <div class="presentation-context-add" id="presentation-cooperator-invite">
-            <label class="work-form-field"><span>CHAINED ARTIST</span><input name="cooperator-profile-search" maxlength="100" placeholder="SEARCH ARTIST PROFILE" autocomplete="off"></label>
-            <button class="text-action" type="button" disabled>[ INVITE CO-OPERATOR ]</button>
-            <div class="presentation-profile-results" id="presentation-cooperator-results" hidden></div>
-          </div>
-        </section>
-
-        <section class="work-form-section presentation-context-section" id="presentation-works-section" hidden>
-          <header class="work-form-section-header"><p>06</p><div><h3>WORKS</h3><p>PUBLIC WORKS BY CHAINED ARTISTS</p></div></header>
-          <div class="presentation-work-participants" id="presentation-work-participants"></div>
-          <div class="presentation-context-add" id="presentation-work-profile-search">
-            <label class="work-form-field"><span>CHAINED ARTIST</span><input name="work-profile-search" maxlength="100" placeholder="SEARCH ARTIST PROFILE" autocomplete="off"></label>
-            <div class="presentation-profile-results" id="presentation-work-profile-results" hidden></div>
-          </div>
-          <p class="dashboard-empty-state" id="presentation-work-state">SELECT OR SEARCH A CHAINED ARTIST</p>
-          <div class="presentation-work-grid" id="presentation-work-grid"></div>
-        </section>
-
-        <section class="work-form-section presentation-context-section" id="presentation-agenda-image-section" hidden>
-          <header class="work-form-section-header"><p>07</p><div><h3>AGENDA IMAGE</h3><p>ONE OPTIONAL PUBLIC AGENDA CONTEXT IMAGE</p></div></header>
-          <div class="presentation-context-list" id="presentation-agenda-image-state"></div>
-          <div class="presentation-context-add">
-            <label class="work-form-field"><span>IMAGE</span><input id="presentation-agenda-image-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif"></label>
-            <button class="text-action" id="presentation-agenda-image-upload" type="button">[ UPLOAD ]</button>
-          </div>
-          <div class="presentation-context-add">
-            <label class="work-form-field"><span>REPRESENTATIVE WORK</span><select id="presentation-representative-work"><option value="">[ NONE ]</option></select></label>
-          </div>
-        </section>
-
-        <section class="work-form-section presentation-context-section" id="presentation-program-section" hidden>
-          <header class="work-form-section-header"><p>08</p><div><h3>PROGRAM</h3><p>PRESENTATION-SPECIFIC MOMENTS</p></div></header>
-          <div class="presentation-context-list" id="presentation-program-list"></div>
-          <div class="presentation-context-add" id="presentation-program-add">
-            <label class="work-form-field"><span>TITLE</span><input name="program-title" maxlength="300" placeholder="PROGRAM TITLE"></label>
-            <label class="work-form-field"><span>DATE</span><input name="program-date" type="date"></label>
-            <label class="work-form-field"><span>START TIME</span><input name="program-start-time" type="time"></label>
-            <label class="work-form-field"><span>TYPE</span><input name="program-type" maxlength="80" placeholder="OPENING"></label>
-            <label class="work-visibility-options"><input name="program-visible" type="checkbox" checked><span>SHOW IN PRESENTATION</span></label>
-            <button class="text-action" type="button">[ ADD PROGRAM ITEM ]</button>
-          </div>
-        </section>
-
-
         <section class="work-form-section">
 
           <header class="work-form-section-header">
-            <p>08</p>
+            <p>02</p>
 
             <div>
               <h3>PLACE AND DATE</h3>
@@ -340,7 +288,6 @@
 
         </section>
 
-
         <section class="work-form-section">
 
           <header class="work-form-section-header">
@@ -381,11 +328,10 @@
 
         </section>
 
-
         <section class="work-form-section">
 
           <header class="work-form-section-header">
-            <p>07</p>
+            <p>04</p>
 
             <div>
               <h3>PLACEMENT</h3>
@@ -428,6 +374,62 @@
 
         </section>
 
+        <section class="work-form-section presentation-context-section" id="presentation-participants-section" hidden>
+          <header class="work-form-section-header"><p>05</p><div><h3>PARTICIPANTS</h3><p>PEOPLE INCLUDED IN THIS PRESENTATION</p></div></header>
+          <div class="presentation-context-list" id="presentation-participants-list"></div>
+          <div class="presentation-context-add" id="presentation-participant-add">
+            <label class="work-form-field"><span>NAME</span><input name="participant-name" maxlength="300" placeholder="PARTICIPANT NAME"></label>
+            <button class="text-action" type="button">[ ADD PARTICIPANT ]</button>
+          </div>
+        </section>
+
+        <section class="work-form-section presentation-context-section" id="presentation-works-section" hidden>
+          <header class="work-form-section-header"><p>06</p><div><h3>WORKS</h3><p>ADD EXISTING PUBLIC WORKS BY CHAINED ARTISTS</p></div></header>
+          <p class="presentation-context-note">SELECT AN ARTIST, THEN ADD AN ELIGIBLE WORK. THE ARTIST KEEPS CONTROL OF ITS WORK RECORD.</p>
+          <div class="presentation-work-participants" id="presentation-work-participants"></div>
+          <div class="presentation-context-add" id="presentation-work-profile-search">
+            <label class="work-form-field"><span>CHAINED ARTIST</span><input name="work-profile-search" maxlength="100" placeholder="SEARCH ARTIST PROFILE" autocomplete="off"></label>
+            <div class="presentation-profile-results" id="presentation-work-profile-results" hidden></div>
+          </div>
+          <p class="dashboard-empty-state" id="presentation-work-state">SELECT OR SEARCH AN ARTIST TO ADD AN EXISTING PUBLIC WORK</p>
+          <div class="presentation-work-grid" id="presentation-work-grid"></div>
+        </section>
+
+        <section class="work-form-section presentation-context-section" id="presentation-agenda-image-section" hidden>
+          <header class="work-form-section-header"><p>07</p><div><h3>AGENDA IMAGE</h3><p>ONE OPTIONAL PUBLIC AGENDA CONTEXT IMAGE</p></div></header>
+          <div class="presentation-context-list" id="presentation-agenda-image-state"></div>
+          <div class="presentation-context-add">
+            <label class="work-form-field"><span>IMAGE</span><input id="presentation-agenda-image-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif"></label>
+            <button class="text-action" id="presentation-agenda-image-upload" type="button">[ UPLOAD ]</button>
+          </div>
+          <div class="presentation-context-add">
+            <label class="work-form-field"><span>REPRESENTATIVE WORK</span><select id="presentation-representative-work"><option value="">[ NONE ]</option></select></label>
+          </div>
+        </section>
+
+        <section class="work-form-section presentation-context-section" id="presentation-program-section" hidden>
+          <header class="work-form-section-header"><p>08</p><div><h3>PROGRAM</h3><p>PRESENTATION-SPECIFIC MOMENTS</p></div></header>
+          <div class="presentation-context-list" id="presentation-program-list"></div>
+          <div class="presentation-context-add" id="presentation-program-add">
+            <label class="work-form-field"><span>TITLE</span><input name="program-title" maxlength="300" placeholder="PROGRAM TITLE"></label>
+            <label class="work-form-field"><span>DATE</span><input name="program-date" type="date"></label>
+            <label class="work-form-field"><span>START TIME</span><input name="program-start-time" type="time"></label>
+            <label class="work-form-field"><span>TYPE</span><input name="program-type" maxlength="80" placeholder="OPENING"></label>
+            <label class="work-visibility-options"><input name="program-visible" type="checkbox" checked><span>SHOW IN PRESENTATION</span></label>
+            <button class="text-action" type="button">[ ADD PROGRAM ITEM ]</button>
+          </div>
+        </section>
+
+        <section class="work-form-section presentation-context-section" id="presentation-cooperators-section" hidden>
+          <header class="work-form-section-header"><p>09</p><div><h3>CO-OPERATORS</h3><p>MANAGEMENT ACCESS · NOT PUBLIC PARTICIPANTS</p></div></header>
+          <div class="presentation-context-list" id="presentation-cooperators-list"></div>
+          <div class="presentation-context-add" id="presentation-cooperator-invite">
+            <label class="work-form-field"><span>CHAINED ARTIST</span><input name="cooperator-profile-search" maxlength="100" placeholder="SEARCH ARTIST PROFILE" autocomplete="off"></label>
+            <button class="text-action" type="button" disabled>[ INVITE CO-OPERATOR ]</button>
+            <div class="presentation-profile-results" id="presentation-cooperator-results" hidden></div>
+          </div>
+        </section>
+
 
         <p
           class="work-form-status"
@@ -447,7 +449,7 @@
             hidden>
             [ + ADD AGENDA MOMENT ]
           </a>
-<button
+          <button
             class="text-action"
             id="presentation-delete"
             type="button"

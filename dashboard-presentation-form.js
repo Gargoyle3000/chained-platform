@@ -23,6 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelector("#presentation-form-status");
   const headingElement =
     document.querySelector("#presentation-editor-heading");
+  const editorStatusElement = document.querySelector("#presentation-editor-status");
   const contextElement =
     document.querySelector("#presentation-editor-context");
   const ownerField =
@@ -38,6 +39,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelector("#presentation-add-agenda");
   const saveButton =
     document.querySelector(".presentation-form-save");
+  const firstSaveNote = document.querySelector("#presentation-first-save-note");
   const participantsSection = document.querySelector("#presentation-participants-section");
   const participantsList = document.querySelector("#presentation-participants-list");
   const participantAddForm = document.querySelector("#presentation-participant-add");
@@ -101,6 +103,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     [...form.elements].forEach((element) => {
       element.disabled = disabled;
     });
+    firstSaveNote.hidden = disabled || Boolean(currentPresentationId);
   }
 
   function normaliseUrl(value) {
@@ -206,6 +209,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     headingElement.textContent = editing
       ? presentation.title || "UNTITLED PRESENTATION"
       : "NEW PRESENTATION";
+    editorStatusElement.textContent = `STATUS: ${editing ? presentation.visibility.toUpperCase() : "NEW"}`;
 
     document.title = editing
       ? `${presentation.title || "Untitled Presentation"} — CHAINED Dashboard`
@@ -214,6 +218,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     deleteButton.hidden = !editing || !isOwnerManager;
     publicationButton.hidden = !editing;
     agendaButton.hidden = !editing;
+    firstSaveNote.hidden = editing;
 
     if (editing) {
       agendaButton.href =
@@ -448,7 +453,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             )
           );
         } else {
-          controls.append(action("+", async () => {
+          controls.append(action("ADD WORK", async () => {
             try {
               await repository.proposePresentationWork(currentPresentationId, work.id);
               await refreshContext();
@@ -500,7 +505,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
     workState.textContent = selectedProfile
       ? ""
-      : "SELECT OR SEARCH A CHAINED ARTIST";
+      : "SELECT OR SEARCH AN ARTIST TO ADD AN EXISTING PUBLIC WORK";
 
     workParticipants.replaceChildren(...profiles.map((profile) => {
       const select = action(profile.displayName, async () => {
@@ -815,6 +820,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (saveButton.disabled) return;
 
     setError();
     setStatus();
@@ -858,6 +864,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       await reconcilePendingWorkRemovals();
 
       currentPresentationId = saved.id;
+      currentPresentation = saved;
       expectedUpdatedAt = saved.updatedAt;
       currentVisibility = saved.visibility;
       if (creating) isOwnerManager = true;
@@ -872,6 +879,18 @@ document.addEventListener("DOMContentLoaded", async () => {
           saved.id
         )}`
       );
+
+      if (creating) {
+        try {
+          const hydrated = await repository.getPresentation(saved.id);
+          if (!hydrated) throw new Error("PRESENTATION IS NOT AVAILABLE");
+          currentPresentation = hydrated;
+          updateEditorState(hydrated);
+          await refreshContext();
+        } catch {
+          setError("DRAFT SAVED. CONTEXT COULD NOT BE LOADED. RELOAD THIS PAGE.");
+        }
+      }
 
       setStatus(
         saved.visibility === "published"

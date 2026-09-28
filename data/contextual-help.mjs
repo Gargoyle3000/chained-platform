@@ -26,7 +26,7 @@ const HELP_CONTEXTS = Object.freeze({
       ["CONNECTED TO", "Presentations can connect to Works, participants and dated Agenda occurrences."]
     ]
   },
-  "presentation-editor": { title: "PRESENTATION EDITOR", sections: [["THIS PAGE", "Manage the Presentation itself."], ["EDIT HERE", "Edit its type, title, venue, location, description, external link, participants, co-operators, linked Works and Program where available."], ["CONNECTED TO", "A Presentation may have a dated Agenda occurrence. Manage that occurrence’s date, time, location and Agenda-specific image controls primarily in Agenda Edit."]] },
+  "presentation-editor": { title: "PRESENTATION EDITOR", sections: [["THIS PAGE", "Save a new Presentation as a draft first. Participants, existing Works, Agenda image, Program and co-operator access then become available."], ["EDIT HERE", "Edit Presentation details and placement here. Add eligible public Works from their existing Artist records; the Artist keeps control of each Work. Participants are public context, while co-operators have management access."], ["CONNECTED TO", "A Presentation may have a dated Agenda occurrence. Its dedicated image or chosen representative Work serves Agenda display; manage the occurrence’s date, time and location primarily in Agenda Edit."]] },
   agenda: {
     title: "AGENDA",
     sections: [

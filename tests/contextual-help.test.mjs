@@ -58,6 +58,10 @@ test("Agenda and Work help preserve the explicit image source-of-truth", () => {
   assert.match(agenda, /dedicated verified Agenda image/);
   assert.match(agenda, /no first Work is selected automatically/);
   assert.match(presentation, /primarily in Agenda Edit/);
+  const presentationSections = HELP_CONTEXTS["presentation-editor"].sections;
+  assert.match(presentationSections[0][1], /Save a new Presentation as a draft first/);
+  assert.match(presentationSections[1][1], /Artist keeps control of each Work/);
+  assert.match(presentationSections[1][1], /co-operators have management access/);
 });
 
 test("Selector help explains automatic own Works and private organisation boundaries", () => {
