@@ -1,6 +1,7 @@
 import { rememberWorkFeedOrigin } from "./data/work-feed-return.mjs";
 import {
   createPublicResponsiveImage,
+  setPublicImageCompact,
   updatePublicResponsiveImage
 } from "./data/public-image-renditions.mjs";
 
@@ -29,6 +30,9 @@ function readStoredView() {
 function setView(view) {
   const selected = view === "grid" ? "grid" : "single";
   page.dataset.view = selected;
+  stream.querySelectorAll(".discover-work picture.public-responsive-image").forEach((picture) => {
+    setPublicImageCompact(picture, selected === "grid");
+  });
 
   viewButtons.forEach((button) => {
     const isActive = button.dataset.view === selected;
@@ -219,7 +223,10 @@ function createDiscoverWork(
   imageLink.setAttribute("aria-label", `View ${work.title} by ${work.artistName}`);
   image.alt = `${work.title} by ${work.artistName}`;
   image.addEventListener("error", () => replaceBrokenImage(imageLink), { once: true });
-  const picture = createPublicResponsiveImage(document, image, work.image);
+  const picture = createPublicResponsiveImage(document, image, work.image, {
+    compact: page.dataset.view === "grid",
+    reserveGeometry: true
+  });
   imageLink.append(picture);
   carousel?.attach({
     link: imageLink,
@@ -232,7 +239,10 @@ function createDiscoverWork(
     previousButton: carouselControls?.previous,
     nextButton: carouselControls?.next,
     counter: carouselControls?.counter,
-    onImageChange: (current) => updatePublicResponsiveImage(image, picture, current)
+    onImageChange: (current) => updatePublicResponsiveImage(image, picture, current, {
+      compact: page.dataset.view === "grid",
+      reserveGeometry: true
+    })
   });
 
   if (carouselControls) metadata.append(carouselControls.root);

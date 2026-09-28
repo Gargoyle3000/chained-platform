@@ -6,6 +6,7 @@ import {
   createPublicImageRendition,
   createPublicResponsiveImage,
   PUBLIC_LARGE_MEDIA_QUERY,
+  setPublicImageCompact,
   updatePublicResponsiveImage
 } from "../data/public-image-renditions.mjs";
 
@@ -19,9 +20,10 @@ const publicUrl = (path) => path ? `https://media.test/${path}` : null;
 function node(name) {
   return {
     name,
+    dataset: {},
     children: [],
     append(...children) { this.children.push(...children); },
-    querySelector(selector) { return selector === "source" ? this.children.find((child) => child.name === "source") || null : null; }
+    querySelector(selector) { return this.children.find((child) => child.name === selector) || null; }
   };
 }
 
@@ -50,6 +52,23 @@ test("responsive picture keeps SMALL below the existing mobile breakpoint and se
   assert.equal(image.loading, "lazy");
 });
 
+test("lazy loading is set before either public image URL is attached", () => {
+  const image = node("img");
+  const source = node("source");
+  Object.defineProperty(image, "src", {
+    set(value) { assert.equal(this.loading, "lazy"); this.currentSrc = value; },
+    get() { return this.currentSrc; }
+  });
+  Object.defineProperty(source, "srcset", {
+    set(value) { assert.equal(image.loading, "lazy"); this.currentSrcset = value; },
+    get() { return this.currentSrcset; }
+  });
+  const documentRef = { createElement: (name) => name === "source" ? source : node(name) };
+  const rendition = createPublicImageRendition({ public_object_path: smallPath }, publicUrl);
+  createPublicResponsiveImage(documentRef, image, rendition, { compact: true });
+  assert.equal(image.src, rendition.smallSrc);
+});
+
 test("the existing 700px mobile boundary keeps 320/390 SMALL and makes LARGE eligible at tablet/desktop", () => {
   const matchesLargeSource = (viewportWidth) => viewportWidth >= 701;
   assert.equal(matchesLargeSource(320), false);
@@ -61,11 +80,30 @@ test("the existing 700px mobile boundary keeps 320/390 SMALL and makes LARGE eli
 test("carousel source changes retain the responsive SMALL/LARGE contract", () => {
   const image = node("img");
   const picture = node("picture");
-  picture.append(node("source"));
+  picture.append(node("source"), image);
   const second = createPublicImageRendition({ public_object_path: smallPath.replace(IMAGE_ID, PROFILE_ID) }, publicUrl);
   updatePublicResponsiveImage(image, picture, second);
   assert.equal(image.src, second.smallSrc);
   assert.equal(picture.querySelector("source").srcset, second.largeSrc);
+});
+
+test("compact images retain SMALL through view switches and carousel changes", () => {
+  const image = node("img");
+  const documentRef = { createElement: (name) => node(name) };
+  const first = createPublicImageRendition({ public_object_path: smallPath, pixel_width: 2400, pixel_height: 1600 }, publicUrl);
+  const second = createPublicImageRendition({ public_object_path: smallPath.replace(IMAGE_ID, PROFILE_ID), pixel_width: 1000, pixel_height: 1500 }, publicUrl);
+  const picture = createPublicResponsiveImage(documentRef, image, first, { compact: true, reserveGeometry: true });
+  const source = picture.querySelector("source");
+  assert.equal(source.srcset, first.smallSrc);
+  assert.equal(image.loading, "lazy");
+  assert.equal(image.width / image.height, 1.5);
+  setPublicImageCompact(picture, false);
+  assert.equal(source.srcset, first.largeSrc);
+  updatePublicResponsiveImage(image, picture, second, { compact: true, reserveGeometry: true });
+  assert.equal(source.srcset, second.smallSrc);
+  assert.equal(image.width / image.height, 2 / 3);
+  setPublicImageCompact(picture, false);
+  assert.equal(source.srcset, second.largeSrc);
 });
 
 test("all large public Work listing surfaces use the shared browser-native rendition helper", async () => {
@@ -76,4 +114,18 @@ test("all large public Work listing surfaces use the shared browser-native rendi
     assert.match(source, /createPublicResponsiveImage/);
     assert.doesNotMatch(source, /privatePreview|private_object_path/);
   });
+});
+
+test("Discover and Follow opt feed GRID into compact delivery without changing Profile or Presentation", async () => {
+  const [discover, following, profile, presentation] = await Promise.all([
+    "discover.js", "following.js", "profile-dynamic.js", "presentation.js"
+  ].map((file) => readFile(new URL(`../${file}`, import.meta.url), "utf8")));
+  for (const feed of [discover, following]) {
+    assert.match(feed, /setPublicImageCompact\(picture, selected === "grid"\)/);
+    assert.match(feed, /createPublicResponsiveImage\(document, image, work\.image, \{\s*compact: page\.dataset\.view === "grid"/);
+    assert.match(feed, /updatePublicResponsiveImage\(image, picture, current, \{\s*compact: page\.dataset\.view === "grid"/);
+  }
+  for (const other of [profile, presentation]) {
+    assert.doesNotMatch(other, /setPublicImageCompact|compact: page\.dataset\.view/);
+  }
 });

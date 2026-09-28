@@ -32,25 +32,44 @@ export function createPublicImageRendition(row, publicUrl) {
   });
 }
 
-export function createPublicResponsiveImage(documentRef, image, rendition) {
+export function createPublicResponsiveImage(documentRef, image, rendition, { compact = false, reserveGeometry = false } = {}) {
   const picture = documentRef.createElement("picture");
   picture.className = "public-responsive-image";
   if (picture.style) picture.style.display = "contents";
+  image.loading = "lazy";
   if (rendition?.largeSrc) {
     const large = documentRef.createElement("source");
     large.media = PUBLIC_LARGE_MEDIA_QUERY;
     large.srcset = rendition.largeSrc;
     picture.append(large);
   }
-  updatePublicResponsiveImage(image, picture, rendition);
+  updatePublicResponsiveImage(image, picture, rendition, { compact, reserveGeometry });
   picture.append(image);
   return picture;
 }
 
-export function updatePublicResponsiveImage(image, picture, rendition) {
-  if (!image || !rendition?.smallSrc) return;
+export function setPublicImageCompact(picture, compact) {
   const large = picture?.querySelector?.("source");
-  if (large) large.srcset = rendition.largeSrc || "";
-  image.src = rendition.smallSrc;
+  const image = picture?.querySelector?.("img");
+  if (large && image) large.srcset = compact ? image.src : large.dataset.largeSrc || "";
+}
+
+export function updatePublicResponsiveImage(image, picture, rendition, { compact = false, reserveGeometry = false } = {}) {
+  if (!image || !rendition?.smallSrc) return;
   image.loading = "lazy";
+  if (reserveGeometry) {
+    if (rendition.width && rendition.height) {
+      image.width = rendition.width;
+      image.height = rendition.height;
+    } else {
+      image.removeAttribute("width");
+      image.removeAttribute("height");
+    }
+  }
+  const large = picture?.querySelector?.("source");
+  if (large) {
+    large.dataset.largeSrc = rendition.largeSrc || "";
+    large.srcset = compact ? rendition.smallSrc : rendition.largeSrc || "";
+  }
+  image.src = rendition.smallSrc;
 }
