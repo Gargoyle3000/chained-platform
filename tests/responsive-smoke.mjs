@@ -79,7 +79,7 @@ try {
   await command("Page.enable");
 
   const widths = responsivePages.length === 1 && responsivePages[0] === "dashboard.html"
-    ? [1920, 1881, 1880, 1440, 1101, 1100, 900, 701, 700, 390, 320]
+    ? [1920, 1881, 1880, 1440, 1101, 1100, 900, 701, 700, 390, 360, 320]
     : [1440, 390, 320];
   for (const width of widths) {
     for (const page of responsivePages) {
@@ -121,6 +121,10 @@ try {
             }
           }
           const header = document.querySelector('.site-header')?.getBoundingClientRect();
+          const navigation = document.querySelector('.main-nav-with-dashboard');
+          const profileLink = navigation?.querySelector('[data-own-profile-link]')?.getBoundingClientRect();
+          const dashboardLink = navigation?.querySelector('.dashboard-link')?.getBoundingClientRect();
+          const agendaLink = navigation?.querySelector('a[href="agenda.html"]')?.getBoundingClientRect();
           const main = document.querySelector('main')?.getBoundingClientRect();
           const latestMain = document.querySelector('.dashboard-latest-main');
           const recentWorkRow = document.querySelector('#dashboard-recent-work-list .dashboard-work-row');
@@ -156,6 +160,18 @@ try {
               return Boolean(document.querySelector('#dashboard-cv-import-file')) && !text.includes('ENTRIES FOUND');
             })(),
             headerBottom: header?.bottom || 0,
+            navigationLayout: navigation ? {
+              profileTop: profileLink?.top,
+              profileRight: profileLink?.right,
+              dashboardTop: dashboardLink?.top,
+              dashboardLeft: dashboardLink?.left,
+              dashboardRight: dashboardLink?.right,
+              dashboardWidth: dashboardLink?.width,
+              dashboardHeight: dashboardLink?.height,
+              agendaRight: agendaLink?.right,
+              groupLeft: navigation.querySelector('.profile-nav-group')?.getBoundingClientRect().left,
+              navRight: navigation.getBoundingClientRect().right
+            } : null,
             mainTop: Number.isFinite(contentTop) ? contentTop : main?.top || 0,
             hasMain: Boolean(main),
             dashboardLayout: latestMain ? {
@@ -203,6 +219,18 @@ try {
       });
       const value = evaluation.result.value;
       if (page === "dashboard.html") {
+        if (width <= 720) {
+          const nav = value.navigationLayout;
+          assert.ok(nav, `Dashboard navigation exists at ${width}px`);
+          assert.ok(Math.abs(nav.profileTop - nav.dashboardTop) <= 1, `PROFILE and [+] share a row at ${width}px`);
+          assert.ok(nav.dashboardLeft >= nav.profileRight - 1 && nav.dashboardLeft - nav.profileRight <= 12, `[+] stays near PROFILE at ${width}px`);
+          assert.ok(nav.dashboardRight <= nav.navRight + 1, `[+] remains inside navigation at ${width}px`);
+          assert.ok(nav.dashboardHeight >= 44, `[+] retains a touch target at ${width}px`);
+          assert.ok(nav.dashboardWidth >= 44, `[+] retains a wide touch target at ${width}px`);
+          if (Math.abs(nav.profileTop - nav.dashboardTop) <= 1 && nav.agendaRight <= nav.groupLeft) {
+            assert.ok(nav.groupLeft - nav.agendaRight >= 8, `AGENDA clears PROFILE group at ${width}px`);
+          }
+        }
         assert.equal(value.dashboardLayout.columns, width > 1880 ? 2 : 1, `Dashboard latest columns at ${width}px`);
         assert.ok(value.dashboardLayout.statusRight <= value.dashboardLayout.rowRight + 1, `Dashboard status remains in its row at ${width}px`);
         assert.equal(value.dashboardLayout.statusWhiteSpace, "nowrap", `Dashboard status does not wrap at ${width}px`);
@@ -219,6 +247,51 @@ try {
           assert.ok(value.dashboardLayout.listRight - value.dashboardLayout.statusRight >= 12, `Dashboard retains right breathing room at ${width}px`);
         }
         if (width >= 701) assert.equal(value.dashboardLayout.pageWidth, "6px", `Dashboard page scrollbar remains 6px at ${width}px`);
+
+        const authenticatedHeader = await command("Runtime.evaluate", {
+          expression: `(() => {
+            const header = document.querySelector('.site-header');
+            const navigation = header.querySelector('.main-nav-with-dashboard');
+            const actions = document.createElement('div');
+            actions.className = 'header-actions';
+            navigation.before(actions);
+            actions.append(navigation);
+            const indicator = document.createElement('div');
+            indicator.className = 'auth-session-indicator';
+            indicator.textContent = '[ LOG OUT ]';
+            actions.append(indicator);
+            const profile = navigation.querySelector('[data-own-profile-link]').getBoundingClientRect();
+            const dashboard = navigation.querySelector('.dashboard-link').getBoundingClientRect();
+            const group = navigation.querySelector('.profile-nav-group').getBoundingClientRect();
+            const agenda = navigation.querySelector('a[href="agenda.html"]').getBoundingClientRect();
+            return {
+              overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+              profileTop: profile.top,
+              profileRight: profile.right,
+              dashboardTop: dashboard.top,
+              dashboardLeft: dashboard.left,
+              dashboardRight: dashboard.right,
+              dashboardWidth: dashboard.width,
+              dashboardHeight: dashboard.height,
+              groupLeft: group.left,
+              agendaRight: agenda.right,
+              navRight: navigation.getBoundingClientRect().right
+            };
+          })()`,
+          returnByValue: true
+        });
+        const wrapped = authenticatedHeader.result.value;
+        assert.equal(wrapped.overflow, false, `Authenticated Dashboard header has no overflow at ${width}px`);
+        if (width <= 720) {
+          assert.ok(Math.abs(wrapped.profileTop - wrapped.dashboardTop) <= 1, `Authenticated PROFILE and [+] share a row at ${width}px`);
+          assert.ok(wrapped.dashboardLeft >= wrapped.profileRight - 1 && wrapped.dashboardLeft - wrapped.profileRight <= 12, `Authenticated [+] stays near PROFILE at ${width}px`);
+          assert.ok(wrapped.dashboardRight <= wrapped.navRight + 1, `Authenticated [+] stays inside navigation at ${width}px`);
+          assert.ok(wrapped.dashboardHeight >= 44, `Authenticated [+] retains a touch target at ${width}px`);
+          assert.ok(wrapped.dashboardWidth >= 44, `Authenticated [+] retains a wide touch target at ${width}px`);
+          if (wrapped.agendaRight <= wrapped.groupLeft) {
+            assert.ok(wrapped.groupLeft - wrapped.agendaRight >= 8, `Authenticated AGENDA clears PROFILE group at ${width}px`);
+          }
+        }
       }
       if (width >= 1440) {
         assert.equal(value.scrollbar.rootElement, "HTML", `${page} scrolls through the document root`);
