@@ -69,11 +69,67 @@ test("canonical controls are compact, accessible, and absent for a one-image Wor
   assert.equal(createPublicWorkCarouselControls(testDocument, 1), null);
   const controls = createPublicWorkCarouselControls(testDocument);
   assert.equal(controls.root.hidden, true);
+  assert.equal(controls.previous.hidden, true);
+  assert.equal(controls.next.hidden, true);
   assert.equal(controls.previous.textContent, "<");
   assert.equal(controls.next.textContent, ">");
   assert.equal(controls.previous.getAttribute("aria-label"), "Previous image");
   assert.equal(controls.next.getAttribute("aria-label"), "Next image");
   assert.equal(controls.counter.getAttribute("aria-live"), "polite");
+});
+
+test("shared CSS gives native hidden state precedence over carousel display rules", async () => {
+  const styles = await readFile(new URL("../styles.css", import.meta.url), "utf8");
+  assert.match(styles, /\.public-work-carousel-controls\s*\{\s*display:\s*flex\s*;/);
+  assert.match(styles, /\.public-work-carousel-button\s*\{\s*display:\s*inline-grid\s*;/);
+  assert.match(
+    styles,
+    /\.public-work-carousel-controls\[hidden\]\s*,\s*\.public-work-carousel-button\[hidden\]\s*\{\s*display:\s*none\s*!important\s*;/
+  );
+});
+
+test("one-image async resolution leaves controls hidden; two images reveal 1/2 and loop", async () => {
+  const link = element();
+  const image = element();
+  const article = element();
+  const { root, previous, next, counter } = createPublicWorkCarouselControls(testDocument);
+  let resolveImages;
+  const loadImages = () => new Promise((resolve) => { resolveImages = resolve; });
+  attachPublicWorkCarousel({
+    link, image, article, workId: "11111111-1111-4111-8111-111111111111",
+    coverImage: images[0], loadImages, label: "View Work",
+    previousButton: previous, nextButton: next, counter, eager: true
+  });
+  assert.equal(root.hidden, true);
+  resolveImages([images[0]]);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(root.hidden, true);
+  assert.equal(previous.hidden, true);
+  assert.equal(next.hidden, true);
+  assert.equal(article.classList.contains("has-public-work-carousel"), false);
+
+  const twoImageControls = createPublicWorkCarouselControls(testDocument);
+  attachPublicWorkCarousel({
+    link: element(), image: element(), article: element(),
+    workId: "22222222-2222-4222-8222-222222222222",
+    coverImage: images[0], loadImages: async () => images.slice(0, 2), label: "View Work",
+    previousButton: twoImageControls.previous,
+    nextButton: twoImageControls.next,
+    counter: twoImageControls.counter,
+    eager: true
+  });
+  assert.equal(twoImageControls.root.hidden, true);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(twoImageControls.root.hidden, false);
+  assert.equal(twoImageControls.previous.hidden, false);
+  assert.equal(twoImageControls.next.hidden, false);
+  assert.equal(twoImageControls.counter.textContent, "1/2");
+  twoImageControls.next.dispatchEvent(new Event("click", { cancelable: true }));
+  assert.equal(twoImageControls.counter.textContent, "2/2");
+  twoImageControls.next.dispatchEvent(new Event("click", { cancelable: true }));
+  assert.equal(twoImageControls.counter.textContent, "1/2");
+  twoImageControls.previous.dispatchEvent(new Event("click", { cancelable: true }));
+  assert.equal(twoImageControls.counter.textContent, "2/2");
 });
 
 test("shared carousel clips its interaction target to the contained image footprint", () => {

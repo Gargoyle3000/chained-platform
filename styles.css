@@ -1255,6 +1255,11 @@ footer {
   cursor: pointer;
 }
 
+.public-work-carousel-controls[hidden],
+.public-work-carousel-button[hidden] {
+  display: none !important;
+}
+
 .public-work-carousel-button:focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: -2px;
