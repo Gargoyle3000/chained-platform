@@ -211,6 +211,7 @@ Last updated: 2026-09-28
 
 \- The permanent contextual `[ ? ]` is the existing compact, user-invoked, page-specific reference; it is not a Guide overlay or onboarding wizard. Ordinary save/publish/error feedback never depends on help.
 \- A separate, one-time first-login introduction remains to be built. It should give a compact overview of CHAINED's public/private model, DISCOVER and FOLLOW, SELECTOR, TAGS/PROJECTS, Artist Workspace, Work → Presentation → Agenda source-of-truth relationships, publication and contextual help. Approximately seven steps are the current direction; exact UI and copy remain open.
+\- Onboarding acknowledgement is per authenticated account, stored as a non-negative integer version. Existing accounts are grandfathered for v1; future accounts start at version 0. SKIP and FINISH will both acknowledge v1. This is UI preference state only, never an authorization, ownership or publication gate.
 \- The introduction should explain CHAINED as a tool for professional practice, without social popularity mechanics or pressure to use every area. Reopening it later may be useful but is not an implemented Settings contract.
 
 \## Profile and Work publication
