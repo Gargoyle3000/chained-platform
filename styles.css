@@ -1557,11 +1557,12 @@ footer {
 @media (max-width: 720px) {
   .main-nav-with-dashboard {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    justify-content: flex-start;
-    gap: 0 clamp(8px, 2vw, 12px);
+    justify-content: space-between;
+    gap: 0;
     width: 100%;
+    min-width: 0;
   }
 
   .main-nav-with-dashboard > a,
@@ -1582,8 +1583,9 @@ footer {
 
   .main-nav-with-dashboard .profile-nav-group .dashboard-link {
     justify-content: center;
-    width: 44px;
-    min-width: 44px;
+    min-width: 24px;
+    width: auto;
+    white-space: nowrap;
   }
 
   .site-header > .main-nav-with-dashboard {
