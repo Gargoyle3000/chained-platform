@@ -48,6 +48,15 @@
           <button class="discover-channel-button" type="button" data-discover-channel="curated" aria-pressed="false">CURATED</button>
         </div>
 
+        <div class="discover-artist-search" id="discover-artist-search">
+          <button class="text-action discover-artist-search-trigger" type="button" aria-expanded="false" aria-controls="discover-artist-search-panel">[ FIND ARTISTS ]</button>
+          <div class="discover-artist-search-panel" id="discover-artist-search-panel" hidden>
+            <label class="sr-only" for="discover-artist-search-query">Artist name or profile slug</label>
+            <input id="discover-artist-search-query" type="search" minlength="2" maxlength="100" autocomplete="off" aria-controls="discover-artist-search-results" placeholder="ARTIST NAME">
+            <ul class="discover-artist-search-results" id="discover-artist-search-results" aria-label="Artist suggestions" hidden></ul>
+          </div>
+        </div>
+
         <div class="discover-filter" hidden>
           <button
             class="text-action discover-filter-trigger"
@@ -63,7 +72,6 @@
             <button class="text-action discover-filter-clear" type="button" hidden>[ CLEAR FILTERS ]</button>
           </div>
         </div>
-        <a class="text-action discover-artists-link" href="artist-search.html">[ FIND ARTISTS ]</a>
       </div>
     </section>
 
@@ -72,6 +80,7 @@
 
   <script type="module" src="auth/public-navigation.mjs"></script>
   <script type="module" src="discover.js"></script>
+  <script type="module" src="discover-artist-search.mjs"></script>
   <script src="saved-works.js"></script>
 </body>
 </html>

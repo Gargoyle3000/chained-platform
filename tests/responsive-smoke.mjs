@@ -22,7 +22,7 @@ const listeners = new Map();
 const requestedPages = process.env.CHAINED_RESPONSIVE_PAGES?.split(",").map((page) => page.trim()).filter(Boolean);
 const responsivePages = requestedPages?.length
   ? requestedPages
-  : ["dashboard-works.html", "dashboard-portfolio-export.html", "dashboard-work-edit.html", "archive.html", "artwork.html", "artist-search.html", "login.html", "password-update.html"];
+  : ["dashboard-works.html", "dashboard-portfolio-export.html", "dashboard-work-edit.html", "archive.html", "artwork.html", "discover.html", "login.html", "password-update.html"];
 
 function wait(milliseconds) { return new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds)); }
 
@@ -91,6 +91,29 @@ try {
       await command("Page.navigate", { url: `http://127.0.0.1:5500/${pageUrl}` });
       await Promise.race([loaded, wait(5000)]);
       await wait(1200);
+      if (page === "discover.html") {
+        await command("Runtime.evaluate", {
+          expression: `(() => {
+            const filter = document.querySelector('.discover-filter');
+            if (filter) filter.hidden = false;
+            document.querySelector('.discover-artist-search-trigger')?.click();
+            const list = document.querySelector('.discover-artist-search-results');
+            if (!list) return;
+            for (let index = 0; index < 6; index += 1) {
+              const item = document.createElement('li');
+              const link = document.createElement('a');
+              const name = document.createElement('span');
+              link.className = 'discover-artist-search-result';
+              link.href = 'profile.html?slug=example-artist';
+              name.textContent = 'EXAMPLE ARTIST WITH A LONG NAME';
+              link.append(name);
+              item.append(link);
+              list.append(item);
+            }
+            list.hidden = false;
+          })()`
+        });
+      }
       if (page === "dashboard.html") {
         await command("Runtime.evaluate", {
           expression: `(() => {
@@ -142,6 +165,10 @@ try {
           const main = document.querySelector('main')?.getBoundingClientRect();
           const discoverToolbar = document.querySelector('.discover-toolbar');
           const discoverStream = document.querySelector('.discover-stream');
+          const artistTrigger = document.querySelector('.discover-artist-search-trigger');
+          const artistPanel = document.querySelector('.discover-artist-search-panel');
+          const artistInput = document.querySelector('#discover-artist-search-query');
+          const discoverFilter = document.querySelector('.discover-filter');
           const discoverContentTop = discoverStream
             ? discoverStream.getBoundingClientRect().top + parseFloat(getComputedStyle(discoverStream).paddingTop || '0')
             : null;
@@ -200,6 +227,15 @@ try {
               toolbarBottom: discoverToolbar.getBoundingClientRect().bottom,
               toolbarPosition: getComputedStyle(discoverToolbar).position,
               contentTop: discoverContentTop
+            } : null,
+            artistLookupLayout: artistTrigger && artistPanel && artistInput && discoverFilter ? {
+              beforeFilter: Boolean(artistTrigger.compareDocumentPosition(discoverFilter) & Node.DOCUMENT_POSITION_FOLLOWING),
+              open: !artistPanel.hidden && artistTrigger.getAttribute('aria-expanded') === 'true',
+              left: artistPanel.getBoundingClientRect().left,
+              right: artistPanel.getBoundingClientRect().right,
+              inputLeft: artistInput.getBoundingClientRect().left,
+              inputRight: artistInput.getBoundingClientRect().right,
+              viewportWidth: document.documentElement.clientWidth
             } : null,
             navigationLayout: navigation ? {
               navLeft: navigation.getBoundingClientRect().left,
@@ -370,6 +406,12 @@ try {
       assert.equal(value.cvImportSurface, true, `${page} CV import state renders at ${width}px`);
       if (page === "discover.html") {
         assert.ok(value.discoverLayout, `Discover toolbar and stream render at ${width}px`);
+        assert.ok(value.artistLookupLayout?.beforeFilter, `FIND ARTISTS precedes FILTER at ${width}px`);
+        assert.ok(value.artistLookupLayout.open, `Discover Artist lookup opens at ${width}px`);
+        assert.ok(value.artistLookupLayout.left >= -1 && value.artistLookupLayout.right <= value.artistLookupLayout.viewportWidth + 1,
+          `Discover Artist suggestions fit the viewport at ${width}px`);
+        assert.ok(value.artistLookupLayout.inputLeft >= value.artistLookupLayout.left && value.artistLookupLayout.inputRight <= value.artistLookupLayout.right,
+          `Discover Artist input fits its panel at ${width}px`);
         if (value.discoverLayout.toolbarPosition === "fixed") {
           assert.ok(value.discoverLayout.toolbarTop >= value.headerBottom - 1,
             `Discover fixed toolbar starts below the header at ${width}px`);
