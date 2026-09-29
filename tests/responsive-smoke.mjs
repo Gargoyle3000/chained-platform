@@ -22,7 +22,7 @@ const listeners = new Map();
 const requestedPages = process.env.CHAINED_RESPONSIVE_PAGES?.split(",").map((page) => page.trim()).filter(Boolean);
 const responsivePages = requestedPages?.length
   ? requestedPages
-  : ["dashboard-works.html", "dashboard-portfolio-export.html", "dashboard-work-edit.html", "archive.html", "artwork.html", "login.html", "password-update.html"];
+  : ["dashboard-works.html", "dashboard-portfolio-export.html", "dashboard-work-edit.html", "archive.html", "artwork.html", "artist-search.html", "login.html", "password-update.html"];
 
 function wait(milliseconds) { return new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds)); }
 
@@ -140,6 +140,11 @@ try {
             };
           })() : null;
           const main = document.querySelector('main')?.getBoundingClientRect();
+          const discoverToolbar = document.querySelector('.discover-toolbar');
+          const discoverStream = document.querySelector('.discover-stream');
+          const discoverContentTop = discoverStream
+            ? discoverStream.getBoundingClientRect().top + parseFloat(getComputedStyle(discoverStream).paddingTop || '0')
+            : null;
           const latestMain = document.querySelector('.dashboard-latest-main');
           const recentWorkRow = document.querySelector('#dashboard-recent-work-list .dashboard-work-row');
           const recentWorkTitle = recentWorkRow?.querySelector('h3')?.getBoundingClientRect();
@@ -151,7 +156,10 @@ try {
           const presentationStatus = presentationRow?.querySelector(':scope > span')?.getBoundingClientRect();
           const imageDialog = document.querySelector('.export-image-dialog');
           if (imageDialog && !imageDialog.open) imageDialog.showModal();
-          const contentTop = Math.min(...[...document.querySelectorAll('main > *')].map((element) => element.getBoundingClientRect().top).filter((value) => Number.isFinite(value)));
+          const contentTop = Math.min(...[...document.querySelectorAll('main > *')]
+            .filter((element) => getComputedStyle(element).position !== 'fixed')
+            .map((element) => element.getBoundingClientRect().top)
+            .filter((value) => Number.isFinite(value)));
           const rootScroller = document.scrollingElement;
           const dashboardScroller = document.querySelector(
             '.dashboard-work-list, .dashboard-recent-presentation-list'
@@ -187,6 +195,12 @@ try {
               return Boolean(document.querySelector('#dashboard-cv-import-file')) && !text.includes('ENTRIES FOUND');
             })(),
             headerBottom: header?.bottom || 0,
+            discoverLayout: discoverToolbar && discoverStream ? {
+              toolbarTop: discoverToolbar.getBoundingClientRect().top,
+              toolbarBottom: discoverToolbar.getBoundingClientRect().bottom,
+              toolbarPosition: getComputedStyle(discoverToolbar).position,
+              contentTop: discoverContentTop
+            } : null,
             navigationLayout: navigation ? {
               navLeft: navigation.getBoundingClientRect().left,
               navRight: navigation.getBoundingClientRect().right,
@@ -354,7 +368,20 @@ try {
       assert.equal(value.portfolioControls, true, `${page} portfolio controls render at ${width}px`);
       assert.equal(value.imagePicker, true, `${page} image picker opens without horizontal overflow at ${width}px`);
       assert.equal(value.cvImportSurface, true, `${page} CV import state renders at ${width}px`);
-      assert.ok(value.mainTop >= value.headerBottom - 1, `${page} starts below the full header at ${width}px`);
+      if (page === "discover.html") {
+        assert.ok(value.discoverLayout, `Discover toolbar and stream render at ${width}px`);
+        if (value.discoverLayout.toolbarPosition === "fixed") {
+          assert.ok(value.discoverLayout.toolbarTop >= value.headerBottom - 1,
+            `Discover fixed toolbar starts below the header at ${width}px`);
+          assert.ok(value.discoverLayout.contentTop >= value.headerBottom - 1,
+            `Discover feed content starts below the header at ${width}px`);
+        } else {
+          assert.ok(value.discoverLayout.contentTop >= value.discoverLayout.toolbarBottom - 1,
+            `Discover feed content starts below its in-flow toolbar at ${width}px`);
+        }
+      } else {
+        assert.ok(value.mainTop >= value.headerBottom - 1, `${page} starts below the full header at ${width}px`);
+      }
       const screenshot = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
       const screenshotPath = join(screenshotDirectory, `${page.replace(/[^a-z0-9]+/gi, "-")}-${width}.png`);
       await writeFile(screenshotPath, screenshot.data, "base64");

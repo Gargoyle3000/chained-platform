@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(59);
+select plan(61);
 
 insert into auth.users (
   instance_id,
@@ -112,6 +112,37 @@ values
     null,
     '00000000-0000-0000-0000-000000000103'
   );
+
+insert into public.public_profiles (
+  id,
+  profile_type,
+  slug,
+  display_name,
+  publication_status,
+  published_at,
+  claim_state,
+  primary_controller_account_id,
+  claimed_at,
+  created_by_account_id,
+  deleted_by_account_id,
+  deleted_at,
+  purge_after
+)
+values (
+  '00000000-0000-0000-0000-000000000204',
+  'artist',
+  'deleted-published-artist',
+  'DELETED PUBLISHED ARTIST',
+  'published',
+  now(),
+  'claimed',
+  '00000000-0000-0000-0000-000000000101',
+  now(),
+  '00000000-0000-0000-0000-000000000101',
+  '00000000-0000-0000-0000-000000000101',
+  now(),
+  now() + interval '30 days'
+);
 
 insert into public.profile_members (
   profile_id,
@@ -387,6 +418,18 @@ select results_eq(
   $$select count(id) from public.public_profiles where id = '00000000-0000-0000-0000-000000000201'$$,
   array[1::bigint],
   'guest can read a published artist profile'
+);
+
+select results_eq(
+  $$select count(id) from public.public_profiles where id = '00000000-0000-0000-0000-000000000203'$$,
+  array[0::bigint],
+  'guest cannot read an unpublished artist profile'
+);
+
+select results_eq(
+  $$select count(id) from public.public_profiles where id = '00000000-0000-0000-0000-000000000204'$$,
+  array[0::bigint],
+  'guest cannot read a claimed published but soft-deleted artist profile'
 );
 
 select results_eq(

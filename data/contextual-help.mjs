@@ -84,6 +84,14 @@ const HELP_CONTEXTS = Object.freeze({
       ["CONNECTED TO", "A Work-level [+] leads to private Selector only; it does not publish anything or notify the Artist. FOLLOW tracks an Artist or practice, not one Work. The main-navigation [+] is different: it opens your Artist workspace / Dashboard."]
     ]
   },
+  "artist-search": {
+    title: "ARTIST SEARCH",
+    sections: [
+      ["THIS PAGE", "Find claimed, published Artist Profiles by display name or Profile slug."],
+      ["EDIT HERE", "Enter at least two characters and submit. Results link to public Profiles; private account and Workspace details are not searched."],
+      ["CONNECTED TO", "This lookup includes only public Artist identities. Presentation management has a separate Artist association search for its own workflow."]
+    ]
+  },
   following: {
     title: "FOLLOW",
     sections: [
@@ -144,7 +152,7 @@ const HELP_CONTEXTS = Object.freeze({
 
 const PATH_CONTEXTS = Object.freeze({
   "dashboard.html": "dashboard", "dashboard-works.html": "works", "dashboard-work-edit.html": "work-editor", "dashboard-presentations.html": "presentations", "dashboard-presentation-edit.html": "presentation-editor", "dashboard-agenda.html": "agenda", "dashboard-agenda-edit.html": "agenda-editor", "dashboard-settings.html": "profile", "dashboard-cv.html": "cv", "dashboard-press.html": "press", "dashboard-portfolio-export.html": "portfolio-export", "dashboard-admin-invite.html": "admin", "archive.html": "archive", "archive-project.html": "project",
-  "discover.html": "discover", "following.html": "following", "profile.html": "public-profile", "profile-cv.html": "public-profile", "profile-press.html": "public-profile", "profile-agenda.html": "public-profile", "profile-presentations.html": "public-profile", "artwork.html": "public-work", "agenda.html": "public-agenda", "presentation.html": "public-presentation"
+  "discover.html": "discover", "artist-search.html": "artist-search", "following.html": "following", "profile.html": "public-profile", "profile-cv.html": "public-profile", "profile-press.html": "public-profile", "profile-agenda.html": "public-profile", "profile-presentations.html": "public-profile", "artwork.html": "public-work", "agenda.html": "public-agenda", "presentation.html": "public-presentation"
 });
 
 function filename(pathname = "") {

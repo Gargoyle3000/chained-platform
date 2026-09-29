@@ -24,6 +24,7 @@ const routes = Object.freeze({
   "archive.html": "archive",
   "archive-project.html": "project",
   "discover.html": "discover",
+  "artist-search.html": "artist-search",
   "following.html": "following",
   "profile.html": "public-profile",
   "profile-cv.html": "public-profile",
