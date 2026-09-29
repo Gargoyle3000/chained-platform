@@ -91,6 +91,16 @@ try {
       await command("Page.navigate", { url: `http://127.0.0.1:5500/${pageUrl}` });
       await Promise.race([loaded, wait(5000)]);
       await wait(1200);
+      if (page === "dashboard.html") {
+        await command("Runtime.evaluate", {
+          expression: `(() => {
+            const dialog = document.querySelector('#dashboard-onboarding-dialog');
+            dialog.querySelector('[data-onboarding-heading]').textContent = 'WORKS / PUBLICATION';
+            dialog.querySelector('[data-onboarding-copy]').textContent = 'Save a Work before choosing to publish it. Work and Profile publication are separate; a published Work under a draft Profile is not publicly reachable.';
+            dialog.showModal();
+          })()`
+        });
+      }
       if (page === "dashboard-cv.html") {
         await command("Runtime.evaluate", {
           expression: "document.querySelector('#dashboard-cv-export')?.click()"
@@ -146,12 +156,25 @@ try {
           const dashboardScroller = document.querySelector(
             '.dashboard-work-list, .dashboard-recent-presentation-list'
           );
+          const onboardingDialog = document.querySelector('#dashboard-onboarding-dialog');
+          const onboardingRect = onboardingDialog?.getBoundingClientRect();
           return {
             overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
             protected: document.body.hasAttribute('data-auth-protected'),
             portfolioLibraries: !document.querySelector('#portfolio-generate') || (Boolean(window.PDFLib) && Boolean(window.fontkit)),
             portfolioControls: !document.querySelector('#portfolio-generate') || Boolean(document.querySelector('#portfolio-work-selection') && document.querySelector('#portfolio-selected-works')),
             imagePicker: !imageDialog || (imageDialog.open && imageDialog.getBoundingClientRect().width <= document.documentElement.clientWidth),
+            onboardingDialog: !onboardingDialog || {
+              open: onboardingDialog.open,
+              left: onboardingRect.left,
+              right: onboardingRect.right,
+              top: onboardingRect.top,
+              bottom: onboardingRect.bottom,
+              scrollWidth: onboardingDialog.scrollWidth,
+              clientWidth: onboardingDialog.clientWidth,
+              scrollHeight: onboardingDialog.scrollHeight,
+              clientHeight: onboardingDialog.clientHeight
+            },
             cvImportSurface: (() => {
               if (!document.querySelector('#dashboard-cv-import')) return true;
               const state = new URLSearchParams(location.search).get('cv-import-state');
@@ -230,6 +253,11 @@ try {
       });
       const value = evaluation.result.value;
       if (page === "dashboard.html") {
+        const dialog = value.onboardingDialog;
+        assert.equal(dialog.open, true, `Dashboard onboarding dialog opens at ${width}px`);
+        assert.ok(dialog.left >= 0 && dialog.right <= width, `Dashboard onboarding dialog fits width at ${width}px`);
+        assert.ok(dialog.top >= 0 && dialog.bottom <= (width === 1440 ? 900 : 844), `Dashboard onboarding dialog fits viewport height at ${width}px`);
+        assert.ok(dialog.scrollWidth <= dialog.clientWidth, `Dashboard onboarding dialog has no horizontal overflow at ${width}px`);
         if (width <= 720) {
           const nav = value.navigationLayout;
           assert.ok(nav, `Dashboard navigation exists at ${width}px`);

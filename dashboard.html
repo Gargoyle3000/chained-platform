@@ -260,8 +260,28 @@
 
   </main>
 
+  <dialog
+    class="dashboard-onboarding-dialog"
+    id="dashboard-onboarding-dialog"
+    aria-labelledby="dashboard-onboarding-heading"
+    aria-describedby="dashboard-onboarding-copy">
+    <p class="dashboard-onboarding-kicker">CHAINED / FIRST STEPS <span data-onboarding-progress>1 / 7</span></p>
+    <h2 id="dashboard-onboarding-heading" data-onboarding-heading tabindex="-1"></h2>
+    <p id="dashboard-onboarding-copy" data-onboarding-copy></p>
+    <p class="dashboard-onboarding-feedback" data-onboarding-feedback role="alert" hidden></p>
+    <div class="dashboard-onboarding-actions">
+      <button class="text-action" type="button" data-onboarding-back>[ BACK ]</button>
+      <button class="text-action" type="button" data-onboarding-next>[ NEXT ]</button>
+      <button class="text-action" type="button" data-onboarding-finish hidden>[ FINISH ]</button>
+      <button class="text-action" type="button" data-onboarding-skip>[ SKIP ]</button>
+      <button class="text-action" type="button" data-onboarding-retry hidden>[ RETRY ]</button>
+      <button class="text-action" type="button" data-onboarding-dismiss hidden>[ CONTINUE FOR NOW ]</button>
+    </div>
+  </dialog>
+
   <script src="work-store.js"></script>
   <script src="dashboard-overview.js"></script>
+  <script type="module" src="data/dashboard-onboarding.mjs"></script>
 
 </body>
 </html>
