@@ -68,6 +68,8 @@
 - Do not move secrets into tracked files.
 - Preserve the distinction between private originals and public media.
 - Do not weaken RLS or Storage policies merely to make an operation work.
+- Run `npm run test:migration-security` for migration work. A changed migration containing policies, RLS mode changes, grants/revokes, `SECURITY DEFINER`, function definitions, Storage policies, or privileged helpers requires a changed `supabase/tests/*.test.sql` file with the exact per-migration coverage marker documented in `docs/DEV_ENVIRONMENT.md`.
+- Security migration coverage must exercise intended and wrong actors. For Storage, cover bucket/path/input rejection and shared flows using the same table or operation. Never assume PostgreSQL policy expressions short-circuit.
 - Authentication in the frontend is not a substitute for database authorization.
 - When changing visibility behavior, distinguish clearly between:
   - hidden in the UI;

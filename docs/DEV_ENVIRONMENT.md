@@ -52,6 +52,20 @@ Important agent rule: failure to resolve `docker` from PATH does not mean Docker
 - Git is installed and used for repository history and GitHub integration.
 - Google Cloud tooling is used for CHAINED Cloud Run, Cloud Scheduler, Artifact Registry, and Secret Manager operations; discover its current executable location before reporting it unavailable.
 
+### Security-sensitive migration gate
+
+`npm run test:migration-security` inspects only added or modified migration files. It runs automatically before `npm run test:frontend` and requires explicit changed pgTAP coverage for policy changes, RLS mode changes, grants/revokes, `SECURITY DEFINER`, function definitions, `storage.objects` policies and privileged helper functions.
+
+Add or update a file under `supabase/tests/*.test.sql` and include one exact marker for each security-sensitive migration:
+
+```sql
+-- Security migration coverage: 20261001090000_example.sql
+```
+
+The pgTAP test should prove the intended actor and wrong actors. Storage changes should also reject the wrong bucket, path and input metadata where applicable, and should exercise existing flows that share the table or operation. PostgreSQL may evaluate every applicable policy expression, so tests and policy design must not assume short-circuit evaluation.
+
+By default the gate checks working-tree changes, including untracked files; with no working-tree changes it checks the latest commit. Multi-commit CI or review jobs must set `CHAINED_MIGRATION_GATE_BASE` to the target/base ref, optionally set `CHAINED_MIGRATION_GATE_HEAD`, or pass `--base` and `--head` directly. This is a static review gate and does not replace `npx supabase test db` or a clean local migration replay.
+
 ### Production operator notes
 
 - Supabase CLI 2.111.0 `db query --output-format json` returns a root JSON array. Operator helpers must accept that machine-readable shape and reject mixed stdout.
