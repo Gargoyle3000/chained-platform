@@ -130,6 +130,45 @@ try {
         });
         await wait(80);
       }
+      if (page === "dashboard-portfolio-export.html") {
+        await command("Runtime.evaluate", {
+          expression: `(() => {
+            const root = document.querySelector('#portfolio-selected-works');
+            if (!root || root.querySelector('.portfolio-selected-work')) return;
+            for (let index = 1; index <= 12; index += 1) {
+              const row = document.createElement('article');
+              const leading = document.createElement('div');
+              const handle = document.createElement('button');
+              const number = document.createElement('span');
+              const title = document.createElement('div');
+              const heading = document.createElement('strong');
+              const meta = document.createElement('small');
+              const actions = document.createElement('div');
+              row.className = 'portfolio-selected-work';
+              row.dataset.workId = String(index);
+              leading.className = 'portfolio-selected-work-leading';
+              handle.className = 'portfolio-drag-handle';
+              handle.textContent = '[ ↕ ]';
+              number.className = 'portfolio-selected-work-number';
+              number.textContent = String(index).padStart(2, '0');
+              leading.append(handle, number);
+              title.className = 'portfolio-selected-work-title';
+              heading.textContent = 'A LONG PORTFOLIO WORK TITLE WITH AN UNBROKENREFERENCEWITHOUTSPACESANDMOREWORDS';
+              meta.textContent = '2026 · INSTALLATION · 3 IMAGES';
+              title.append(heading, meta);
+              actions.className = 'portfolio-selected-work-actions';
+              for (const label of ['[ MOVE UP ]', '[ MOVE DOWN ]', '[ REMOVE ]']) {
+                const button = document.createElement('button');
+                button.className = 'text-action';
+                button.textContent = label;
+                actions.append(button);
+              }
+              row.append(leading, title, actions);
+              root.append(row);
+            }
+          })()`
+        });
+      }
       const evaluation = await command("Runtime.evaluate", {
         expression: `(() => {
           if (document.body.classList.contains('dashboard-overview-page')) {
@@ -183,6 +222,22 @@ try {
           const presentationStatus = presentationRow?.querySelector(':scope > span')?.getBoundingClientRect();
           const imageDialog = document.querySelector('.export-image-dialog');
           if (imageDialog && !imageDialog.open) imageDialog.showModal();
+          const portfolioRows = [...document.querySelectorAll('#portfolio-selected-works .portfolio-selected-work')];
+          const portfolioOrderLayout = portfolioRows.length ? {
+            count: portfolioRows.length,
+            rowsFit: portfolioRows.every((row) => {
+              const box = row.getBoundingClientRect();
+              const titleElement = row.querySelector('.portfolio-selected-work-title');
+              const title = titleElement.getBoundingClientRect();
+              const actions = row.querySelector('.portfolio-selected-work-actions').getBoundingClientRect();
+              return box.left >= -1 && box.right <= document.documentElement.clientWidth + 1
+                && title.left >= box.left && title.right <= box.right + 1
+                && titleElement.scrollWidth <= titleElement.clientWidth
+                && actions.left >= box.left && actions.right <= box.right + 1;
+            }),
+            handleWidth: portfolioRows[0].querySelector('.portfolio-drag-handle').getBoundingClientRect().width,
+            handleTouchAction: getComputedStyle(portfolioRows[0].querySelector('.portfolio-drag-handle')).touchAction
+          } : null;
           const contentTop = Math.min(...[...document.querySelectorAll('main > *')]
             .filter((element) => getComputedStyle(element).position !== 'fixed')
             .map((element) => element.getBoundingClientRect().top)
@@ -199,6 +254,7 @@ try {
             portfolioLibraries: !document.querySelector('#portfolio-generate') || (Boolean(window.PDFLib) && Boolean(window.fontkit)),
             portfolioControls: !document.querySelector('#portfolio-generate') || Boolean(document.querySelector('#portfolio-work-selection') && document.querySelector('#portfolio-selected-works')),
             imagePicker: !imageDialog || (imageDialog.open && imageDialog.getBoundingClientRect().width <= document.documentElement.clientWidth),
+            portfolioOrderLayout,
             onboardingDialog: !onboardingDialog || {
               open: onboardingDialog.open,
               left: onboardingRect.left,
@@ -403,6 +459,12 @@ try {
       assert.equal(value.portfolioLibraries, true, `${page} PDF libraries load at ${width}px`);
       assert.equal(value.portfolioControls, true, `${page} portfolio controls render at ${width}px`);
       assert.equal(value.imagePicker, true, `${page} image picker opens without horizontal overflow at ${width}px`);
+      if (page === "dashboard-portfolio-export.html") {
+        assert.equal(value.portfolioOrderLayout.count, 12, `Portfolio order rows render at ${width}px`);
+        assert.equal(value.portfolioOrderLayout.rowsFit, true, `Portfolio order titles and actions fit at ${width}px`);
+        assert.ok(value.portfolioOrderLayout.handleWidth >= 44, `Portfolio drag handle remains usable at ${width}px`);
+        assert.equal(value.portfolioOrderLayout.handleTouchAction, "none", `Portfolio handle owns touch dragging at ${width}px`);
+      }
       assert.equal(value.cvImportSurface, true, `${page} CV import state renders at ${width}px`);
       if (page === "discover.html") {
         assert.ok(value.discoverLayout, `Discover toolbar and stream render at ${width}px`);

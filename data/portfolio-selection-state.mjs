@@ -22,6 +22,13 @@ export function createPortfolioSelectionState(workIds = []) {
       [selected[index], selected[destination]] = [selected[destination], selected[index]];
       return true;
     },
+    moveTo(workId, targetIndex) {
+      const index = indexOf(workId);
+      if (index < 0 || !Number.isInteger(targetIndex) || targetIndex < 0 || targetIndex >= selected.length || index === targetIndex) return false;
+      selected.splice(index, 1);
+      selected.splice(targetIndex, 0, workId);
+      return true;
+    },
     select(workId) {
       if (!available.has(workId) || indexOf(workId) >= 0) return false;
       selected.push(workId);

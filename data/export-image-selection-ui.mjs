@@ -62,8 +62,8 @@ export function openExportImageSelection(dialog, works, selection, { title = "SE
       eligibleImages(work).forEach((image, index) => {
         const label = document.createElement("label");
         const input = document.createElement("input");
+        const thumbnailSlot = document.createElement("span");
         const thumbnail = document.createElement("img");
-        const fallback = document.createElement("span");
         const caption = document.createElement("span");
         label.className = "export-image-choice";
         input.type = "checkbox";
@@ -73,23 +73,22 @@ export function openExportImageSelection(dialog, works, selection, { title = "SE
         thumbnail.alt = "";
         thumbnail.className = "export-image-thumbnail";
         thumbnail.hidden = true;
-        fallback.className = "export-image-thumbnail-fallback";
-        fallback.hidden = true;
-        fallback.textContent = "IMAGE UNAVAILABLE";
+        thumbnailSlot.className = "export-image-thumbnail-slot";
+        thumbnailSlot.append(thumbnail);
         caption.textContent = `${String(index + 1).padStart(2, "0")}${image.isCover ? " · COVER" : ""}`;
-        label.append(input, thumbnail, fallback, caption);
+        label.append(input, thumbnailSlot, caption);
         list.append(label);
+        const showThumbnail = (src) => {
+          thumbnail.onload = () => { if (active) thumbnail.hidden = false; };
+          thumbnail.onerror = () => { thumbnail.hidden = true; thumbnail.removeAttribute("src"); };
+          thumbnail.src = src;
+        };
         const state = thumbnails.state(image);
         if (state?.state === "ready" && state.src) {
-          thumbnail.src = state.src;
-          thumbnail.hidden = false;
-        } else if (state?.state === "failed") {
-          fallback.hidden = false;
-        } else {
+          showThumbnail(state.src);
+        } else if (state?.state !== "failed") {
           thumbnails.resolve(image).then((src) => {
-            if (!active) return;
-            if (src) { thumbnail.src = src; thumbnail.hidden = false; }
-            else fallback.hidden = false;
+            if (active && src) showThumbnail(src);
           });
         }
       });

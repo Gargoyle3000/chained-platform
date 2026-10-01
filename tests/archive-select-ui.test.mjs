@@ -50,7 +50,8 @@ test("Archive renders direct Project SELECT export only from active Project stat
   assert.match(script, /resolveThumbnail: \(image\) => repository\.projectSelectThumbnail\(image\)/);
   assert.match(script, /disposeThumbnail: \(url\) => repository\.releaseProjectSelectThumbnail\(url\)/);
   assert.match(script, /\[ LOADING IMAGES \]/);
-  assert.match(styles, /\.export-image-thumbnail-fallback\[hidden\]\s*\{\s*display:\s*none;\s*\}/);
+  assert.match(styles, /\.export-image-thumbnail-slot\s*\{[^}]*width:\s*42px;[^}]*height:\s*42px;/);
+  assert.doesNotMatch(styles, /export-image-thumbnail-fallback/);
   assert.doesNotMatch(script, /writeChainedSelectSession|archive-select\.html|filterSelectButton/);
 });
 

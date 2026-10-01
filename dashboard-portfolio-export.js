@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   } = await import("./data/portfolio-export.mjs");
   const { createPdfDelivery } = await import("./data/pdf-delivery.mjs");
   const { createPortfolioSelectionState } = await import("./data/portfolio-selection-state.mjs");
+  const { createPortfolioOrderDrag } = await import("./data/portfolio-order-drag.mjs");
   const { applyExportImageSelection, createExportImageSelectionState } = await import("./data/export-image-selection-state.mjs");
   const { openExportImageSelection } = await import("./data/export-image-selection-ui.mjs");
   const { getWorkRepository } = await import("./data/work-repository.mjs");
@@ -40,6 +41,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const idleExportLabel = "[ EXPORT PORTFOLIO ]";
   let progress = 0;
   let pdfDelivery = null;
+  const orderDrag = createPortfolioOrderDrag(orderRoot, {
+    moveTo(workId, targetIndex) {
+      if (selection.moveTo(workId, targetIndex)) renderComposition();
+    }
+  });
 
   function setError(message = "") {
     errorElement.textContent = message;
@@ -180,6 +186,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderOrder() {
+    orderDrag.cancel();
     orderRoot.replaceChildren();
     const selected = selectedWorks();
     if (!selected.length) {
@@ -191,14 +198,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     selected.forEach((work, index) => {
       const row = document.createElement("article");
+      const leading = document.createElement("div");
+      const handle = document.createElement("button");
       const number = document.createElement("span");
       const title = document.createElement("div");
       const heading = document.createElement("strong");
       const meta = document.createElement("small");
       const actions = document.createElement("div");
       row.className = "portfolio-selected-work";
+      row.dataset.workId = work.id;
+      leading.className = "portfolio-selected-work-leading";
+      handle.type = "button";
+      handle.className = "portfolio-drag-handle";
+      handle.textContent = "[ ↕ ]";
+      handle.setAttribute("aria-label", `Drag ${work.title || "untitled work"} to reorder`);
       number.className = "portfolio-selected-work-number";
       number.textContent = String(index + 1).padStart(2, "0");
+      leading.append(handle, number);
       title.className = "portfolio-selected-work-title";
       heading.textContent = text(work.title) || "UNTITLED";
       meta.textContent = workSummary(work);
@@ -218,7 +234,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         })
       );
       title.append(heading, meta);
-      row.append(number, title, actions);
+      row.append(leading, title, actions);
       orderRoot.append(row);
     });
   }
@@ -411,5 +427,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     generateButton.disabled = true;
   }
 
-  window.addEventListener("beforeunload", () => { clearPdfDelivery(); repository?.media?.urls.revokeAll(); });
+  window.addEventListener("beforeunload", () => { orderDrag.dispose(); clearPdfDelivery(); repository?.media?.urls.revokeAll(); });
 });

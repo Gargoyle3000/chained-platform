@@ -127,7 +127,7 @@ const HELP_CONTEXTS = Object.freeze({
   "portfolio-export": {
     title: "PORTFOLIO EXPORT",
     sections: [
-      ["THIS PAGE", "Choose Works and images for a private Portfolio PDF."],
+      ["THIS PAGE", "Choose Works and images for a private Portfolio PDF. Drag Works in PORTFOLIO ORDER, or use MOVE UP / MOVE DOWN to reorder with a keyboard."],
       ["EDIT HERE", "This selection is only for the export. Work details and publication remain managed in WORKS; private managed drafts can be included where authorized."],
       ["CONNECTED TO", "Exporting a Portfolio PDF does not publish or change the selected Works."]
     ]

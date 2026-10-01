@@ -49,3 +49,15 @@ test("Portfolio export owns progress at its action and resets safely", async () 
   assert.doesNotMatch(script, /SELECT IMAGES \]`, `Select images for/);
   assert.doesNotMatch(script, /ENTER A DOCUMENT TITLE OR TURN OFF TITLE PAGE/);
 });
+
+test("Portfolio order drag updates canonical selection before export and retains keyboard moves", async () => {
+  const [script, controller] = await Promise.all([
+    read("dashboard-portfolio-export.js"),
+    read("data/portfolio-order-drag.mjs")
+  ]);
+  assert.match(script, /createPortfolioOrderDrag\(orderRoot,[\s\S]*selection\.moveTo\(workId, targetIndex\)/);
+  assert.match(script, /function selectedWorks\(\)[\s\S]*selection\.ids\(\)\.map/);
+  assert.match(script, /createPortfolioPlan\(applyExportImageSelection\(selected, imageSelection\)\)/);
+  assert.match(script, /createAction\("\[ MOVE UP \]"[\s\S]*createAction\("\[ MOVE DOWN \]"/);
+  assert.match(controller, /addEventListener\("pointerdown"/);
+});
