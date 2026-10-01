@@ -10,6 +10,10 @@ Last updated: 2026-09-28
 
 - Production Discover GRID at 1440px requested 23 LARGE images (24.9 MB) with only three cards visible. The shared viewport-only rendition rule selected LARGE for compact cards, while unreserved ordinary card geometry let the 720px continuation sentinel append a second batch before images settled. A local frontend fix selects SMALL for Discover/Follow GRID, reserves known image ratios, and sets lazy loading before image URLs. A controlled local Chrome fixture now keeps the desktop initial batch at 12 cards and starts 9 SMALL requests; production release and network validation remain pending.
 
+## Dashboard mobile metric overlap
+
+- On narrow phone widths, the Dashboard metric/action area can let REQUESTS run into PRESENTATIONS. The desktop three-column layout is sound; forcing WORKS, PRESENTATIONS and REQUESTS into one mobile row is too cramped. Fix and validate at 320px, 390px and 412px; keep WORKS and PRESENTATIONS together only if they remain clear, and place REQUESTS distinctly below or otherwise separate it.
+
 The production multi-image Discover, Follow and Selector carousels were manually checked on 2026-09-26. The one-image visibility fix below still needs post-deployment visual smoke checks.
 
 CV Import ADD production release/validation and an Artist-safe terminal derivative recovery path are planned work in `ROADMAP.md`, not confirmed defects in current behavior.
