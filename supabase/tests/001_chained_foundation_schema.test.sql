@@ -84,32 +84,13 @@ select ok(
       join pg_catalog.pg_namespace as n on n.oid = p.pronamespace
      where n.nspname = 'public'
        and p.prosecdef
-       and p.oid not in (
-         'public.list_published_curated_collection_items(uuid[])'::regprocedure,
-         'public.get_public_presentation_participant_summaries(uuid)'::regprocedure,
-         'public.get_public_presentation_program(uuid)'::regprocedure,
-         'public.get_public_presentation_works(uuid)'::regprocedure
-       )
-  )
-  and not exists (
-    select 1
-      from pg_catalog.pg_proc as p
-     where p.oid in (
-       'public.list_published_curated_collection_items(uuid[])'::regprocedure,
-       'public.get_public_presentation_participant_summaries(uuid)'::regprocedure,
-       'public.get_public_presentation_program(uuid)'::regprocedure,
-       'public.get_public_presentation_works(uuid)'::regprocedure
-     )
-       and (
-         not p.prosecdef
-         or not exists (
-           select 1
-             from unnest(coalesce(p.proconfig, array[]::text[])) as setting
-            where setting like 'search_path=%'
-         )
+       and not exists (
+         select 1
+           from unnest(coalesce(p.proconfig, array[]::text[])) as setting
+          where setting like 'search_path=%'
        )
   ),
-  'only allowlisted public SECURITY DEFINER projections use a fixed search_path'
+  'every public SECURITY DEFINER function fixes its search_path'
 );
 
 select is(

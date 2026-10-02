@@ -21,9 +21,13 @@ select ok(
      where schemaname = 'storage'
        and tablename = 'objects'
        and roles && array['anon'::name, 'authenticated'::name, 'public'::name]
-       and (coalesce(qual, '') || coalesce(with_check, '')) not like '%work-originals%'
+       and (
+         (coalesce(qual, '') || coalesce(with_check, '')) not like '%bucket_id = ''work-originals''%'
+         and (coalesce(qual, '') || coalesce(with_check, '')) not like '%bucket_id = ''presentation-agenda-media''%'
+         or (coalesce(qual, '') || coalesce(with_check, '')) like '%work-derivative-staging%'
+       )
   ),
-  'no broad browser Storage policy can reach derivative staging'
+  'browser Storage policies are bucket-bound and exclude derivative staging'
 );
 insert into storage.objects (bucket_id, name)
 values ('work-derivative-staging', 'server-owned/fixture.webp');

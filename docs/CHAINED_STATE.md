@@ -1,6 +1,6 @@
 # CHAINED — CURRENT STATE
 
-Last updated: 2026-09-28
+Last updated: 2026-10-02
 
 ## CURRENT SYSTEM
 
@@ -27,6 +27,7 @@ This file distinguishes repository implementation from production validation whe
 - Discover SINGLE mobile is good and must not be changed.
 - Dashboard/Works mobile spacing is currently good.
 - Public Profile mobile spacing is currently good.
+- Peer confirmed the Public Profile intermediate-width Work/MATERIALS overlap fix is good in production on 2026-10-02; Dashboard mobile REQUESTS spacing was also live-checked successfully.
 - Mobile Portfolio PDF download works in Android Chrome production; the cross-browser download helper is live.
 - Photo Corrector exists as a standalone tool; the planned eligible-account Dashboard TOOLS entry and dedicated tool view are not implemented.
 - Anonymous Discover uses a minimal `<CHAINED>` / `[ LOG IN ]` header; Private Access uses `[ DISCOVER ]`.
@@ -35,6 +36,7 @@ This file distinguishes repository implementation from production validation whe
 - Management language uses concise `WORKS`, `PRESENTATIONS`, and `AGENDA` headings.
 - Compact multi-image browsing is live on Discover, Follow, Public Profile and Selector: these viewers use the same circular current-image state and compact green accessible `< current/total >` navigation, while preserving swipe/drag and keyboard browsing. The shared CSS now honors the controls' `hidden` state for one-image Works; post-deployment visual verification remains pending. Selector secondary images remain lazily resolved through its existing strict public projection; Project, Tag and export state is unaffected. Public Work Detail intentionally renders all ordered images vertically for close viewing/comparison and has no carousel. The control is UI-only and never enters exports.
 - Discover NOSY and Follow progressively append their existing deterministic batches as an unobtrusive end sentinel approaches. Follow retains its cursor RPC; Discover retains its bounded, artist-spread candidate ordering. Dashboard mobile `[ LOAD MORE ]` remains unchanged.
+- The current Discover/Follow GRID code selects SMALL renditions and reserves image ratios. In a controlled local Chrome check, Discover's desktop initial batch stayed at 12 cards with 9 SMALL, 0 LARGE and no premature second batch. Anonymous production network validation remains pending.
 - Dashboard mobile initially shows 10 recent Works and 10 recent Presentations per independent list; `[ LOAD MORE ]` reveals 10 at a time. Wide desktop retains independently scrolling latest lists; the intermediate-width latest section stacks and uses normal page flow.
 - In the repository, Latest Updates stacks at 1880px and below, with flexible Work titles and right-aligned no-wrap status above mobile width. Desktop page scrolling uses a native 6px green scrollbar and wide Dashboard lists use native 2px compact scrollbars. A 3px transient green page-position indicator is implemented for coarse-pointer viewports at 700px and below; real-device/live validation remains open.
 - New-Artist empty states are quiet and functional: Works, Presentations and Agenda retain direct add actions; CV and Press retain their inline add forms; Selector stays a neutral empty private workspace; and Dashboard hides REQUESTS until an action or a real failure needs attention. Draft profiles remain outside public visibility.
@@ -45,6 +47,7 @@ This file distinguishes repository implementation from production validation whe
 - The local Presentation editor now uses the shared Work-form layout and sequential base/context/management sections. New drafts explain that related context follows first save; after creation the editor keeps the persisted ID and URL, loads the saved record, and refreshes Participants, Works, Agenda image, Program and co-operator context. Existing public Works are added through Artist selection and the current proposal contract; their records remain Artist controlled. Signed-in visual and first-save checks remain pending.
 - Dashboard derives a quiet `WORK READY TO PUBLISH — <TITLE>` action only from a managed Work media-ready generation completed after this narrow lifecycle was activated and not explicitly handled by that account. Existing READY drafts remain silent. `[ DETAILS ]` opens the Work editor without mutation; `[ PUBLISH ]` rechecks readiness and uses the trusted Work publish operation directly, then reconciles the server-backed ready list. `[ NOT NOW ]` acknowledges only the current generation. The action disappears on acknowledgement, publication, deletion, lost management or obsolete media, and a later current ready generation can create a new action. Publication under a draft Profile leaves the Work publicly hidden and is explained inline. Signed-in production validation of the two-path flow remains pending. This is a narrow Work lifecycle, not a generic notification, counter, badge, inbox or read/unread system.
 - The Work editor shows `NEW WORK`, `DRAFT` or `PUBLISHED` status with Publish / Unpublish beside it instead of visibility radios. Saved drafts also offer Publish beside Save Draft at the form end; both entry points use the same publication flow, and the bottom action returns attention to the top status/feedback. Published Works keep only Save Changes at the bottom. Ordinary Save Draft / Save Changes preserves publication state; Publish remains subject to existing validation and media readiness. `[ NEW WORK ]` appears near the top only after a successful save and completion of every browser upload/finalization, with no unsaved changes or media failure; independent SMALL/LARGE processing may continue. It opens the canonical new editor without publishing the previous Work. A published Work under a draft Profile shows that it is not yet publicly visible, with a one-time explanation after publication. Dashboard DETAILS still opens this editor.
+- Peer confirmed on 2026-10-02 that the Work editor's processing/readiness feedback prevents the old generic publish failure in production; the separate Dashboard DETAILS/direct PUBLISH production check remains pending.
 
 ### Exports
 
