@@ -9,6 +9,8 @@ test("Profile Work stage uses the same metadata-gap centering shift as Discover"
   ]);
   assert.match(styles, /--discover-meta-width[\s\S]*--discover-gap[\s\S]*transform: translateX\(/);
   assert.match(profile, /\.profile-image-link \{[\s\S]*transform: translateX\([\s\S]*var\(--work-meta-width\)[\s\S]*var\(--work-gap\)/);
+  assert.match(profile, /\.profile-image-link \{[\s\S]*width: calc\(100% - var\(--work-meta-width\) - var\(--work-gap\)\)/);
+  assert.match(profile, /@media \(min-width: 701px\) and \(max-width: 1280px\) \{[\s\S]*?\.profile-image-link \{[\s\S]*?width: 100%;[\s\S]*?transform: none;/);
   assert.match(profile, /@media \(max-width: 700px\)[\s\S]*\.profile-image-link \{[\s\S]*transform: none;/);
   assert.doesNotMatch(profile, /\.profile-image-link img \{[\s\S]*object-fit:\s*cover/);
 });

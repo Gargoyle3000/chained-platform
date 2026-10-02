@@ -80,6 +80,8 @@ try {
 
   const widths = responsivePages.length === 1 && responsivePages[0] === "dashboard.html"
     ? [1920, 1881, 1880, 1440, 1101, 1100, 900, 701, 700, 412, 390, 360, 320]
+    : responsivePages.length === 1 && responsivePages[0] === "profile.html"
+      ? [1440, 1281, 1280, 1100, 900, 701, 700, 390, 320]
     : [1440, 390, 320];
   for (const width of widths) {
     for (const page of responsivePages) {
@@ -91,6 +93,30 @@ try {
       await command("Page.navigate", { url: `http://127.0.0.1:5500/${pageUrl}` });
       await Promise.race([loaded, wait(5000)]);
       await wait(1200);
+      if (page === "profile.html") {
+        await command("Runtime.evaluate", {
+          expression: `(() => {
+            const work = document.createElement('article');
+            work.className = 'profile-work profile-work-landscape';
+            const imageLink = document.createElement('a');
+            imageLink.className = 'profile-image-link';
+            imageLink.href = '#works';
+            const image = document.createElement('img');
+            image.alt = 'Landscape layout fixture';
+            image.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1600" height="900"%3E%3Crect width="1600" height="900" fill="black"/%3E%3C/svg%3E';
+            imageLink.append(image);
+            const metadata = document.createElement('div');
+            metadata.className = 'profile-work-meta';
+            const title = document.createElement('h2');
+            title.textContent = 'LANDSCAPE WORK';
+            const materials = document.createElement('p');
+            materials.textContent = 'MATERIALS: Archival pigment print, reclaimed aluminum, hand finished paper, and layered transparent resin with an extended description of the installation materials and construction.';
+            metadata.append(title, materials);
+            work.append(imageLink, metadata);
+            document.querySelector('#works').replaceChildren(work);
+          })()`
+        });
+      }
       if (page === "discover.html") {
         await command("Runtime.evaluate", {
           expression: `(() => {
@@ -358,6 +384,39 @@ try {
         returnByValue: true
       });
       const value = evaluation.result.value;
+      if (page === "profile.html") {
+        const geometry = (await command("Runtime.evaluate", {
+          expression: `(() => {
+            const work = document.querySelector('.profile-work');
+            const image = work.querySelector('.profile-image-link');
+            const metadata = work.querySelector('.profile-work-meta');
+            const stage = work.getBoundingClientRect();
+            const a = image.getBoundingClientRect();
+            const b = metadata.getBoundingClientRect();
+            return {
+              image: { left: a.left, right: a.right, top: a.top, bottom: a.bottom },
+              metadata: { left: b.left, right: b.right, top: b.top, bottom: b.bottom },
+              stageCenter: (stage.left + stage.right) / 2,
+              metadataFits: metadata.scrollWidth <= metadata.clientWidth,
+              overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth
+            };
+          })()`,
+          returnByValue: true
+        })).result.value;
+        assert.equal(geometry.overflow, false, `Profile has no horizontal overflow at ${width}px`);
+        assert.equal(geometry.metadataFits, true, `Profile MATERIALS fits at ${width}px`);
+        if (width > 700) {
+          assert.ok(geometry.metadata.right <= geometry.image.left + 1,
+            `Profile metadata clears landscape image at ${width}px`);
+          if (width > 1280) {
+            assert.ok(Math.abs((geometry.image.left + geometry.image.right) / 2 - geometry.stageCenter) <= 1,
+              `Profile image stays centered in the Work stage at ${width}px`);
+          }
+        } else {
+          assert.ok(geometry.image.bottom <= geometry.metadata.top + 1,
+            `Profile metadata follows the image at ${width}px`);
+        }
+      }
       if (page === "dashboard.html") {
         const dialog = value.onboardingDialog;
         assert.equal(dialog.open, true, `Dashboard onboarding dialog opens at ${width}px`);
