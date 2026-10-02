@@ -222,6 +222,10 @@
   min-width: 0;
 }
 
+.dashboard-requests-section[hidden] {
+  display: none;
+}
+
 .dashboard-requests-list {
   display: grid;
   gap: 14px;
@@ -1059,6 +1063,12 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 
   margin-bottom: 0;
+}
+
+@media (max-width: 700px) {
+  .dashboard-overview-primary .dashboard-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .dashboard-profile-status {

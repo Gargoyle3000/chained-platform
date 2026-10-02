@@ -364,6 +364,58 @@ try {
         assert.ok(dialog.left >= 0 && dialog.right <= width, `Dashboard onboarding dialog fits width at ${width}px`);
         assert.ok(dialog.top >= 0 && dialog.bottom <= (width === 1440 ? 900 : 844), `Dashboard onboarding dialog fits viewport height at ${width}px`);
         assert.ok(dialog.scrollWidth <= dialog.clientWidth, `Dashboard onboarding dialog has no horizontal overflow at ${width}px`);
+        const summaryResult = await command("Runtime.evaluate", {
+          expression: `(() => {
+            document.querySelector('#dashboard-onboarding-dialog').close();
+            const summary = document.querySelector('.dashboard-summary');
+            const [works, presentations, requests] = summary.querySelectorAll('.dashboard-summary-item');
+            const hiddenDisplay = getComputedStyle(requests).display;
+            requests.hidden = false;
+            const list = requests.querySelector('.dashboard-requests-list');
+            const row = document.createElement('div');
+            row.className = 'dashboard-request-row';
+            const copy = document.createElement('p');
+            copy.textContent = 'PRESENTATION WORK REQUEST — A LONG PRESENTATION TITLE';
+            const actions = document.createElement('div');
+            actions.className = 'dashboard-request-actions';
+            const action = document.createElement('button');
+            action.className = 'dashboard-request-action';
+            action.textContent = '[ REVIEW ]';
+            actions.append(action);
+            row.append(copy, actions);
+            list.replaceChildren(row);
+            const rect = (element) => {
+              const { left, right, top, bottom } = element.getBoundingClientRect();
+              return { left, right, top, bottom };
+            };
+            return {
+              hiddenDisplay,
+              columns: getComputedStyle(summary).gridTemplateColumns.split(' ').length,
+              works: rect(works), presentations: rect(presentations), requests: rect(requests),
+              label: rect(requests.querySelector('.dashboard-label')),
+              action: rect(action),
+              overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth
+            };
+          })()`,
+          returnByValue: true
+        });
+        const summary = summaryResult.result.value;
+        assert.equal(summary.hiddenDisplay, "none", `hidden REQUESTS occupies no space at ${width}px`);
+        assert.equal(summary.overflow, false, `visible REQUESTS causes no page overflow at ${width}px`);
+        if (width <= 700 || width >= 1440) {
+          assert.ok(summary.label.left >= summary.requests.left && summary.action.right <= summary.requests.right + 1,
+            `REQUESTS content fits its column at ${width}px`);
+        }
+        if (width <= 700) {
+          assert.equal(summary.columns, 1, `Dashboard summary stacks at ${width}px`);
+          assert.ok(summary.works.bottom < summary.presentations.top && summary.presentations.bottom < summary.requests.top,
+            `WORKS, PRESENTATIONS and REQUESTS stay distinct at ${width}px`);
+        } else if (width >= 1101) {
+          assert.equal(summary.columns, 3, `Dashboard summary retains three desktop columns at ${width}px`);
+          assert.ok(Math.abs(summary.works.top - summary.presentations.top) <= 1
+            && Math.abs(summary.works.top - summary.requests.top) <= 1,
+          `Dashboard desktop summary remains one row at ${width}px`);
+        }
         if (width <= 720) {
           const nav = value.navigationLayout;
           assert.ok(nav, `Dashboard navigation exists at ${width}px`);

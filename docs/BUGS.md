@@ -1,6 +1,6 @@
 # CHAINED — ACTIVE BUGS / BLOCKERS
 
-Last updated: 2026-09-28
+Last updated: 2026-10-02
 
 ## Existing database-suite validation assertions
 
@@ -10,15 +10,12 @@ Last updated: 2026-09-28
 
 - Production Discover GRID at 1440px requested 23 LARGE images (24.9 MB) with only three cards visible. The shared viewport-only rendition rule selected LARGE for compact cards, while unreserved ordinary card geometry let the 720px continuation sentinel append a second batch before images settled. A local frontend fix selects SMALL for Discover/Follow GRID, reserves known image ratios, and sets lazy loading before image URLs. A controlled local Chrome fixture now keeps the desktop initial batch at 12 cards and starts 9 SMALL requests; production release and network validation remain pending.
 
-## Dashboard mobile metric overlap
-
-- On narrow phone widths, the Dashboard metric/action area can let REQUESTS run into PRESENTATIONS. The desktop three-column layout is sound; forcing WORKS, PRESENTATIONS and REQUESTS into one mobile row is too cramped. Fix and validate at 320px, 390px and 412px; keep WORKS and PRESENTATIONS together only if they remain clear, and place REQUESTS distinctly below or otherwise separate it.
-
 The production multi-image Discover, Follow and Selector carousels were manually checked on 2026-09-26. The one-image visibility fix below still needs post-deployment visual smoke checks.
 
 CV Import ADD production release/validation and an Artist-safe terminal derivative recovery path are planned work in `ROADMAP.md`, not confirmed defects in current behavior.
 
 ## Resolved incidents
+- Dashboard mobile metric overlap (2026-10-02): the later overview selector forced three summary columns even at phone widths. The summary now stacks WORKS, PRESENTATIONS and visible REQUESTS at 700px and below; `[hidden]` removes REQUESTS from layout when empty. Local browser geometry checks passed at 320px, 390px, 412px and desktop, with focused Dashboard tests passing. Production visual validation remains pending.
 - Opaque-RGBA Work derivative rejection (2026-09-28): the processor incorrectly treated `metadata.hasAlpha` as proof that source pixels were transparent, and rejected a valid opaque WebP when libwebp omitted its redundant alpha channel. It now uses Sharp `stats().isOpaque` to require output alpha only when actual transparency is present. The opaque-RGBA regression, transparent PNG, RGB PNG and worker completion paths are covered by focused Linux processor tests. Production validation succeeded on Cloud Run revision `chained-image-worker-00005-hfk`, which receives 100% of traffic: the previously failing PNG completed processing, SMALL and LARGE became READY, and CHAINED reported the Work READY TO PUBLISH.
 - One-image compact Work carousel controls (2026-09-27): Peer observed `< >` without a useful count on a one-image Work; the exact route was not recorded. Discover, Follow, Public Profile and Selector all instantiate the same controls before async image-count resolution. The shared JS marked their container/buttons `hidden`, but `styles.css` assigned explicit `display` values that overrode native hidden styling. Scoped `[hidden]` rules now keep both container and buttons out of view until multi-image resolution reveals them. Focused tests cover the CSS contract, one-image async resolution, two-image `1/2` and `2/2` controls, circular navigation and Public Work Detail's separate renderer; the full frontend suite passes. Production visual verification remains pending.
 - Work image upload Storage privilege (2026-09-27): the Agenda INSERT policy called `private.can_insert_reserved_presentation_agenda_media(text,jsonb)` without authenticated EXECUTE, causing unrelated `work-originals` uploads to fail with `42501`. Forward migration `20260927082536_grant_agenda_storage_insert_predicate.sql` granted only that privilege and was applied to production on 2026-09-27. Koos De Vries, a real second Artist, subsequently uploaded Works with images successfully; the incident is live verified. Local pgTAP had reproduced the failure before the grant and passed after it.
