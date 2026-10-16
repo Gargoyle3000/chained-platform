@@ -288,7 +288,7 @@ select is(
 );
 
 select is(
-  has_table_privilege('service_role', 'public.account_invitations', 'insert'),
+  has_column_privilege('service_role', 'public.account_invitations', 'email_normalized', 'insert'),
   true,
   'the trusted service role can create approved invitations'
 );
