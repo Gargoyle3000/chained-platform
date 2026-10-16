@@ -23,6 +23,8 @@ Last updated: 2026-10-16
 
 \- The release model is CODE/TESTS → BETA → LIVE (decided 2026-10-16). Local execution (unit tests, local Supabase stack, migration replay, pgTAP) remains part of CODE/TESTS only; it is not a product-validation or release environment. Peer validates product behavior on LIVE today, so BETA must mirror LIVE as closely as feasible and becomes the product-validation step before LIVE. BETA is not yet implemented.
 
+\- BETA is intentionally parked (decided 2026-10-16) until the product is closer to its end state; CURATOR comes first. The BETA design below remains the agreed target and is not withdrawn. Until BETA is built, releases continue under the current manual CODE/TESTS → LIVE process with Peer validating on LIVE.
+
 \- BETA (`beta.chained.work`) is fully isolated from LIVE: its own Supabase project/organisation (Free initially while scale permits), database, Auth, Storage, Edge Functions, project ref, keys and secrets; its own hosting/deploy target; its own derivative worker, worker token and scheduler; and its own CORS/redirect/origin values. BETA never holds LIVE credentials, never calls LIVE services and receives no production user data by default; any future copy of LIVE data requires a separate explicit, reviewed decision. BETA uses beta-only synthetic accounts and data. `chained.work` remains LIVE; plan Supabase Pro before broader real-user/commercial operation requires it.
 
 \- Parity: BETA runs the same commit, the same full migration history, the same Edge Function sources and the same worker container image as the release candidate for LIVE, with only environment values differing. BETA hosted Auth, Storage and function settings mirror LIVE (invite-only, signup disabled, 12-hour invite/OTP expiry, password-first) except for BETA URLs.
@@ -34,6 +36,18 @@ Last updated: 2026-10-16
 \- Misrouting safeguards: each environment pins its own Supabase URL/ref in a tracked browser-safe frontend config selected by exact hostname, and validation rejects the other environment's URL; operator scripts and Supabase CLI commands must name and verify their target ref before any write; secrets for the two environments use distinct names/storage so one cannot be loaded for the other.
 
 \- GitHub remains the source repository and home for history, branches, pull requests and useful CI/Actions. Web delivery will move from GitHub Pages to Cloudflare before paid/commercial service. The exact Cloudflare substrate (Pages, Workers with Static Assets, or another suitable configuration) is open; this is a hosting change, not a source-control move. Cloudflare is not currently present in the repository or in use.
+
+
+
+\## Product perspectives
+
+\- CHAINED has three intended perspectives onto one shared network: ARTIST, CURATOR and INSTITUTION/GALLERY (decided 2026-10-16). ARTIST exists and mainly proves PORTFOLIO. CURATOR is the next product line, before INSTITUTION/GALLERY and before building BETA, and tests NETWORK + WORKSPACE. INSTITUTION/GALLERY is parked as the third perspective; CURATOR must not block it.
+
+\- CURATOR v1 works only with Artists and Works that already exist on CHAINED. There is no upload of external artists, external Works or arbitrary images and no generic moodboard model.
+
+\- The private research workspace is the core of CURATOR v1. Public CURATED output is later and optional; the curator role itself never implies or requires publishing, and private research is not conflated with CURATED.
+
+\- CURATOR reuses existing primitives where semantically sound: account role `curator`, `curator` profile type, account-owned SELECTOR (saves, Tags, ordered Projects, CHAINED SELECT) and the existing Work ownership/provenance model; it does not duplicate them. Proposed model, stages and decisions still open for Peer are in `CURATOR.md`.
 
 
 

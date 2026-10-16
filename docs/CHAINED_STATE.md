@@ -79,7 +79,7 @@ This file distinguishes repository implementation from production validation whe
 - Strict private Storage policy remains unchanged.
 - Portfolio Export v1 is functional.
 - Portfolio Export uses `EXPORT PORTFOLIO`, local monotonic progress, disabled `EXPORTING…` feedback, and a final size/tier status.
-- Selector and ordered Projects are implemented; the existing CURATED surface does not yet provide the planned published Curator/Institution Project and Presentation model.
+- Selector and ordered Projects are implemented; the existing CURATED surface does not yet provide the planned published Curator/Institution Project and Presentation model. No CURATOR perspective is implemented (see `CURATOR.md`).
 - Discover + Following implemented.
 - Mobile core flows usable.
 - Work metadata uses structured MEDIUM and one comma-separated MATERIALS field; legacy material fields are unified on read and migrated when that Work is saved.
@@ -106,7 +106,7 @@ Only LIVE exists; there is no BETA environment, no CI/CD (`.github/` is absent) 
 - **LIVE-pinned operator tooling:** `scripts/backfill-legacy-derivatives.mjs`, `promote-legacy-public-derivatives.mjs`, `recover-failed-derivatives.mjs` and `tests/production-cloud-run-smoke.mjs` hard-code the LIVE ref/URL and require `CHAINED_PRODUCTION_SMOKE=1` plus the untracked `tests/.local/production-cloud-run-smoke.env`.
 - **Other:** OpenAI powers LIVE CV Import extraction. The repository does not identify the registrar or DNS provider for `chained.work`.
 
-The proposed BETA design is recorded in `DECISIONS.md` (Release environments and delivery); prerequisites, sequence and smoke gate are in `ROADMAP.md` (NOW → Release lane).
+The proposed BETA design is recorded in `DECISIONS.md` (Release environments and delivery); prerequisites, sequence and smoke gate are in `ROADMAP.md` (NOW → Release lane). BETA is intentionally parked until the product is closer to its end state.
 
 ## SECURITY BASELINE
 
@@ -114,7 +114,8 @@ The proposed BETA design is recorded in `DECISIONS.md` (Release environments and
 
 ## CURRENT HANDOFF
 
-- Release model changed on 2026-10-16 to CODE/TESTS → BETA → LIVE (see `DECISIONS.md`). Local execution is for code, tests and migrations only and is not a product-validation or release step. BETA is designed, not implemented; next step is Peer's answers to the required prerequisites in `ROADMAP.md`.
+- Active product focus (2026-10-16): CURATOR v1, the second of three perspectives (ARTIST exists → CURATOR next → INSTITUTION/GALLERY parked). It is designed, not implemented: audit, model, stages and open decisions are in `CURATOR.md`; sequence in `ROADMAP.md` → NOW → CURATOR v1. Next step is Peer's answers to `CURATOR.md` §7 D1–D8, then stage C1. Repository facts to keep in mind: `curator` role/profile enums and a CURATED precursor (`curated_collections`, `publish_archive_project`, `[ PUBLISH TO CURATED ]`) already exist, but there is no curator invitation/provisioning, no curator Dashboard and no client path to publish a curator profile.
+- Release model is CODE/TESTS → BETA → LIVE (see `DECISIONS.md`), but BETA is intentionally parked until the product is closer to its end state; its design and prerequisites in `ROADMAP.md` are retained. Local execution is for code, tests and migrations only and is not a product-validation or release step; releases meanwhile follow the current manual process with validation on LIVE.
 - Production is stable after the Phase 4 public-image derivative rollout.
 - Private preview frontend implementation is deployed and production-validated: the browser generates a fixed private WebP derivative before reservation, uploads both server-reserved objects, and finalizes them together. Production smoke covered JPEG and transparent PNG images, including full and partial alpha. Broader browser/device matrix validation remains future hardening.
 - Controlled private-preview backfill remains open where still needed; it is separate from the completed public-derivative legacy migration.

@@ -6,7 +6,24 @@ This is a priority map for remaining work, not a deployment record or fixed cale
 
 ## NOW
 
-### Release lane (CODE/TESTS → BETA → LIVE)
+### CURATOR v1 (next product line)
+
+Contract: `DECISIONS.md` → Product perspectives. Audit, proposed model, open decisions and out-of-scope list: `CURATOR.md`. Design only; nothing implemented. Perspectives: ARTIST (exists) → CURATOR (next) → INSTITUTION/GALLERY (parked).
+
+v1 boundary: private research over existing CHAINED Artists/Works inside the existing account-owned SELECTOR; no external uploads; no public CURATED launch; no collaboration.
+
+1. **C0 Decisions (Peer):** answer `CURATOR.md` §7 D1–D8 (curator plan intent, DRAFT curator profile at admission, workspace eligibility, shared SELECTOR for dual-role accounts, notes placement/limit, Project Artists, hiding the existing `[ PUBLISH TO CURATED ]` precursor, review states).
+2. **C1 Admission + identity:** curator invitation through Admin Console / `invite-account` with DRAFT curator profile + owner membership. Accept: pgTAP provisioning coverage; Artist invite unchanged; an invited curator reaches Dashboard without `PROFILE SETUP REQUIRED`.
+3. **C2 Perspective + navigation:** perspective resolver, Curator Dashboard, `[ ARTIST ]` / `[ CURATOR ]` switch for dual-role accounts, contextual help. Accept: resolver unit tests; Artist Dashboard/onboarding unchanged; switch never affects authorization; desktop/390/320 checks.
+4. **C3 Work research:** private notes on saved Works and Project items, private unavailable-Work placeholders, UI-only COMPARE. Accept: owner-only pgTAP with wrong actors (other account, the Work's Artist, anon, suspended); notes never exported or public.
+5. **C4 Saved Artists:** `[ SAVE ARTIST ]` on public Profile (distinct from FOLLOW) and a SELECTOR ARTISTS scope. Accept: published Artist profiles only; owner-only; invisible to the Artist.
+6. **C5 Validation:** focused security review of new grants/functions and LIVE validation with one invited curator.
+
+Later, separately designed: CURATED publication from private research (reconcile the existing precursor with the `DECISIONS.md` CURATED contract), curator public Profile/Presentations, shared/team research, curator onboarding introduction.
+
+### Release lane (CODE/TESTS → BETA → LIVE) — PARKED
+
+Intentionally parked on 2026-10-16 until the product is closer to its end state; CURATOR comes first. The design and prerequisites below are retained unchanged as the agreed target. Until then, releases follow the current manual CODE/TESTS → LIVE process.
 
 Contract: `DECISIONS.md` → Release environments and delivery. Confirmed current architecture: `CHAINED_STATE.md` → DEPLOYMENT ARCHITECTURE. Not implemented.
 
@@ -80,7 +97,7 @@ Implemented in the repository; not recorded as released or production-validated.
 - Complete operational hardening before wider beta: production capacity and intended Supabase Pro timing, cleanup of temporary smoke credentials/environment, appropriate rate/abuse controls, stronger Admin Console security including 2FA where absent, and a privacy-safe incident/error view. Remove temporary tester analytics when that phase ends.
 - Reconcile shared entity, relationship, permission and approval primitives before broader Gallery/Curator access. Resolve Gallery-created unclaimed Artist capacity, entitlement and anti-abuse boundaries so a Gallery account cannot substitute for many independent Artist accounts; retain Artist control over authoritative Works, images and approved changes.
 - CV Import eligibility and accounting (open): before broader rollout, add durable account-scoped idempotency and quota/entitlement accounting; never persist source PDFs or silently create Presentations. Replace the temporary per-user `CV_IMPORT_BETA_USER_IDS` Edge Function secret allowlist with an automatic, security-conscious eligibility rule; keep authentication and an active account mandatory, determine the intended CHAINED account/profile eligibility model first, and do not expose CV Import as an unrestricted public function.
-- Broader relationship discovery, Profile claiming and Gallery/Curator access beyond FIND ARTISTS remain later work.
+- Broader relationship discovery, Profile claiming and Gallery access beyond FIND ARTISTS remain later work. CURATOR v1 is scheduled in NOW → CURATOR v1.
 - Define a reviewed artist-safe recovery contract for terminal Work derivative failures; the current trusted service maintenance path and truthful editor failure state do not provide an Artist retry action.
 
 ## LATER
@@ -96,7 +113,7 @@ Implemented in the repository; not recorded as released or production-validated.
 ### Network and accounts
 
 - Keep DISCOVER/NOSY centered on Works and Artist practices. Evolve CURATED around intentionally published curatorial/institutional material; eligible published Projects and Presentations may eventually participate. FOLLOW may later distinguish Artist Work activity from followed Curator/Institution Projects and Presentations. The public model and UX remain to be designed.
-- Extend the initial public Profile search into deliberate CHAINED relationship discovery, with human-reviewed Profile claiming, provenance, aliases, delegated capabilities and proposed-change approval. Extend account/profile types to Gallery, Curator and Institution teams/subtypes using shared permissions; do not grant a collaborator control over another Artist's Work.
+- Extend the initial public Profile search into deliberate CHAINED relationship discovery, with human-reviewed Profile claiming, provenance, aliases, delegated capabilities and proposed-change approval. Extend account/profile types to Gallery and Institution teams/subtypes (the parked third perspective) and later Curator teams using shared permissions; do not grant a collaborator control over another Artist's Work.
 - Implement account/product limits, CHAINED/CHAINED+ upgrade handling and technical abuse ceilings without turning plan status into public rank or hiding existing content at a limit. Add a narrow system-only notification layer for action-required and informational events, without social metrics or DMs.
 - Consider a Profile external SHOP link only; CHAINED does not become a commerce platform.
 
