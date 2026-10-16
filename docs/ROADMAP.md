@@ -1,30 +1,45 @@
 # CHAINED — ROADMAP
 
-Last updated: 2026-09-28
+Last updated: 2026-10-16
 
-This is a priority map for remaining work, not a deployment record or fixed calendar. Current implementation and deployment status belong in `CHAINED_STATE.md`; established contracts belong in `DECISIONS.md`.
+This is a priority map for remaining work, not a deployment record or fixed calendar. Current implementation and deployment status belong in `CHAINED_STATE.md`; established contracts belong in `DECISIONS.md`. Most NOW items are release/validation of existing implementation, not missing features. A commit on `main` is not evidence of external deployment.
 
 ## NOW
 
-- Finish live checks of the current mobile/responsive polish, including Dashboard intermediate widths and the transient mobile page indicator on real devices. Make a short sitewide visual pass at desktop and narrow mobile widths; retain known good Discover SINGLE and original artwork ratios.
-- PENDING — With the next genuinely new eligible Artist account, smoke-test Dashboard onboarding in production through the normal Artist invitation and password setup: confirm the seven-step dialog opens on first Dashboard load, NEXT / BACK work, FINISH or SKIP completes it, acknowledgement persists, and after logout plus ordinary login it does not reopen. Confirm Dashboard remains usable and permanent contextual `[ ? ]` help stays separate. Do not reset an existing account's acknowledgement version to simulate a new Artist.
-- Complete signed-in production validation of Dashboard DETAILS, direct PUBLISH and draft-Profile feedback after release; preserve publication validation and truthful processing state during the live check.
-- Validate the revised Presentation editor with a signed-in first save and persisted context at desktop and narrow mobile widths. Evaluate whether a direct canonical NEW WORK route can preserve Presentation return/association context without changing authoritative Work ownership; the existing ADD WORK association path is now clearer.
-- Validate Discover/Follow GRID request volume and SMALL selection in production after release. Continue targeted Profile, Selector and Presentation delivery measurements before considering a reduced-bandwidth mode; optimize ordinary delivery first.
-- Complete the controlled production smoke check of the dedicated Presentation-scoped Agenda image upload/finalize path; representative-Work thumbnail delivery is already visibly confirmed.
+### Local / pending release
+
+Implemented in the repository; not recorded as released or production-validated.
+
+- Dashboard onboarding frontend (seven-step first-login dialog). After release, smoke-test with the next genuinely new eligible Artist through the normal invitation and password setup: the dialog opens on first Dashboard load, NEXT / BACK work, FINISH or SKIP persists acknowledgement, it does not reopen after logout and ordinary login, and permanent contextual `[ ? ]` help stays separate. Do not reset an existing account's acknowledgement version to simulate a new Artist.
+- Revised Presentation editor. After release: signed-in first save and persisted context at desktop and narrow mobile widths.
+- CV Import atomic ADD. After release: one controlled production persistence check by an authorized account. Extraction and same-page review are already production-validated (see PRE-BETA for eligibility and accounting).
+- CV Export v1. After release: signed-in production check of selection mode and PDF generation/delivery on desktop and mobile.
+- Discover FIND ARTISTS lookup. After release: production check that only claimed, published Artist Profiles appear.
+
+### Production validation
+
+- Dashboard DETAILS, direct PUBLISH and draft-Profile feedback: signed-in check; preserve publication validation and truthful processing state. (The Work editor's readiness feedback is already validated.)
+- Discover/Follow GRID request volume and SMALL selection: anonymous production network check. Continue targeted Profile, Selector and Presentation delivery measurements before considering a reduced-bandwidth mode.
+- Dedicated Presentation-scoped Agenda image upload/finalize path: controlled production smoke. (Representative-Work Agenda thumbnail delivery is already validated.)
+- One-image carousel: production smoke that one-image Works show no `< current/total >` control on Discover, Follow, Public Profile and Selector.
+- Mobile/responsive polish: live checks of Dashboard intermediate widths and the transient mobile page indicator on real devices; short sitewide desktop/narrow-mobile pass. Retain known good Discover SINGLE and original artwork ratios.
+
+### Product decisions and reconciliation
+
+- **Publish-intent contract/code discrepancy (unresolved):** `DECISIONS.md` requires retaining a user's Publish intent and automatically continuing after media READY, but current code returns during processing and later only refreshes controls/feedback. Peer must choose whether to implement retained automatic intent or revise the decision. The code describes current behavior; `DECISIONS.md` records the established contract and is intentionally unchanged. No product direction is chosen by this docs sync.
+- Optional: evaluate a direct canonical NEW WORK route that preserves Presentation return/association context without changing authoritative Work ownership. Independent of the Presentation editor release validation above.
 
 ## PRE-BETA
 
-- Finish controlled private-preview backfill and coverage verification, then remove any temporary original fallback. Reconcile the editor's approximately 25 MiB/no-AVIF validation with the service/backend's 50 MiB/AVIF contract; check real display and HiDPI needs and a broader browser/device matrix.
+- Finish controlled private-preview backfill and coverage verification, then remove any temporary original fallback. Validate the remaining browser/format/HiDPI matrix for editor image handling: real display and HiDPI needs and a broader browser/device set, including formats such as AVIF where relevant. Reconcile editor and backend limits only if validation shows a gap.
 - Measure Work derivative queue wait and processing separately from upload finalization through SMALL/LARGE readiness under representative 20/50/100-image bursts. Calibrate worker capacity, polling and long-processing thresholds from measurements.
 - Complete a focused RLS, Auth, Storage, Data API and privileged-function security review against actual trust boundaries. Security Advisor warnings on intentional service-only tables or `SECURITY DEFINER` functions require inspection, not automatic classification as defects.
-- **Before 2026-10-30:** audit every migration that creates a `public` table for explicit Data API privilege intent. Record required `GRANT`/`REVOKE` access separately for `anon`, `authenticated` and `service_role`; preserve least privilege and RLS, avoid generic CRUD grants, codify this for future migrations, and test clean replay under the new default where practical. Existing tables are not an emergency migration target solely because of the [Supabase default-grant change](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically).
+- **Before 2026-10-30 (historical migration audit):** future-migration privilege intent is already codified in `DECISIONS.md`. Still open: the historical audit of every migration that creates a `public` table, recording required `GRANT`/`REVOKE` access separately for `anon`, `authenticated` and `service_role`, and a clean-replay test under the new default where practical. Preserve least privilege and RLS and avoid generic CRUD grants. Existing tables are not an emergency migration target solely because of the [Supabase default-grant change](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically).
 - Build the isolated LOCAL → BETA → LIVE release lane before wider beta: `beta.chained.work` with its own Supabase Free project/organisation initially, synthetic accounts/data, separate project refs/secrets and no Production backend access. Use a beta branch, automated tests, fixed smoke loop and reviewed promotion of the same code/migration artifacts to `main` and LIVE; retain a small production post-deploy smoke check. Assess Cloudflare Pages versus Workers with Static Assets (or another suitable Cloudflare setup) for future web delivery, and migrate LIVE off GitHub Pages before paid/commercial service while GitHub remains source/CI.
 - Complete operational hardening before wider beta: production capacity and intended Supabase Pro timing, cleanup of temporary smoke credentials/environment, appropriate rate/abuse controls, stronger Admin Console security including 2FA where absent, and a privacy-safe incident/error view. Remove temporary tester analytics when that phase ends.
 - Reconcile shared entity, relationship, permission and approval primitives before broader Gallery/Curator access. Resolve Gallery-created unclaimed Artist capacity, entitlement and anti-abuse boundaries so a Gallery account cannot substitute for many independent Artist accounts; retain Artist control over authoritative Works, images and approved changes.
-- CV Import extraction and same-page review were production-validated; atomic ADD exists locally. Release the authorized ADD path and perform one controlled production persistence check. Before broader rollout, add durable account-scoped idempotency and quota/entitlement accounting; never persist source PDFs or silently create Presentations.
-- Replace the temporary per-user `CV_IMPORT_BETA_USER_IDS` Edge Function secret allowlist with an automatic, security-conscious eligibility rule before wider onboarding. Keep authentication and an active account mandatory; determine the intended CHAINED account/profile eligibility model before implementation. Do not expose CV Import as an unrestricted public function.
-- Release and validate Discover's local inline FIND ARTISTS lookup with only claimed, published Artist Profiles in production. Broader relationship discovery, Profile claiming and Gallery/Curator access remain later work.
+- CV Import eligibility and accounting (open): before broader rollout, add durable account-scoped idempotency and quota/entitlement accounting; never persist source PDFs or silently create Presentations. Replace the temporary per-user `CV_IMPORT_BETA_USER_IDS` Edge Function secret allowlist with an automatic, security-conscious eligibility rule; keep authentication and an active account mandatory, determine the intended CHAINED account/profile eligibility model first, and do not expose CV Import as an unrestricted public function.
+- Broader relationship discovery, Profile claiming and Gallery/Curator access beyond FIND ARTISTS remain later work.
 - Define a reviewed artist-safe recovery contract for terminal Work derivative failures; the current trusted service maintenance path and truthful editor failure state do not provide an Artist retry action.
 
 ## LATER

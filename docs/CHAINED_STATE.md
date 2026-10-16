@@ -1,6 +1,6 @@
 # CHAINED — CURRENT STATE
 
-Last updated: 2026-10-02
+Last updated: 2026-10-16
 
 ## CURRENT SYSTEM
 
@@ -102,3 +102,4 @@ This file distinguishes repository implementation from production validation whe
 - CV Import extraction and same-page review were production-validated. The extraction Edge Function currently requires the authenticated user ID in the `CV_IMPORT_BETA_USER_IDS` secret allowlist; a real Artist's access worked after manual inclusion. The atomic ADD path exists locally but its production persistence has not been validated or released. CV Export is also implemented locally pending release. Neither ADD nor CV Export is recorded here as production-live.
 - Protect the authorized private-media gateway, PDF export, Phase 4 public derivative behavior, and current Discover/Following/Profile geometry.
 - Optional drag-follow carousel animation is future polish, not an active bug.
+- Open product decision (2026-10 audit): `DECISIONS.md` requires retaining Publish intent and automatically continuing after media READY, but current code returns during processing and later only refreshes controls/feedback. Peer has not chosen between implementing the retained intent and revising the decision; tracked in `ROADMAP.md`, not as a bug.

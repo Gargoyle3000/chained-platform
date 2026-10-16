@@ -7,6 +7,7 @@ for a future public transparency or subprocessor notice. It is not a complete
 legal privacy notice.
 
 Last reviewed: 2026-08-31
+CV Import status reviewed: 2026-10-16
 
 
 SUPABASE
@@ -141,16 +142,16 @@ not active.
 
 
 OPENAI API
-STATUS: LOCAL PROTOTYPE / BACKEND IMPLEMENTED, NOT DEPLOYED
+STATUS: PRODUCTION (CV IMPORT EXTRACTION ONLY, TEMPORARY PER-USER ALLOWLIST)
 
 PURPOSE:
-Provider candidate extraction and structured text transformation for future CV Import.
+Provider candidate extraction and structured text transformation for CV Import. Extraction and same-page review are production-validated for allowlisted users; this is not persistence. Atomic ADD is local and not production-live, and CV Export (no provider call) is local and not production-live.
 
 CURRENT MODEL / API:
 `gpt-5.6-luna` via the Responses API.
 
 PRIVACY / TRUST BOUNDARY:
-Requests explicitly use `store:false`. The implemented production-facing boundary requires intentional authenticated PDF selection, transient server-side processing through a beta-gated Edge Function, and same-page human review; it is not deployed or configured yet. CHAINED does not intentionally persist the uploaded PDF. OpenAI returns untrusted candidates only; CHAINED validates them and requires human review before any write. OpenAI never writes directly to the CHAINED database.
+Requests explicitly use `store:false`. The implemented production-facing boundary requires intentional authenticated PDF selection, transient server-side processing through an allowlist-gated Edge Function, and same-page human review. CHAINED does not intentionally persist the uploaded PDF. OpenAI returns untrusted candidates only; CHAINED validates them and requires human review before any write. OpenAI never writes directly to the CHAINED database.
 
 PROVIDER / SECRET:
 The provider is not permanently locked in and will be benchmarked against alternatives. Secrets are process/server-side only: never browser, public, or repository values.

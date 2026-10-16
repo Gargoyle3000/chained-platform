@@ -34,7 +34,7 @@
 
 ## Visual language
 
-- Use only the existing white, black, and `#00D422` green system.
+- Use only the existing white, black, and `#00FC28` green system.
 - Use Cascadia Code.
 - Do not add rounded cards, shadows, gradients, grey interface panels, or decorative UI unless explicitly requested.
 - Preserve generous whitespace and thin functional lines.
@@ -142,12 +142,11 @@ During implementation:
 
 ## AI/Codex working method
 
-- ChatGPT is the orchestrator and reviewer; Codex is the default executing repository agent. For code work, ChatGPT should provide one complete, copy-paste-ready Codex task rather than requiring the user to relay loose PowerShell commands. Avoid making the human act as a terminal when the agent can execute the work itself.
-- Temporary Windows Desktop exception: a current sandbox regression can deny normal Git writes with `.git/index.lock: Permission denied`. Codex continues to inspect, edit, test, and report; use PowerShell for `git add`, commit, and push until the upstream issue changes. Do not change Git permissions or configuration as a workaround, and do not record this tooling limitation in `docs/BUGS.md`.
+- The orchestrator (for example ChatGPT) plans and reviews; an executing repository agent (for example Codex or Claude Code, depending on the environment) performs the work. For code work, the orchestrator should provide one complete, copy-paste-ready agent task rather than requiring the user to relay loose PowerShell commands. Avoid making the human act as a terminal when the agent can execute the work itself.
+- Historical/conditional Windows Desktop workaround: some past sandboxes denied normal Git writes with `.git/index.lock: Permission denied`. Only if that error actually occurs, continue to inspect, edit, test, and report, and have Git writes (`git add`, commit, push) performed from PowerShell when separately authorized. It is not the default workflow. Do not change Git permissions or configuration as a workaround, and do not record this tooling limitation in `docs/BUGS.md`. Staging, commit, push, and deploy still require explicit authorization.
 - For meaningful work, Codex reads `AGENTS.md` and relevant project docs, inspects the current code and working patterns, then reports repository facts, affected files/locations, risks, hypotheses, and the proposed approach before changing anything. Larger or risky tasks start inspection-only and proceed to implementation after review; small, explicit, well-bounded tasks may be implemented directly when authorized.
 - Keep changes within scope, run focused validation, inspect the diff, and run `git diff --check`. Commit, push, deploy, reset, and revert only on explicit instruction.
-- Model choice has two dimensions: family (`LUNA`, `TERRA`, `SOL`) and reasoning (`LIGHT`, `MEDIUM`, `HIGH`). Always name the combination (for example, `LUNA LIGHT` or `SOL HIGH`), never only “Codex High” or “Medium”. Choose the lightest reliable combination: `LUNA LIGHT` for tiny clear local/documentation tasks; `LUNA/TERRA MEDIUM` for normal focused implementation and debugging; `TERRA HIGH` / `SOL MEDIUM` for complex interaction or important backend/frontend work; and `SOL HIGH` only when repository-wide architecture, security, RLS/Storage/Auth, or difficult debugging genuinely benefits from it. These are guidelines; scale back after heavy work when possible.
-- Model selection also considers credits and execution speed. Use `TERRA MEDIUM` as the default for substantive repository work. Prefer `LUNA LIGHT` for documentation, inventory, tiny/local changes, and simple Git work. Use heavier TERRA/SOL modes only when task complexity genuinely requires escalation; `SOL` is not a default and should normally be selected only after harder architecture/security reasoning is identified.
+- Model and agent selection depends on the environment and orchestrator; do not assume a fixed model family or executor. Choose the lightest reliable model and reasoning level available for the task, considering credits and speed, and escalate only for repository-wide architecture, security, RLS/Storage/Auth, or difficult debugging work.
 - At each new relevant CHAINED session, read `AGENTS.md` and the relevant project memory, use its decisions and handoff as the starting context, avoid asking the user to reconstruct documented context, and check repository state before technical work.
 - At session end, after validation, update only the relevant `CHAINED_STATE.md`, `DECISIONS.md`, `BUGS.md`, or `ROADMAP.md` when the task actually changes current state, decisions, bugs, priorities, or handoff. Keep the handoff sufficient for the next chat, without turning project memory into a changelog.
 - Whenever a production external service is added, materially changed, or removed, update `docs/EXTERNAL_SERVICES.txt`.

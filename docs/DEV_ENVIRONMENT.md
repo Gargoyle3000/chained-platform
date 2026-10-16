@@ -16,14 +16,14 @@ is fallback/archive only and is not the active working copy.
 `proofs/` exists locally in the active repository and is intentionally excluded
 from Git.
 
-### Current Codex Desktop Git limitation
+### Historical / conditional Codex Desktop Git limitation
 
-Due to a current Windows Desktop sandbox regression, Codex can inspect, edit,
-and test repository files, but sandboxed Git writes can fail with
-`.git/index.lock: Permission denied`. Until that upstream issue changes, Codex
-handles inspection, editing, testing, and reporting; use PowerShell for
-`git add`, commit, and push. This is a tooling limitation, not a CHAINED product
-bug. Do not change Git permissions or configuration as a workaround.
+Some past Windows Desktop sandboxes denied Git writes with
+`.git/index.lock: Permission denied`. Only if that error actually occurs,
+continue inspection, editing, testing, and reporting, and use PowerShell for
+separately authorized `git add`, commit, and push. This is not the default
+workflow or a CHAINED product bug. Do not change Git permissions or configuration
+as a workaround. Staging, commit, push, and deploy require explicit authorization.
 
 ## Known tooling
 
@@ -73,11 +73,11 @@ By default the gate checks working-tree changes, including untracked files; with
 
 ### OpenAI / CV Import local development
 
-- Current use is the local CV Import prototype/benchmark in the CHAINED OpenAI API project.
+- Local use includes the CV Import prototype/benchmark in the CHAINED OpenAI API project; production extraction status is recorded below.
 - The restricted Project API key is stored for the current Windows user in Credential Manager as `OPENAI_CHAINED_CV_IMPORT` (username: `CHAINED`). The local launcher injects it only as process-scoped `OPENAI_API_KEY`.
 - Secret values never belong in Git, documentation, plaintext `.env` files, CLI arguments, browser code, or logs. The current key requires Responses write permission.
-- The local development key and any future production key are separate credentials. A future production integration should use server-side secret handling, likely Supabase Edge Function secrets.
-- The implemented, not-yet-deployed CV extraction Edge Function expects a separate server-side `OPENAI_API_KEY`, a comma-separated `CV_IMPORT_BETA_USER_IDS` allowlist, and `ALLOWED_CV_IMPORT_ORIGINS`. Do not configure real values during ordinary local validation or commit them; deployment and secret configuration require separate explicit authorization.
+- Keep local development and production credentials separate. Production extraction uses server-side Supabase Edge Function secrets.
+- The CV extraction Edge Function is deployed, and extraction plus same-page review are production-validated behind the temporary per-user allowlist. It expects a separate server-side `OPENAI_API_KEY`, a comma-separated `CV_IMPORT_BETA_USER_IDS` allowlist, and `ALLOWED_CV_IMPORT_ORIGINS`. Extraction does not persist CV entries: the atomic ADD path is local and not production-live, and CV Export is local and not production-live. Do not configure real values during ordinary local validation or commit them; deployment and secret configuration require separate explicit authorization.
 - The API project currently uses prepaid development billing with auto-reload disabled.
 
 ### Sensitive local development secrets
