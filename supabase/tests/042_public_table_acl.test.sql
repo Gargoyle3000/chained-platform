@@ -109,7 +109,7 @@ insert into expected_direct_acl values
 
 
 select results_eq(
-  $$select c.relname::text from pg_class c join pg_namespace n on n.oid=c.relnamespace
+  $$select c.relname::text collate "default" from pg_class c join pg_namespace n on n.oid=c.relnamespace
     where n.nspname='public' and c.relkind in ('r','p') order by c.relname$$,
   $$select distinct table_name from expected_direct_acl order by table_name$$,
   'the contract covers exactly the existing 31 public tables'

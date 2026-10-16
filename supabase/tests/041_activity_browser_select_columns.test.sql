@@ -8,7 +8,7 @@ select plan(75);
 -- accidental future exposure of audit IDs or lifecycle-only purge_after.
 select ok(not has_table_privilege('anon', 'public.profile_activities', 'SELECT'), 'anon has no whole-table SELECT on profile_activities');
 select results_eq(
-  $$select attname::text from pg_attribute
+  $$select attname::text collate "default" from pg_attribute
     where attrelid = 'public.profile_activities'::regclass and attnum > 0 and not attisdropped
       and has_column_privilege('anon', attrelid, attname, 'SELECT')
     order by attname$$,
@@ -17,7 +17,7 @@ select results_eq(
 );
 select ok(not has_table_privilege('anon', 'public.activity_occurrences', 'SELECT'), 'anon has no whole-table SELECT on activity_occurrences');
 select results_eq(
-  $$select attname::text from pg_attribute
+  $$select attname::text collate "default" from pg_attribute
     where attrelid = 'public.activity_occurrences'::regclass and attnum > 0 and not attisdropped
       and has_column_privilege('anon', attrelid, attname, 'SELECT')
     order by attname$$,
@@ -26,7 +26,7 @@ select results_eq(
 );
 select ok(not has_table_privilege('authenticated', 'public.profile_activities', 'SELECT'), 'authenticated has no whole-table SELECT on profile_activities');
 select results_eq(
-  $$select attname::text from pg_attribute
+  $$select attname::text collate "default" from pg_attribute
     where attrelid = 'public.profile_activities'::regclass and attnum > 0 and not attisdropped
       and has_column_privilege('authenticated', attrelid, attname, 'SELECT')
     order by attname$$,
@@ -35,7 +35,7 @@ select results_eq(
 );
 select ok(not has_table_privilege('authenticated', 'public.activity_occurrences', 'SELECT'), 'authenticated has no whole-table SELECT on activity_occurrences');
 select results_eq(
-  $$select attname::text from pg_attribute
+  $$select attname::text collate "default" from pg_attribute
     where attrelid = 'public.activity_occurrences'::regclass and attnum > 0 and not attisdropped
       and has_column_privilege('authenticated', attrelid, attname, 'SELECT')
     order by attname$$,
@@ -80,16 +80,16 @@ insert into public.profile_activities (
 insert into public.activity_occurrences (
   id, activity_id, owner_profile_id, created_by_account_id, updated_by_account_id,
   occurrence_type, title_override, start_date, show_in_agenda, show_in_presentation,
-  visibility, published_at
+  visibility, published_at, venue_name_override, city_override
 ) values
   ('c4400000-0000-4000-8000-000000000001', 'c4300000-0000-4000-8000-000000000001', 'c4200000-0000-4000-8000-000000000001', 'c4100000-0000-4000-8000-000000000001', 'c4100000-0000-4000-8000-000000000001',
-   'opening', 'PUBLIC OPENING', current_date + 10, true, false, 'published', now()),
+   'opening', 'PUBLIC OPENING', current_date + 10, true, false, 'published', now(), null, null),
   ('c4400000-0000-4000-8000-000000000002', 'c4300000-0000-4000-8000-000000000002', 'c4200000-0000-4000-8000-000000000001', 'c4100000-0000-4000-8000-000000000001', 'c4100000-0000-4000-8000-000000000001',
-   'talk', 'PRIVATE PROGRAM', current_date + 10, false, true, 'draft', null),
+   'talk', 'PRIVATE PROGRAM', current_date + 10, false, true, 'draft', null, null, null),
   ('c4400000-0000-4000-8000-000000000003', null, 'c4200000-0000-4000-8000-000000000001', 'c4100000-0000-4000-8000-000000000001', 'c4100000-0000-4000-8000-000000000001',
-   'opening', 'STANDALONE OPENING', current_date + 11, true, false, 'published', now()),
+   'opening', 'STANDALONE OPENING', current_date + 11, true, false, 'published', now(), 'VENUE', 'AMSTERDAM'),
   ('c4400000-0000-4000-8000-000000000004', 'c4300000-0000-4000-8000-000000000001', 'c4200000-0000-4000-8000-000000000001', 'c4100000-0000-4000-8000-000000000001', 'c4100000-0000-4000-8000-000000000001',
-   'talk', 'PUBLIC PROGRAM ONLY', current_date + 12, false, true, 'published', now());
+   'talk', 'PUBLIC PROGRAM ONLY', current_date + 12, false, true, 'published', now(), null, null);
 insert into public.presentation_cooperators (
   presentation_id, invited_account_id, invited_by_account_id, status, responded_at
 ) values ('c4300000-0000-4000-8000-000000000002', 'c4100000-0000-4000-8000-000000000003', 'c4100000-0000-4000-8000-000000000001', 'accepted', now());
