@@ -427,7 +427,7 @@ values
 set local role anon;
 select set_config('request.jwt.claims','{"role":"anon"}',true);
 select results_eq($$select occurrence_type from public.activity_occurrences where id='a1500000-0000-4000-8000-000000000001'$$,$$values ('historical-talk'::varchar)$$,'historical Presentation program item is public without date filtering');
-select results_eq($$select show_in_agenda,show_in_presentation from public.activity_occurrences where id='a1500000-0000-4000-8000-000000000002'$$,$$values (true,false)$$,'Agenda-only item remains independently public');
+select results_eq($$select show_in_agenda, exists (select 1 from public.get_public_presentation_program('a1300000-0000-4000-8000-000000000001') where occurrence_type='agenda-only') from public.activity_occurrences where id='a1500000-0000-4000-8000-000000000002'$$,$$values (true,false)$$,'Agenda-only item remains independently public without entering the safe Program projection');
 select is_empty($$select id from public.activity_occurrences where id='a1500000-0000-4000-8000-000000000003'$$,'item hidden from both surfaces is not public');
 select is_empty($$select id from public.activity_occurrences where id='a1500000-0000-4000-8000-000000000004'$$,'private Presentation parent blocks program child');
 select results_eq($$select occurrence_type from public.activity_occurrences where id='a1500000-0000-4000-8000-000000000005'$$,$$values ('agenda-source'::varchar)$$,'Agenda remains public when its source is hidden from Presentations');
