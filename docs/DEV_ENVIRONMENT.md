@@ -45,6 +45,14 @@ Docker Desktop provides the local Supabase stack, local PostgreSQL, and pgTAP/da
 
 Important agent rule: failure to resolve `docker` from PATH does not mean Docker Desktop is uninstalled. Distinguish software not installed, installed with a CLI absent from PATH, installed but inaccessible from the current shell, daemon unavailable, permissions issues, and actual application failures.
 
+Runtime lane: on this Windows machine, Docker and local Supabase runtime validation (`npx supabase start`, migration replay, `npx supabase test db`) must run in the Claude SHELL lane, not Codex. Codex's sandbox ACL cannot access the per-user Docker Desktop installation. This is a tooling boundary, not a CHAINED bug; do not change the sandbox policy as a workaround.
+
+The local stack belongs to CODE/TESTS only (code, automated tests, migration replay, pgTAP). It is not a product-validation or release environment; see the release model in `DECISIONS.md`.
+
+### Supabase CLI link
+
+This working copy's untracked `supabase/.temp` link points at the LIVE project ref `jjtobvxjmbnybbxlvnxs`, whose display name is `chained-development`. Linked commands such as `supabase db push` or `supabase functions deploy` therefore target LIVE. Run them only with explicit authorization and after verifying the target ref, especially once a BETA project exists.
+
 ### Project tooling
 
 - Supabase CLI/tooling is installed and used by this repository.

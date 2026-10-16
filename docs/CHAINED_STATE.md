@@ -94,8 +94,27 @@ This file distinguishes repository implementation from production validation whe
 - Active old and new Works now use the same derivative publication contract. The last documented temporary production smoke environment/key needs a current-state check and cleanup/revocation if still present.
 - The one-time legacy public-media promotion is complete: 9 published Works / 29 images now have canonical SMALL and LARGE publication derivatives. Historic legacy objects remain only for cleanup compatibility; promotion is idempotent and did not alter publication, Selector, Project or Presentation relations.
 
+## DEPLOYMENT ARCHITECTURE (repository-confirmed, 2026-10-16)
+
+Only LIVE exists; there is no BETA environment, no CI/CD (`.github/` is absent) and no Cloudflare, Netlify, Vercel or Wrangler configuration. All deploys are manual operator actions.
+
+- **Frontend:** static HTML/CSS/JS from the repository root with no build step; tracked `CNAME` = `chained.work`; served by GitHub Pages (`EXTERNAL_SERVICES.txt`: releases are pushes to `main`). The only remote branch is `main`. The Pages source branch/folder and last built commit are GitHub settings outside the repository and are unverified. If Pages serves `main`, frontend items described here as "pending release" are already served and are only not production-validated, while their backend parts may not be deployed — verify before relying on either reading.
+- **Frontend config:** `auth/config.mjs` selects by exact hostname: `127.0.0.1`/`localhost` → untracked `frontend-config.local.mjs`; `chained.work` → tracked `frontend-config.production.mjs` (LIVE URL + publishable key; LIVE URL hard-pinned). Any other hostname silently falls back to browser-local PROTOTYPE mode, so a BETA hostname currently has no backend target.
+- **Supabase LIVE:** project ref `jjtobvxjmbnybbxlvnxs`. This working copy's untracked CLI link (`supabase/.temp`) points at that ref, whose project display name is `chained-development` — any linked `supabase db push` / `functions deploy` targets LIVE. Migrations (65) and Edge Functions (11) are deployed manually with the Supabase CLI. `supabase/config.toml` describes only the local stack; hosted Auth settings (redirect allowlist, 12-hour invite/OTP expiry, email delivery/templates) are dashboard-managed and not recorded in the repository. Whether F1 `20261016120000` and F2 `20261016130000` are applied to LIVE is not recorded.
+- **Edge Function environment:** `SUPABASE_URL`, `SUPABASE_PUBLIC_URL`/`CLIENT_FACING_SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY(S)`/`SUPABASE_SECRET_KEY(S)`, `ALLOWED_MEDIA_ORIGINS`, `ALLOWED_INVITE_ORIGINS`, `INVITE_REDIRECT_URL`, `ALLOWED_CV_IMPORT_ORIGINS`, `CV_IMPORT_BETA_USER_IDS` (CV Import allowlist; unrelated to the BETA environment), `OPENAI_API_KEY`, `CHAINED_IMAGE_WORKER_TOKEN`.
+- **Derivative/media processing:** `services/public-image-processor` (Node 22 + sharp container) runs as Cloud Run service `chained-image-worker` in GCP project `chained-507212` (min 0 / max 1 instance); a europe-west3 Cloud Scheduler job wakes it each minute via OIDC. The worker needs only `CHAINED_BROKER_URL` + `CHAINED_IMAGE_WORKER_TOKEN` and talks to the `worker-image-broker` Edge Function. Image build/deploy is manual `gcloud`.
+- **LIVE-pinned operator tooling:** `scripts/backfill-legacy-derivatives.mjs`, `promote-legacy-public-derivatives.mjs`, `recover-failed-derivatives.mjs` and `tests/production-cloud-run-smoke.mjs` hard-code the LIVE ref/URL and require `CHAINED_PRODUCTION_SMOKE=1` plus the untracked `tests/.local/production-cloud-run-smoke.env`.
+- **Other:** OpenAI powers LIVE CV Import extraction. The repository does not identify the registrar or DNS provider for `chained.work`.
+
+The proposed BETA design is recorded in `DECISIONS.md` (Release environments and delivery); prerequisites, sequence and smoke gate are in `ROADMAP.md` (NOW → Release lane).
+
+## SECURITY BASELINE
+
+- The historical Supabase security baseline is runtime-verified green at commit `fa8b1a51df273ea4c28401fd1115733a53352770` on the local Supabase stack: 65/65 migrations replayed cleanly, 45/45 pgTAP files and 2232/2232 assertions passed, 31/31 public tables have RLS ENABLED + FORCED, and the F2 ACL catalog contract matched 569/569 grants with no missing or unexpected grants. This is CODE/TESTS evidence, not LIVE deployment evidence.
+
 ## CURRENT HANDOFF
 
+- Release model changed on 2026-10-16 to CODE/TESTS → BETA → LIVE (see `DECISIONS.md`). Local execution is for code, tests and migrations only and is not a product-validation or release step. BETA is designed, not implemented; next step is Peer's answers to the required prerequisites in `ROADMAP.md`.
 - Production is stable after the Phase 4 public-image derivative rollout.
 - Private preview frontend implementation is deployed and production-validated: the browser generates a fixed private WebP derivative before reservation, uploads both server-reserved objects, and finalizes them together. Production smoke covered JPEG and transparent PNG images, including full and partial alpha. Broader browser/device matrix validation remains future hardening.
 - Controlled private-preview backfill remains open where still needed; it is separate from the completed public-derivative legacy migration.

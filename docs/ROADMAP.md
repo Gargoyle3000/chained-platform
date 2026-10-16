@@ -6,9 +6,50 @@ This is a priority map for remaining work, not a deployment record or fixed cale
 
 ## NOW
 
-### Local / pending release
+### Release lane (CODE/TESTS → BETA → LIVE)
 
-Implemented in the repository; not recorded as released or production-validated.
+Contract: `DECISIONS.md` → Release environments and delivery. Confirmed current architecture: `CHAINED_STATE.md` → DEPLOYMENT ARCHITECTURE. Not implemented.
+
+Required prerequisites / external decisions (Peer):
+
+1. Confirm the LIVE GitHub Pages source branch/folder and last built commit, and settle what "pending release" means for frontend already on `main`.
+2. Choose the branch/promotion trigger so unvalidated work cannot reach LIVE: e.g. `beta` branch → BETA and `main` → LIVE, or a separate LIVE branch/tag. Today a push to `main` is the LIVE frontend release path.
+3. Choose BETA hosting. GitHub Pages serves one site per repository, so BETA needs a second repository/Pages site or Cloudflare (Pages or Workers with Static Assets). Cloudflare would also be LIVE's planned future host.
+4. Identify the DNS provider/registrar for `chained.work` and who can create `beta.chained.work` (not in the repository).
+5. Create the BETA Supabase organisation/project: Free plan, same region as LIVE (LIVE region not recorded), unambiguous name. LIVE's display name is `chained-development`.
+6. Record LIVE's hosted Auth settings read-only and decide BETA email delivery: custom SMTP vs Supabase default email with its recipient/rate limits. Invite/onboarding smoke needs real email delivery to beta-only test inboxes.
+7. BETA derivative worker: a separate Cloud Run service, Scheduler job, service identities and worker-token secret. Decide whether these live in GCP project `chained-507212` or a separate GCP project.
+8. CV Import on BETA: a separate OpenAI project key with a beta-only `CV_IMPORT_BETA_USER_IDS`, or explicitly exclude CV Import ADD from the BETA gate.
+9. Sequencing: whether the pending-release items below and the F1/F2 ACL migrations wait for BETA or ship to LIVE under the current manual process first.
+10. Confirm the LIVE database backup/restore capability of the current plan before the next LIVE migration.
+
+Optional: GitHub Actions running the existing test suites and migration gate; a BETA noindex/access restriction or a restrained visible BETA marker (a visual-language decision); renaming the LIVE Supabase display name; BETA on Supabase Pro to avoid Free-plan inactivity pausing (verify current plan terms); a scripted synthetic BETA seed.
+
+Minimal implementation sequence:
+
+1. Record the answers above and a read-only LIVE inventory: applied migration list, Edge Function list, secret names (never values), hosted Auth/Storage settings, Cloud Run/Scheduler configuration and image digest.
+2. Create the BETA Supabase project. Apply all repository migrations in order, configure hosted Auth to mirror LIVE with BETA URLs, deploy all 11 Edge Functions from the same commit and set BETA-only secrets/origins. Never run linked CLI commands without verifying the target ref; this working copy is linked to LIVE.
+3. Deploy the BETA worker from LIVE's container image digest with its own token/broker URL and scheduler; confirm one derivative job reaches READY.
+4. Code change (reviewed, tested): add a `beta` frontend target for `beta.chained.work`, plus a tracked publishable-only `frontend-config.beta.mjs` pinned to the BETA URL, and tests that LIVE and BETA reject each other's URLs. Add an equivalent explicit BETA guard if operator scripts are reused.
+5. Configure BETA hosting, DNS and TLS for `beta.chained.work`.
+6. Bootstrap the BETA administrator through a controlled procedure and create beta-only synthetic Artists, an UNCHAINED viewer and fixtures. No LIVE data.
+7. Run the smoke gate on the commit LIVE currently serves to prove parity, then on the release candidate. Promote to LIVE in the `DECISIONS.md` order, run the LIVE post-deploy smoke, and record the outcome in `CHAINED_STATE.md`.
+
+BETA smoke gate (same commit/migrations/functions/worker image; desktop and ~390px mobile):
+
+- **Baseline:** password login/logout; anonymous and cross-account private-media denial; Portfolio Export.
+- **Onboarding:** a new beta Artist invited from the Admin Console completes password setup. The first-login dialog opens, NEXT/BACK work, FINISH or SKIP persists, it does not reopen after re-login, and `[ ? ]` stays separate.
+- **Work publish/readiness:** create Work and upload JPEG plus transparent PNG; editor processing → READY; Dashboard `WORK READY TO PUBLISH` DETAILS, PUBLISH and NOT NOW; draft-Profile notice; Profile publish makes the Work public; unpublish; delete.
+- **Presentation:** revised editor first save at desktop and mobile; persisted ID/URL and context reload; add a public Work; public detail renders.
+- **Discover/Follow:** anonymous GRID requests SMALL only (initial batch 12, no LARGE); one-image Works show no carousel control and multi-image Works do; follow a second beta Artist and see Follow feed plus Agenda FOLLOW.
+- **Agenda image:** dedicated image upload/finalize; representative-Work fallback; text-only fallback; public Agenda row.
+- **CV Import ADD** (if enabled per item 8): extraction → review → ADD persists; duplicates are skipped; no Presentation/Agenda created.
+- **CV Export:** selection defaults mirror `is_visible`; PDF generation/delivery on desktop and mobile.
+- **FIND ARTISTS:** only claimed, published Profiles are suggested; a draft beta Profile is not.
+
+### Pending release
+
+Implemented in the repository; not recorded as released or production-validated. Once BETA exists, each item passes the BETA smoke gate before LIVE; the "after release" checks below become the LIVE post-deploy smoke.
 
 - Dashboard onboarding frontend (seven-step first-login dialog). After release, smoke-test with the next genuinely new eligible Artist through the normal invitation and password setup: the dialog opens on first Dashboard load, NEXT / BACK work, FINISH or SKIP persists acknowledgement, it does not reopen after logout and ordinary login, and permanent contextual `[ ? ]` help stays separate. Do not reset an existing account's acknowledgement version to simulate a new Artist.
 - Revised Presentation editor. After release: signed-in first save and persisted context at desktop and narrow mobile widths.
@@ -34,8 +75,8 @@ Implemented in the repository; not recorded as released or production-validated.
 - Finish controlled private-preview backfill and coverage verification, then remove any temporary original fallback. Validate the remaining browser/format/HiDPI matrix for editor image handling: real display and HiDPI needs and a broader browser/device set, including formats such as AVIF where relevant. Reconcile editor and backend limits only if validation shows a gap.
 - Measure Work derivative queue wait and processing separately from upload finalization through SMALL/LARGE readiness under representative 20/50/100-image bursts. Calibrate worker capacity, polling and long-processing thresholds from measurements.
 - Complete a focused RLS, Auth, Storage, Data API and privileged-function security review against actual trust boundaries. Security Advisor warnings on intentional service-only tables or `SECURITY DEFINER` functions require inspection, not automatic classification as defects.
-- **Before 2026-10-30 (historical migration audit):** future-migration privilege intent is already codified in `DECISIONS.md`. Still open: the historical audit of every migration that creates a `public` table, recording required `GRANT`/`REVOKE` access separately for `anon`, `authenticated` and `service_role`, and a clean-replay test under the new default where practical. Preserve least privilege and RLS and avoid generic CRUD grants. Existing tables are not an emergency migration target solely because of the [Supabase default-grant change](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically).
-- Build the isolated LOCAL → BETA → LIVE release lane before wider beta: `beta.chained.work` with its own Supabase Free project/organisation initially, synthetic accounts/data, separate project refs/secrets and no Production backend access. Use a beta branch, automated tests, fixed smoke loop and reviewed promotion of the same code/migration artifacts to `main` and LIVE; retain a small production post-deploy smoke check. Assess Cloudflare Pages versus Workers with Static Assets (or another suitable Cloudflare setup) for future web delivery, and migrate LIVE off GitHub Pages before paid/commercial service while GitHub remains source/CI.
+- **Public-table ACL release (historical audit done in CODE/TESTS):** F1 `20261016120000_activity_browser_select_columns.sql` and F2 `20261016130000_reconcile_public_table_acl.sql` codify explicit per-role grants for every existing `public` table. A clean replay and the full pgTAP suite are green at `fa8b1a5` (see `CHAINED_STATE.md` → SECURITY BASELINE). Still open: apply both to LIVE (see Release lane prerequisite 9) and verify the LIVE ACL catalog against the F2 contract. Existing tables are not an emergency migration target solely because of the [Supabase default-grant change](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically) on 2026-10-30.
+- Migrate LIVE web delivery off GitHub Pages to Cloudflare (Pages, Workers with Static Assets, or another suitable setup) before paid/commercial service, after the BETA lane (NOW → Release lane) is working; GitHub remains source/CI.
 - Complete operational hardening before wider beta: production capacity and intended Supabase Pro timing, cleanup of temporary smoke credentials/environment, appropriate rate/abuse controls, stronger Admin Console security including 2FA where absent, and a privacy-safe incident/error view. Remove temporary tester analytics when that phase ends.
 - Reconcile shared entity, relationship, permission and approval primitives before broader Gallery/Curator access. Resolve Gallery-created unclaimed Artist capacity, entitlement and anti-abuse boundaries so a Gallery account cannot substitute for many independent Artist accounts; retain Artist control over authoritative Works, images and approved changes.
 - CV Import eligibility and accounting (open): before broader rollout, add durable account-scoped idempotency and quota/entitlement accounting; never persist source PDFs or silently create Presentations. Replace the temporary per-user `CV_IMPORT_BETA_USER_IDS` Edge Function secret allowlist with an automatic, security-conscious eligibility rule; keep authentication and an active account mandatory, determine the intended CHAINED account/profile eligibility model first, and do not expose CV Import as an unrestricted public function.

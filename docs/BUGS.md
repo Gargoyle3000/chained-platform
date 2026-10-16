@@ -1,6 +1,6 @@
 # CHAINED — BUGS / VALIDATION STATUS
 
-Last updated: 2026-10-02
+Last updated: 2026-10-16
 
 ## Active product bugs
 
@@ -8,7 +8,6 @@ None currently confirmed.
 
 ## Pending validation
 
-- The two older pgTAP failures were stale test assumptions, not product defects: `001_chained_foundation_schema.test.sql` fixed a historical public SECURITY DEFINER allowlist despite later approved functions, and `020_derivative_staging_foundation.test.sql` required every browser Storage policy to reference `work-originals` despite the exact-reservation `presentation-agenda-media` policy. The assertions now check fixed search paths and bucket-bound policies without duplicating the Agenda INSERT behavior covered by `039_storage_insert_policy_grants.test.sql`. Local pgTAP runtime validation remains pending.
 - The Discover GRID overfetch fix is resolved in current code and a controlled local Chrome check: the desktop initial batch stayed at 12 cards, requested 9 SMALL and 0 LARGE images, and did not append a premature second batch. One anonymous production network validation remains pending.
 
 The production multi-image Discover, Follow and Selector carousels were manually checked on 2026-09-26. The one-image visibility fix below still needs post-deployment visual smoke checks.
@@ -16,6 +15,7 @@ The production multi-image Discover, Follow and Selector carousels were manually
 CV Import ADD production release/validation and an Artist-safe terminal derivative recovery path are planned work in `ROADMAP.md`, not confirmed defects in current behavior.
 
 ## Resolved incidents
+- Stale pgTAP assumptions (runtime-verified 2026-10-16): `001_chained_foundation_schema.test.sql` and `020_derivative_staging_foundation.test.sql` encoded outdated SECURITY DEFINER / Storage-policy assumptions, not product defects; they now check fixed search paths and bucket-bound policies. The full suite passes at `fa8b1a5` (45/45 files, 2232/2232 assertions; see `CHAINED_STATE.md` → SECURITY BASELINE).
 - Public Profile intermediate-width Work overlap (2026-10-02): the centered desktop image stage shifted left into its separate metadata column, which could obscure long MATERIALS text. The stage now reserves space for that shift above 1280px; from 701–1280px it uses the image column without a shift, and the existing mobile stack begins at 700px. A local Chrome landscape fixture with long MATERIALS text passed geometry and overflow checks at 1440, 1281, 1280, 1100, 900, 701, 700, 390 and 320px. Peer confirmed the fix is good in production on 2026-10-02.
 - Dashboard mobile metric overlap (2026-10-02): the later overview selector forced three summary columns even at phone widths. The summary now stacks WORKS, PRESENTATIONS and visible REQUESTS at 700px and below; `[hidden]` removes REQUESTS from layout when empty. Local browser geometry checks passed at 320px, 390px, 412px and desktop, with focused Dashboard tests passing. Peer had already live-checked the mobile REQUESTS layout successfully.
 - Opaque-RGBA Work derivative rejection (2026-09-28): the processor incorrectly treated `metadata.hasAlpha` as proof that source pixels were transparent, and rejected a valid opaque WebP when libwebp omitted its redundant alpha channel. It now uses Sharp `stats().isOpaque` to require output alpha only when actual transparency is present. The opaque-RGBA regression, transparent PNG, RGB PNG and worker completion paths are covered by focused Linux processor tests. Production validation succeeded on Cloud Run revision `chained-image-worker-00005-hfk`, which receives 100% of traffic: the previously failing PNG completed processing, SMALL and LARGE became READY, and CHAINED reported the Work READY TO PUBLISH.

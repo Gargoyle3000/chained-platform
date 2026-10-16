@@ -2,7 +2,7 @@
 
 
 
-Last updated: 2026-09-28
+Last updated: 2026-10-16
 
 
 
@@ -21,11 +21,19 @@ Last updated: 2026-09-28
 
 \## Release environments and delivery
 
-\- The intended release path is LOCAL → BETA → LIVE; production is no longer the primary test environment. Local development provides fast implementation and automated testing. `beta.chained.work` is a public test environment with its own Supabase project, Auth, database, Storage, Edge Functions, project ref and secrets; it must not access Production Supabase or use production user data. Start Beta on a separate Supabase Free project/organisation while scale permits, with synthetic accounts and data. `chained.work` remains the live production environment; plan Supabase Pro before broader real-user/commercial operation requires it. Beta is not yet implemented.
+\- The release model is CODE/TESTS → BETA → LIVE (decided 2026-10-16). Local execution (unit tests, local Supabase stack, migration replay, pgTAP) remains part of CODE/TESTS only; it is not a product-validation or release environment. Peer validates product behavior on LIVE today, so BETA must mirror LIVE as closely as feasible and becomes the product-validation step before LIVE. BETA is not yet implemented.
 
-\- GitHub remains the source repository and home for history, branches, pull requests and useful CI/Actions. Web delivery will move from GitHub Pages to Cloudflare before paid/commercial service. The exact Cloudflare substrate (Pages, Workers with Static Assets, or another suitable configuration) is open; this is a hosting change, not a source-control move.
+\- BETA (`beta.chained.work`) is fully isolated from LIVE: its own Supabase project/organisation (Free initially while scale permits), database, Auth, Storage, Edge Functions, project ref, keys and secrets; its own hosting/deploy target; its own derivative worker, worker token and scheduler; and its own CORS/redirect/origin values. BETA never holds LIVE credentials, never calls LIVE services and receives no production user data by default; any future copy of LIVE data requires a separate explicit, reviewed decision. BETA uses beta-only synthetic accounts and data. `chained.work` remains LIVE; plan Supabase Pro before broader real-user/commercial operation requires it.
 
-\- Promote reviewed work through a beta branch and `beta.chained.work`, automated tests and a fixed Beta smoke loop, then approve the exact code and migration files for `main` and `chained.work`. Beta and Production use distinct refs/secrets. Apply the same recorded migration artifacts to both environments; avoid manual environment-only schema edits, undocumented production hotfixes and drift. Live deployment still receives a small post-deploy smoke check.
+\- Parity: BETA runs the same commit, the same full migration history, the same Edge Function sources and the same worker container image as the release candidate for LIVE, with only environment values differing. BETA hosted Auth, Storage and function settings mirror LIVE (invite-only, signup disabled, 12-hour invite/OTP expiry, password-first) except for BETA URLs.
+
+\- Promotion: only the exact artifacts that passed the BETA smoke gate are promoted to LIVE, in order: database migrations → Edge Functions → derivative worker image (when changed) → frontend, followed by a short LIVE post-deploy smoke. Migrations are forward-only and backward-compatible with the frontend still serving; destructive contract changes ship in a later release. No LIVE-only schema edits, undocumented hotfixes or drift; an emergency LIVE fix is replayed to BETA immediately afterwards.
+
+\- Rollback/recovery: frontend and Edge Functions roll back by redeploying the previous promoted commit; the worker rolls back by shifting Cloud Run traffic to the previous revision; the database rolls forward with a corrective migration (the repository has no down migrations). Restoring a LIVE database backup is a last resort requiring Peer's explicit decision.
+
+\- Misrouting safeguards: each environment pins its own Supabase URL/ref in a tracked browser-safe frontend config selected by exact hostname, and validation rejects the other environment's URL; operator scripts and Supabase CLI commands must name and verify their target ref before any write; secrets for the two environments use distinct names/storage so one cannot be loaded for the other.
+
+\- GitHub remains the source repository and home for history, branches, pull requests and useful CI/Actions. Web delivery will move from GitHub Pages to Cloudflare before paid/commercial service. The exact Cloudflare substrate (Pages, Workers with Static Assets, or another suitable configuration) is open; this is a hosting change, not a source-control move. Cloudflare is not currently present in the repository or in use.
 
 
 
